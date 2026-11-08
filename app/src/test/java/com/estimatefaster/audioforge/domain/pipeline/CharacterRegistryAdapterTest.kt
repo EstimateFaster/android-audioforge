@@ -88,7 +88,7 @@ class CharacterRegistryAdapterTest {
         assertNull(han.speed)
         assertTrue(han.locked)
 
-        val info = adapter.registry.all().first { it.roleId == "role_0001" }
+        val info = adapter.all().first { it.roleId == "role_0001" }
         assertEquals(listOf("小立"), info.aliases)
         assertEquals(Gender.Male, info.gender)
         assertEquals(Importance.Protagonist, info.importance)
