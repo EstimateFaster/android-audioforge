@@ -327,13 +327,10 @@ class SweepRunningTest {
         val (novelId, jobId) = createRunningJob()
         val workName = GenerationNotifications.workName(novelId)
         queue.cancelResult = false
-        val worker = launch {
-            delay(60L)
-            assertTrue(fixture.jobs.markCancelled(jobId))
-        }
+        // 用 cancel 回调同步落终态，避免与虚拟时间轮询竞争（本用例只验证 cancel 失败仍会等待）。
+        queue.cancelHook = { assertTrue(fixture.jobs.markCancelled(jobId)) }
 
         val terminal = sweep.cancelAndAwait(novelId, workName, timeoutMs = 2_000L)
-        worker.join()
 
         assertEquals(JobStatus.CANCELLED, terminal?.status)
         assertEquals(listOf(workName), queue.cancelled)
@@ -569,6 +566,7 @@ class SweepRunningTest {
 
         override suspend fun cancel(workName: String): Boolean {
             cancelled += workName
+            cancelHook?.invoke()
             onCancel(workName)
             return cancelResult
         }
