@@ -178,7 +178,7 @@ class FishTtsClientTest {
         assertEquals("1 + maxRetries 次后停止", 5, server.requestCount)
         assertEquals(4, delays.size)
         // 指数退避（2s 起、30s 封顶）都落在合法区间。
-        assertTrue(delays.all { it in 2_000L..30_250L })
+        assertTrue("4 次退避应落在 2s–30.25s，实际 $delays", delays.all { it in 2_000L..30_250L })
     }
 
     // ---------- 协议错误 ----------
