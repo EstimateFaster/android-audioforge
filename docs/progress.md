@@ -28,7 +28,7 @@
 | P1-01 模型与枚举 | ✅ done | CI 42448583320 绿；`EnumsTest` 8/8 |
 | P1-02 Assets：提示词 + 音色池 | ✅ done | CI 42448901696 绿；Prompt/VoicePool 11 个用例 + 快照 |
 | P1-03 TextDecoder | ✅ done | CI 42449492657 绿；`TextDecoderTest` 14/14 |
-| P1-04 ChapterSplitter | 🟡 in_progress | 正则/假标题/无标题 + fixture 对照；等 CI |
+| P1-04 ChapterSplitter | ✅ done | CI 42449986934 绿；`ChapterSplitterTest` 9/9（含上游样例 145/664 字） |
 | P1-05 ScriptSanitizer | ⏳ todo | |
 | P1-06 CoverageChecker | ⏳ todo | |
 | P1-07 CharacterRegistry | ⏳ todo | |
@@ -147,13 +147,14 @@
   改为「严格解码 + CJK 占比 + 中文标点/异常字符评分」；已记录 `docs/decisions.md`
 - 产出：`core/ingest/TextDecoder.kt`、`TextDecoderTest.kt`
 
-### P1-04 ChapterSplitter — in_progress
-- 开始：2026-11-08 13:42（Asia/Shanghai）
-- 分支：`feat/p1-04-chapter-splitter`
-- 目标：逐行移植 Python `core/ingest.py::load_novel`；正则 `第X章/卷/节/回/部` 或 `Chapter N`
-- 依赖：P1-01 ✅、P1-03 ✅
-- 验收：上游 `sample_novel.txt` 切出 2 章（145/664 字、idx 0/1）；无标题/假标题/长标题/CRLF/中文数字/序言丢弃
-- 测试样例来自上游 `test/sample_novel.txt`（commit f1d262b），放入 `app/src/test/resources/`
+### P1-04 ChapterSplitter — done
+- 完成：2026-11-08 13:16（Asia/Shanghai）
+- 分支：`feat/p1-04-chapter-splitter`（PR #9）
+- 提交：`ebc4e41`（实现）、`918f84d`（`Pattern.CASE_INSENSITIVE` 修正）
+- 验证：CI [42449986934](https://github.com/EstimateFaster/android-audioforge/actions/runs/42449986934) 绿；`ChapterSplitterTest` 9/9
+  - 上游 `sample_novel.txt`（f1d262b）切出 2 章：145/664 字、idx 0/1、标题与 fixture 一致
+  - 无标题单章「全文」、假标题跳过、idx 连续、CRLF、超长标题、中文数字/Chapter/卷/节/回/部、序言丢弃、空文本
+- 产出：`core/ingest/ChapterSplitter.kt`、`ChapterSplitterTest.kt`、`app/src/test/resources/sample_novel.txt`
 
 ## 已知实编坑（已处理）
 
@@ -175,9 +176,9 @@
 
 ## 下一步
 
-1. P1-04 ChapterSplitter（章节正则 + 短标题/假标题/无标题）。
-2. P1-05 ScriptSanitizer（最高风险移植点）。
-3. P1-06 CoverageChecker。
+1. P1-05 ScriptSanitizer（最高风险移植点，逐函数对照 Python）。
+2. P1-06 CoverageChecker。
+3. P1-07 CharacterRegistry。
 
 ## 日志
 
@@ -195,3 +196,4 @@
 - 2026-11-08：P1-01 完成；枚举 wire/情绪前缀/RoleId 契约与 Python 对齐，`EnumsTest` 8/8。
 - 2026-11-08：P1-02 完成；提示词 SHA-256、63 音色快照、旁白排除全部锁定，23 个单测全绿。
 - 2026-11-08：P1-03 完成；BOM/UTF-8/GBK/GB18030/UTF-16/Big5 全过；ICU 不可用改用启发式，已记 ADR。
+- 2026-11-08：P1-04 完成；上游样例 2 章 145/664 字对齐 Python；切章边界 9 个用例全绿。
