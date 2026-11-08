@@ -54,7 +54,7 @@ class ChapterSplitter {
 
         private val CHAPTER_RE: Regex = Pattern.compile(
             CHAPTER_PATTERN,
-            Pattern.IGNORE_CASE or Pattern.UNICODE_CHARACTER_CLASS,
+            Pattern.CASE_INSENSITIVE or Pattern.UNICODE_CHARACTER_CLASS,
         ).toRegex()
     }
 }
