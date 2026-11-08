@@ -18,6 +18,14 @@ enum class AnalyzeStatus {
     /** 章节已解析且 `force=false`，本次没有调用 LLM。 */
     Skipped,
 
+    /**
+     * 正文超过 [AnalyzeChapterUseCase.MAX_SINGLE_PASS_CHARS] 且未放行（§8.10）。
+     *
+     * 未调用 LLM、未写入片段，`parse_status` 置回 `pending`（等用户确认后带
+     * `allowLongChapter=true` 可继续）。它是一次带告警的守卫，不是失败。
+     */
+    TooLong,
+
     /** 请求失败（截断、网络、鉴权等），章节标记为 `error`。 */
     Failed,
 }
@@ -26,9 +34,12 @@ enum class AnalyzeStatus {
  * [AnalyzeChapterUseCase] 的返回值。
  *
  * [warning] 是最终写入 `chapters.parseWarn` 的文案（覆盖率、未识别说话人、
- * 降级原因、修复重试结果），无告警时为 `null`；调用方可以直接展示。
+ * 降级原因、修复重试结果、长章节守卫提示），无告警时为 `null`；调用方可以直接展示。
  * [coverage] 只在真正产出剧本时才有值（[AnalyzeStatus.Skipped] /
- * [AnalyzeStatus.Failed] 为 `null`）。
+ * [AnalyzeStatus.Failed] / [AnalyzeStatus.TooLong] 为 `null`）。
+ *
+ * [AnalyzeStatus.TooLong] 不是失败：此时 [error] 为 `null`，[warning] 说明字数、
+ * 上限与「继续/取消」的后续动作，`parse_status=pending`。
  */
 data class AnalyzeResult(
     val status: AnalyzeStatus,

@@ -46,9 +46,11 @@ import kotlinx.serialization.json.Json
  *    取覆盖率更高的一版；第二次 JSON 非法则保留第一版；
  * 9. 单事务落库片段与章节状态/告警/计数。
  *
- * 长章节（> [LONG_CHAPTER_CHARS]）不自动分块（v1 不实现，§8.10）：本用例继续
- * 解析，只把「可能截断」写进 `parseWarn`；调用方可在进入前根据
- * [LONG_CHAPTER_CHARS] 弹确认框。
+ * 长章节守卫（> [MAX_SINGLE_PASS_CHARS]，§8.10）：默认**不调用 LLM**，返回
+ * [AnalyzeStatus.TooLong]，把字数/上限/建议动作写进 `parseWarn`，并把
+ * `parse_status` 置回 `pending`——表示「等调用方确认后可以继续」，而不是失败。
+ * 调用方确认后带 `allowLongChapter=true` 重跑即可继续单次解析，此时只把
+ * 「可能截断」保留在告警里。v1 不做分块（v1.1 / P2.9 再实现）。
  *
  * 测试注入：[chat] 允许用 `suspend (String) -> String` 替换真实
  * [LlmClient.chat]（默认实现就是 `llmClient.chat(prompt)`），其余依赖
@@ -82,12 +84,16 @@ class AnalyzeChapterUseCase(
      * @param chapterId 要解析的章节。
      * @param force `true` 时忽略已有的 `parse_status=done` 重新解析。
      * @param excluded 设置里的「排除角色」名字/别名；命中者不注册，台词降级旁白。
+     * @param allowLongChapter `true` 时放行超过 [MAX_SINGLE_PASS_CHARS] 的章节
+     *   （用户在 UI 确认「章节较长，可能截断」后传入）。默认 `false` 时只做守卫，
+     *   不调用 LLM、不写片段。
      */
     suspend fun analyze(
         novelId: Long,
         chapterId: Long,
         force: Boolean = false,
         excluded: Set<String> = emptySet(),
+        allowLongChapter: Boolean = false,
     ): AnalyzeResult = withContext(dispatcher) {
         val chapter = chapterRepository.getChapter(chapterId)
             ?: return@withContext AnalyzeResult(
@@ -110,6 +116,11 @@ class AnalyzeChapterUseCase(
             )
         }
 
+        // §8.10 长章节守卫：先看原文长度，再决定是否进入 running / 调用 LLM。
+        if (chapter.rawText.length > MAX_SINGLE_PASS_CHARS && !allowLongChapter) {
+            return@withContext blockedByLength(chapter)
+        }
+
         chapterRepository.updateParseStatus(chapterId, ParseStatus.Running.wire, null)
 
         try {
@@ -130,7 +141,7 @@ class AnalyzeChapterUseCase(
     ): AnalyzeResult {
         val chapterId = chapter.id
         val rawText = chapter.rawText
-        val longChapter = rawText.length > LONG_CHAPTER_CHARS
+        val longChapter = rawText.length > MAX_SINGLE_PASS_CHARS
 
         registryAdapter.refresh()
         val prompt = promptRenderer.script(
@@ -328,6 +339,28 @@ class AnalyzeChapterUseCase(
         )
     }
 
+    /**
+     * §8.10 长章节守卫：只记录原因，不调用 LLM、不写片段。
+     *
+     * `parse_status` 置为 `pending`（而不是 `error`）：章节本身没坏，只是等调用方
+     * 确认「继续 / 取消」。用户确认后带 `allowLongChapter=true` 重跑本方法即可，
+     * 因为 `pending` 不会被当作已完成跳过。
+     */
+    private suspend fun blockedByLength(chapter: ChapterEntity): AnalyzeResult {
+        val warn = longChapterWarning(chapter.rawText.length)
+        db.withTransaction {
+            chapterRepository.updateParseStatus(chapter.id, ParseStatus.Pending.wire, null)
+            chapterRepository.updateWarn(chapter.id, warn)
+        }
+        return AnalyzeResult(
+            status = AnalyzeStatus.TooLong,
+            chapterId = chapter.id,
+            segmentCount = chapter.segCount,
+            warning = warn,
+            errorCode = ERROR_CHAPTER_TOO_LONG,
+        )
+    }
+
     /** 失败：只改章节状态，不动已有片段（重跑时可复用旧结果做对照）。 */
     private suspend fun failChapter(chapterId: Long, error: PipelineError): AnalyzeResult {
         val message = when {
@@ -460,7 +493,8 @@ class AnalyzeChapterUseCase(
         val parts = mutableListOf<String>()
         if (degradedWarning != null) parts += degradedWarning
         if (longChapter) {
-            parts += "章节较长（$rawLength 字），可能输出截断，建议分段"
+            parts += "章节较长（$rawLength 字），已按单次解析继续，可能输出截断；" +
+                "建议手动分段或等待分块解析"
         }
         if (coverage < minCoverage) {
             parts += "覆盖率 ${percent(coverage)}，低于阈值 ${percent(minCoverage)}"
@@ -475,12 +509,29 @@ class AnalyzeChapterUseCase(
     private fun percent(value: Double): String =
         String.format(Locale.ROOT, "%.1f%%", value * 100.0)
 
+    /** 守卫文案：字数、单次上限、后续动作三件事都要给调用方。 */
+    private fun longChapterWarning(chars: Int): String =
+        "章节较长（$chars 字），超过单次解析上限 $MAX_SINGLE_PASS_CHARS 字，" +
+            "可能输出截断；建议手动分段或等待分块解析"
+
     companion object {
-        /** §8.10：超过该字数的章节在 UI 侧提示「可能截断」，本用例继续解析。 */
-        const val LONG_CHAPTER_CHARS: Int = 12_000
+        /**
+         * §8.10 / 附录 G：单次解析的正文上限。
+         *
+         * 超过时默认不调用 LLM（见 [analyze] 的 `allowLongChapter`），返回
+         * [AnalyzeStatus.TooLong]；只有调用方确认后才继续单次解析。
+         */
+        const val MAX_SINGLE_PASS_CHARS: Int = 12_000
+
+        /** P2-11 时期的旧名，等同 [MAX_SINGLE_PASS_CHARS]；新代码请用新名。 */
+        @Deprecated("改用 MAX_SINGLE_PASS_CHARS")
+        const val LONG_CHAPTER_CHARS: Int = MAX_SINGLE_PASS_CHARS
 
         /** §8.10 的截断文案；包含「分段」与「分块」两个后续动作。 */
         const val TRUNCATED_MESSAGE: String = "本章过长/输出截断，可手动分段或等待分块解析"
+
+        /** 守卫状态码：正文超过 [MAX_SINGLE_PASS_CHARS] 且未放行（不是失败）。 */
+        const val ERROR_CHAPTER_TOO_LONG: String = "CHAPTER_TOO_LONG"
 
         private const val BAD_JSON_WARNING =
             "BAD_JSON: 模型输出不是合法 JSON，已降级为整章旁白"
