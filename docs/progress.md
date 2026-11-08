@@ -26,7 +26,7 @@
 | 任务 | 状态 | 备注 |
 |---|---|---|
 | P1-01 模型与枚举 | ✅ done | CI 42448583320 绿；`EnumsTest` 8/8 |
-| P1-02 Assets：提示词 + 音色池 | ⏳ todo | |
+| P1-02 Assets：提示词 + 音色池 | 🟡 in_progress | PromptAssets/Renderer/VoicePool + hash/快照测试；等 CI |
 | P1-03 TextDecoder | ⏳ todo | |
 | P1-04 ChapterSplitter | ⏳ todo | |
 | P1-05 ScriptSanitizer | ⏳ todo | |
@@ -116,6 +116,14 @@
 - 验证：CI [42448583320](https://github.com/EstimateFaster/android-audioforge/actions/runs/42448583320) 绿；
   `EnumsTest` 8/8（wire 精确列表、11 情绪前缀、`applyTo`、`fromWire` 往返/兜底、RoleId 格式与非法入参）
 - 产出：`core/model/Enums.kt`、`core/model/RoleId.kt`
+
+### P1-02 Assets：提示词 + 音色池 — in_progress
+- 开始：2026-11-08 13:12（Asia/Shanghai）
+- 分支：`feat/p1-02-assets-voice-pool`
+- 目标：`core/voice/PromptAssets.kt`（加载 + PromptRenderer）、`core/voice/VoicePool.kt`（63 类/查询/LLM 池/兜底）
+- 依赖：P1-01 ✅
+- 验收：提示词 SHA-256 与 fixture 一致；63 key/voice_id/speed/note 快照一致；旁白不进 `poolForLlm()`
+- 现状：`assets/prompts/*.txt` 与 `assets/voice_pool.json` 启动时已从 fixture 拷入，本次只加代码与锁定测试
 
 ## 已知实编坑（已处理）
 
