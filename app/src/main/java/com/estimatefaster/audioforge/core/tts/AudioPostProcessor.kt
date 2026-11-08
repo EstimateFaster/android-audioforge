@@ -69,10 +69,14 @@ open class AudioPostProcessor(
         val pitchPlain = TtsCacheKey.plainDecimal(pitch)
         val inversePitchPlain = TtsCacheKey.plainDecimal(-pitch)
         val volumePlain = TtsCacheKey.plainDecimal(volume)
-        return "asetrate=44100*2^($pitchPlain/12)," +
+        // 先把任意输入重采样到 44100，再按 44100 基准做 pitch 链；
+        // 否则 24k/48k 输入会被 asetrate 误解释为 44100，变调且变速。
+        val limiter = if (volume > 1.0) ",alimiter=limit=0.95" else ""
+        return "aresample=44100," +
+            "asetrate=44100*2^($pitchPlain/12)," +
             "aresample=44100," +
             "atempo=2^($inversePitchPlain/12)," +
-            "volume=$volumePlain"
+            "volume=$volumePlain$limiter"
     }
 
     /**
