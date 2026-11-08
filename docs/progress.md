@@ -29,7 +29,7 @@
 | P1-02 Assets：提示词 + 音色池 | ✅ done | CI 42448901696 绿；Prompt/VoicePool 11 个用例 + 快照 |
 | P1-03 TextDecoder | ✅ done | CI 42449492657 绿；`TextDecoderTest` 14/14 |
 | P1-04 ChapterSplitter | ✅ done | CI 42449986934 绿；`ChapterSplitterTest` 9/9（含上游样例 145/664 字） |
-| P1-05 ScriptSanitizer | 🟡 in_progress | 逐函数移植 + fixture/Python 用例；等 CI |
+| P1-05 ScriptSanitizer | ✅ done | CI 42454921455 绿；`ScriptSanitizerTest` 17/17（fixture+Python 用例） |
 | P1-06 CoverageChecker | ⏳ todo | |
 | P1-07 CharacterRegistry | ⏳ todo | |
 | P1-08 VoicePool 完整 | ⏳ todo | |
@@ -156,14 +156,15 @@
   - 无标题单章「全文」、假标题跳过、idx 连续、CRLF、超长标题、中文数字/Chapter/卷/节/回/部、序言丢弃、空文本
 - 产出：`core/ingest/ChapterSplitter.kt`、`ChapterSplitterTest.kt`、`app/src/test/resources/sample_novel.txt`
 
-### P1-05 ScriptSanitizer — in_progress
-- 开始：2026-11-08 14:30（Asia/Shanghai）
-- 分支：`feat/p1-05-script-sanitizer`
-- 目标：`core/script/ScriptSanitizer.kt` 逐函数移植上游 `core/analyzer.py`：
-  `stripSpeechTail` / `isResidue` / `findQuoted` / `splitDialogueMixed` / `splitMixed` / `splitLong` / `sanitize`
-- 依赖：P1-01 ✅
-- 验收：fixture `strip_speech_tail` 15 条 + `split_long` 4 条；上游 `tests/test_analyzer.py` 清洗用例
-- 方法：先用上游 Python 跑通断言再写 Kotlin，避免盲改正则
+### P1-05 ScriptSanitizer — done
+- 完成：2026-11-08 14:35（Asia/Shanghai）
+- 分支：`feat/p1-05-script-sanitizer`（PR #10）
+- 提交：`069a8f2`（实现）、`e2f610b`（`endsWith` 多后缀修正）
+- 验证：CI [42454921455](https://github.com/EstimateFaster/android-audioforge/actions/runs/42454921455) 绿；`ScriptSanitizerTest` 17/17
+  - fixture `strip_speech_tail` 15 条、`split_long` 4 条逐条通过
+  - 上游 `tests/test_analyzer.py` 清洗用例：剥离/保留动作、残渣、单边引号、混合段拆分、台词去重、旁白合并、超长拆分
+  - 写断言前用上游 Python 实跑校准，修正了两处「想当然」期望（`阿甲` 残渣保留、相邻动作旁白合并）
+- 产出：`core/script/ScriptSanitizer.kt`、`core/model/ScriptSegment.kt`、`ScriptSanitizerTest.kt`
 
 ## 已知实编坑（已处理）
 
@@ -185,9 +186,9 @@
 
 ## 下一步
 
-1. P1-05 ScriptSanitizer（最高风险移植点，逐函数对照 Python）。
-2. P1-06 CoverageChecker。
-3. P1-07 CharacterRegistry。
+1. P1-06 CoverageChecker（归一化 + diff + 设计内丢失过滤 + 阈值 0.97）。
+2. P1-07 CharacterRegistry。
+3. P1-08 VoicePool 完整 / P1-09 设置模型。
 
 ## 日志
 
@@ -206,3 +207,4 @@
 - 2026-11-08：P1-02 完成；提示词 SHA-256、63 音色快照、旁白排除全部锁定，23 个单测全绿。
 - 2026-11-08：P1-03 完成；BOM/UTF-8/GBK/GB18030/UTF-16/Big5 全过；ICU 不可用改用启发式，已记 ADR。
 - 2026-11-08：P1-04 完成；上游样例 2 章 145/664 字对齐 Python；切章边界 9 个用例全绿。
+- 2026-11-08：P1-05 完成；最高风险清洗逻辑逐函数移植，fixture + Python 用例 17/17 全绿。
