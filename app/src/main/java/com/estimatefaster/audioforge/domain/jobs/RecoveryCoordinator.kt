@@ -253,7 +253,7 @@ class RecoveryCoordinator(
         }
 
         for (novelId in known) {
-            if (novelId <= 0L || !handledNovels.add(novelId)) continue
+            if (novelId <= 0L || novelId in handledNovels) continue
             val active = try {
                 jobs.activeJob(novelId)
             } catch (cancellation: CancellationException) {
@@ -265,6 +265,7 @@ class RecoveryCoordinator(
                 )
                 null
             } ?: continue
+            handledNovels += novelId
             rescheduleOne(active, rescheduled, skipped, failures)
         }
 
