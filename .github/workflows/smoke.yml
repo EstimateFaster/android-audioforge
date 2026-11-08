@@ -57,23 +57,16 @@ jobs:
           script: |
             chmod +x ./gradlew
             adb logcat -c
-            set +e
-            ./gradlew --no-daemon --stacktrace connectedDebugAndroidTest
-            RESULT=$?
+            ./gradlew --no-daemon --stacktrace connectedDebugAndroidTest; echo $? > test-exit.txt
+            ./gradlew --no-daemon :app:installDebug || true
             adb shell input keyevent KEYCODE_WAKEUP || true
             adb shell wm dismiss-keyguard || true
             adb shell am start -W -n com.estimatefaster.audioforge.debug/com.estimatefaster.audioforge.MainActivity || true
-            sleep 3
+            sleep 4
             adb exec-out screencap -p > smoke-home.png || true
-            {
-              echo "model=$(adb shell getprop ro.product.model | tr -d '\r')"
-              echo "device=$(adb shell getprop ro.product.device | tr -d '\r')"
-              echo "android=$(adb shell getprop ro.build.version.release | tr -d '\r')"
-              echo "sdk=$(adb shell getprop ro.build.version.sdk | tr -d '\r')"
-              echo "abi=$(adb shell getprop ro.product.cpu.abi | tr -d '\r')"
-            } > device-info.txt
-            adb logcat -d > logcat-smoke.txt
-            exit $RESULT
+            printf 'model=%s\nandroid=%s\nsdk=%s\nabi=%s\n' "$(adb shell getprop ro.product.model | tr -d '\r')" "$(adb shell getprop ro.build.version.release | tr -d '\r')" "$(adb shell getprop ro.build.version.sdk | tr -d '\r')" "$(adb shell getprop ro.product.cpu.abi | tr -d '\r')" > device-info.txt
+            adb logcat -d > logcat-smoke.txt || true
+            exit $(cat test-exit.txt || echo 1)
 
       - name: Upload smoke reports
         if: always()
@@ -86,5 +79,6 @@ jobs:
             logcat-smoke.txt
             smoke-home.png
             device-info.txt
+            test-exit.txt
           if-no-files-found: warn
           retention-days: 14
