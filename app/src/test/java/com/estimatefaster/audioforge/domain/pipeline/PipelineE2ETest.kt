@@ -666,7 +666,7 @@ class PipelineE2ETest {
         io = Dispatchers.Unconfined,
     )
 
-    private fun jobStats(jobId: Long): JsonObject {
+    private suspend fun jobStats(jobId: Long): JsonObject {
         val job = requireNotNull(fixture.jobs.get(jobId))
         return E2E_JSON.parseToJsonElement(job.statsJson).jsonObject
     }
