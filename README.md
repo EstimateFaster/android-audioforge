@@ -4,7 +4,7 @@
 > **不是套壳**：Kotlin + Jetpack Compose + Material 3 Expressive + FFmpegKit + WorkManager。
 
 - 仓库：**https://github.com/EstimateFaster/android-audioforge**
-- 状态：**Phase 0 初始配置完成**（可编译、CI 就绪；业务功能按执行计划逐步实现）
+- 状态：**Phase 0 初始配置完成**（本地实编 + CI 绿；业务功能按执行计划逐步实现）
 - 分发：只 GitHub Release / Artifact 侧载，不上架 Google Play
 
 ## 给 AI 的入口
