@@ -1,0 +1,266 @@
+{
+  "narrator_category": "narrator_male",
+  "pool": {
+    "narrator_male": {
+      "voice_id": "59cb5986671546eaa6ca8ae6f29f6d22",
+      "label": "【旁白】沉稳大气播音腔(固定旁白,不分配给角色)"
+    },
+    "male_lead_serious": {
+      "voice_id": "9b1d37d9e5074ee7b49840495e2fb2e3",
+      "label": "【男主】沉稳磁性·深思熟虑/内敛威严(亦可男配)"
+    },
+    "male_lead_warm": {
+      "voice_id": "ecca6a81948244d4ad1f727aebbded7f",
+      "label": "【男主·备选】清朗朴实·坚韧(亦可男配)",
+      "note": "样音有杂音、音质一般,优先用其它男主音色"
+    },
+    "male_weak": {
+      "voice_id": "e1492975c9364d24aab5fe63a38d3022",
+      "label": "【男主·文弱型】低声细语·柔弱敏感(亦可男配,不适合强硬角色)"
+    },
+    "male_youth_18": {
+      "voice_id": "8ae19c06b5bc48968c4bf57bdeed5495",
+      "label": "【男主·少年】18岁左右·轻柔清朗(亦可男配)",
+      "note": "声音偏轻偏软,需要力度的角色慎用"
+    },
+    "male_gentle_young": {
+      "voice_id": "8adf850e94b548bc82f399524670d8c2",
+      "label": "【男主/男配】青年·细腻柔和舒缓·内心戏/温柔角色"
+    },
+    "male_brother": {
+      "voice_id": "3f62b49f697a4c0da3ee5cfd91d896b4",
+      "label": "【男配】浑厚郑重·兄长/挚友型",
+      "note": "样音语速偏慢,已默认按 1.15 倍速合成",
+      "speed": 1.15
+    },
+    "male_young_master": {
+      "voice_id": "15896f78e288417db16cc34da8fc6f09",
+      "label": "【男配】世家子弟/少侠·语气带讥诮",
+      "note": "样音音量偏小"
+    },
+    "male_young_support": {
+      "voice_id": "949883a2776a4dfb9fd265080f50b93d",
+      "label": "【男配/龙套】青年·迟疑犹豫·跟班/没主见型"
+    },
+    "male_middle": {
+      "voice_id": "b479a3fd424b4989b55a9a763b54da2b",
+      "label": "【男配·长辈】中年男性·厚重权威(父亲/长辈/上位者)"
+    },
+    "male_middle_accent": {
+      "voice_id": "a602ca0c05174d4aaed8182a0f0dc8ff",
+      "label": "【男配·市井】中年男性·市井口音(算命先生/神秘老者/爷叔)"
+    },
+    "male_feminine": {
+      "voice_id": "881e3929b9914ae1ad72781fdb3d3121",
+      "label": "【男配】阴柔俊美男子·男娘型·可爱"
+    },
+    "male_brother_17": {
+      "voice_id": "24aa8a3fca444287bd19ac4a70a10206",
+      "label": "【龙套】少年路人·音色偏尖·惊讶咋舌感(17岁左右)"
+    },
+    "male_youth": {
+      "voice_id": "acd7c7cafa334bd0874df6118d036848",
+      "label": "【龙套·少年】稚嫩·12~16岁"
+    },
+    "male_villain": {
+      "voice_id": "1daf1285298d4535b5a92c71e0a60a4a",
+      "label": "【反派】中年·阴狠威压"
+    },
+    "male_villain_young": {
+      "voice_id": "c4af744ffc6645d79be983c1219ebb56",
+      "label": "【反派】年轻·张扬咄咄逼人"
+    },
+    "male_villain_old": {
+      "voice_id": "27959c9f76bc48d99f25ef9060c24614",
+      "label": "【反派·老年】苍老阴鸷",
+      "note": "样音音量偏轻"
+    },
+    "male_villain_monk": {
+      "voice_id": "30fcd408fe5742d29b045b8f6928d6d1",
+      "label": "【反派】青年/中年·和尚或文士型(不限僧人)"
+    },
+    "male_villain_extra1": {
+      "voice_id": "d8456df652bb4dc6ba687120065d0be2",
+      "label": "【反派/路人】中老年男性·不限身份"
+    },
+    "male_villain_extra2": {
+      "voice_id": "7a02aebcd8f94d8283a02842ce4ddd33",
+      "label": "【反派】温润表象·笑里藏刀"
+    },
+    "male_villain_extra3": {
+      "voice_id": "ef430a74cdea46818bdc772e785041ef",
+      "label": "【反派/路人】口音很重(问句/打听语气)"
+    },
+    "male_elder": {
+      "voice_id": "71673ece2fe14504ba77a856cfd0c35e",
+      "label": "【老年】苍劲·不限身份"
+    },
+    "male_elder_2": {
+      "voice_id": "1a5e6f9daf3d46fab1f8ec76a41ad5fe",
+      "label": "【老年】迟缓慈祥·不限身份"
+    },
+    "male_elder_3": {
+      "voice_id": "ba338f30499747298605a25eb18479c2",
+      "label": "【老年·高龄】气若游丝·古风(风烛残年感)",
+      "note": "声音很弱,慎用于需要气力的台词"
+    },
+    "male_emperor": {
+      "voice_id": "3f3c770b482e475faf8a6811e178f48a",
+      "label": "【上位者/反派】帝王·权臣·雄浑霸气(曹操式音色)"
+    },
+    "male_general": {
+      "voice_id": "c2f4acddd5e343e3acba3d434355b8e2",
+      "label": "【男配·上位者】严肃中年·将军/军旅"
+    },
+    "female_lead_gentle": {
+      "voice_id": "9a57d4b15e80433da1191abd881ed6ea",
+      "label": "【女主】清冷温柔(仙侠/古风)"
+    },
+    "female_young": {
+      "voice_id": "99b1babeaf7c4f55950eb2c753f78b07",
+      "label": "【女配/女主】青年女性·傲娇知性"
+    },
+    "female_playful": {
+      "voice_id": "23e171c3bbaa4642badf9c98ca31835c",
+      "label": "【女配】少女·俏皮可爱"
+    },
+    "female_mature": {
+      "voice_id": "8a88ef7d77d748e59879d8994e216e01",
+      "label": "【女配·女主】成熟女性·御姐"
+    },
+    "female_elder": {
+      "voice_id": "b2e7d827cc8249919463a5f72b98924f",
+      "label": "【老年女性】慈祥"
+    },
+    "female_child_1": {
+      "voice_id": "a8031b6bcf9f424abd98d26b6fbaea55",
+      "label": "【女童】明亮清脆"
+    },
+    "female_child_2": {
+      "voice_id": "f82e3885ac22468eb6c773b96f2c5752",
+      "label": "【女童】软糯(萝莉)"
+    },
+    "male_narr_doc": {
+      "voice_id": "fa9b1d1006404d01981abb22616af0b5",
+      "label": "【旁白·男】纪录片腔·低沉温暖沉稳(亦可中年男配)"
+    },
+    "male_elder_storyteller": {
+      "voice_id": "f72fef8939f54fe8b8b64f312db5e17a",
+      "label": "【老年】低沉苍劲·讲述感(老爷爷/长者旁白)"
+    },
+    "male_narr_doc2": {
+      "voice_id": "8545f2bbf2634b05b9296626e8cb5fe1",
+      "label": "【旁白·男】专业纪录片权威·平静圆润(亦可中年男配)"
+    },
+    "male_support_doc": {
+      "voice_id": "c44c45fce45443aaa40b7721c01c7c86",
+      "label": "【男配】中年·解说腔·清晰沉稳(旁白/解说/教师)"
+    },
+    "male_young_reader": {
+      "voice_id": "10f122007e5540a585fcfdfbcdf11757",
+      "label": "【男配/旁白】青年·专业权威·书籍朗读/引用"
+    },
+    "female_radio_host": {
+      "voice_id": "213197c413fa4f158ca451b093914428",
+      "label": "【女配】中年·磁性电台腔(广告/播音/情感节目)"
+    },
+    "female_elegant": {
+      "voice_id": "27d841c7fdc449d88a89fbf46b55a28d",
+      "label": "【女配】青年·优雅知性(带口音)",
+      "note": "略有口音"
+    },
+    "female_narr_warm": {
+      "voice_id": "d4e76e94763342bea69341524a547ef8",
+      "label": "【旁白·女】中年·温暖圆润(纪录片/旁白)"
+    },
+    "male_lead_steady": {
+      "voice_id": "4d8532199a3340f9bf0880bf20afc96a",
+      "label": "【男主】青年·沉稳口语·清晰有力(首选男主)"
+    },
+    "male_support_steady": {
+      "voice_id": "d6a375a1dbe1477790a4e750a7bd4d21",
+      "label": "【男配】中年·沉稳温暖·教学感"
+    },
+    "female_lead_soft": {
+      "voice_id": "56a008a4346946f1a4a2301b23ae9970",
+      "label": "【女主】青年·柔和亲切·内心戏"
+    },
+    "female_big_sister": {
+      "voice_id": "bdc493bc80cf4814bdb6080377bfa940",
+      "label": "【女主/女配】青年·知性温暖·大姐姐型"
+    },
+    "male_news_anchor": {
+      "voice_id": "c4654abc438d4821a2c60be83923e4fb",
+      "label": "【男配/旁白】中老年·新闻播音腔·严肃权威"
+    },
+    "male_lead_soft": {
+      "voice_id": "530a14adc5bf4189a86ca6af52e234b5",
+      "label": "【男主】青年·柔和温暖·细腻(可男二号)"
+    },
+    "male_magnetic": {
+      "voice_id": "1faf4a0bcc08449d8f2057464b1eab12",
+      "label": "【男配】青年·浑厚磁性·略带沙哑",
+      "note": "口音重、略有沙哑"
+    },
+    "male_passersby": {
+      "voice_id": "136f8d4e0d9f4de3b9a100533bf893c6",
+      "label": "【龙套】中年·沉稳口语·路人/街坊"
+    },
+    "male_minor_middle": {
+      "voice_id": "fb83b809cbae45acaf0d78e71fc7ab09",
+      "label": "【龙套】中年·清晰沉稳·路人/主播/学者"
+    },
+    "male_child_playful": {
+      "voice_id": "cf7666df6d354b0cb98ece686844da1b",
+      "label": "【童声】男童·活泼明亮(5~8岁)"
+    },
+    "male_villain_lead": {
+      "voice_id": "9c7f73f9a94945dfb21e33d43071e2e4",
+      "label": "【反派】中年·沙哑低沉·顶级反派/男二号"
+    },
+    "male_villain_extra4": {
+      "voice_id": "5b329a6724d446f58ce3d075f3da7d9c",
+      "label": "【反派】青年/中年·戏剧化张扬"
+    },
+    "female_passersby": {
+      "voice_id": "22db8a83d25e453a9eeb417adf21e930",
+      "label": "【龙套】青年·活力甜美·路人"
+    },
+    "female_lively": {
+      "voice_id": "b5ef4ddc1b9a49e6a4cdbbf8790a3f53",
+      "label": "【女配】少女·灵动明亮·俏皮"
+    },
+    "female_sweet": {
+      "voice_id": "510d7514d3f945e3a645706f50d84e8d",
+      "label": "【女配/女主】青年·甜美灵动·柔和"
+    },
+    "female_mature_royal": {
+      "voice_id": "292a9d246d4244de8071756db525cf48",
+      "label": "【女主/女配】中年·成熟御姐·圆润平静"
+    },
+    "female_shrew": {
+      "voice_id": "51f8fa0e0c424d0088f3dc70211a45d5",
+      "label": "【女配·反派】青年·刁钻泼辣(大妈/班主任/撒泼女)"
+    },
+    "female_lead_tender": {
+      "voice_id": "03506746f08644449b9ea9c78f7faea1",
+      "label": "【女主】青年·轻柔温柔·讲书感"
+    },
+    "female_lead_affable": {
+      "voice_id": "32153ca8aff04850bf01a6fcd861c48c",
+      "label": "【女主/女配】青年·温柔亲切·口语"
+    },
+    "female_grandma": {
+      "voice_id": "4e6f0a72b36e447084e454cdb6d75c36",
+      "label": "【老年女性】温暖慈祥·奶奶"
+    },
+    "male_elder_hoarse": {
+      "voice_id": "abc97a84007f4cddb522fe1ab1c0a76f",
+      "label": "【老年】苍老沙哑·低沉(老江湖/长者)"
+    },
+    "female_neutral_villain": {
+      "voice_id": "8db9a5abab1f40b1a4e39a72f06fa5c5",
+      "label": "【女配】中性平直·可正可反(反派/旁白皆宜)"
+    }
+  }
+}

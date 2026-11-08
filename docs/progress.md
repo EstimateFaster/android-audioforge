@@ -26,7 +26,7 @@
 | 任务 | 状态 | 备注 |
 |---|---|---|
 | P1-01 模型与枚举 | ✅ done | CI 42448583320 绿；`EnumsTest` 8/8 |
-| P1-02 Assets：提示词 + 音色池 | ⏳ todo | |
+| P1-02 Assets：提示词 + 音色池 | ✅ done | CI 42448901696 绿；Prompt/VoicePool 11 个用例 + 快照 |
 | P1-03 TextDecoder | ⏳ todo | |
 | P1-04 ChapterSplitter | ⏳ todo | |
 | P1-05 ScriptSanitizer | ⏳ todo | |
@@ -117,6 +117,25 @@
   `EnumsTest` 8/8（wire 精确列表、11 情绪前缀、`applyTo`、`fromWire` 往返/兜底、RoleId 格式与非法入参）
 - 产出：`core/model/Enums.kt`、`core/model/RoleId.kt`
 
+### P1-02 Assets：提示词 + 音色池 — in_progress
+- 开始：2026-11-08 13:12（Asia/Shanghai）
+- 分支：`feat/p1-02-assets-voice-pool`
+- 目标：`core/voice/PromptAssets.kt`（加载 + PromptRenderer）、`core/voice/VoicePool.kt`（63 类/查询/LLM 池/兜底）
+- 依赖：P1-01 ✅
+- 验收：提示词 SHA-256 与 fixture 一致；63 key/voice_id/speed/note 快照一致；旁白不进 `poolForLlm()`
+- 现状：`assets/prompts/*.txt` 与 `assets/voice_pool.json` 启动时已从 fixture 拷入，本次只加代码与锁定测试
+
+### P1-02 Assets：提示词 + 音色池 — done
+- 完成：2026-11-08 13:16（Asia/Shanghai）
+- 分支：`feat/p1-02-assets-voice-pool`（PR #7）
+- 提交：`c52ef62`（实现 + 测试）
+- 验证：CI [42448901696](https://github.com/EstimateFaster/android-audioforge/actions/runs/42448901696) 绿
+  - `PromptAssetsTest` 2/2：三段提示词 SHA-256 与 fixture 一致（1882/476/98 字符，无 BOM）
+  - `PromptRendererTest` 3/3：占位符字面量替换、`{}` 不误伤、repair 追加
+  - `VoicePoolTest` 6/6：63 类别与 fixture 逐项一致、`male_brother=1.15`、8 个 note、旁白不进 LLM 池、兜底全覆盖
+  - 合计 23 个单测全绿
+- 产出：`core/voice/PromptAssets.kt`、`core/voice/VoicePool.kt`、`app/src/test/resources/voice-pool.json`
+
 ## 已知实编坑（已处理）
 
 - KSP + AGP 9 内置 Kotlin：`android.disallowKotlinSourceSets=false`。
@@ -136,9 +155,9 @@
 
 ## 下一步
 
-1. P1-02 Assets：提示词 + 音色池（依赖 P1-01 ✅）。
-2. P1-03 TextDecoder。
-3. P1-04 ChapterSplitter。
+1. P1-03 TextDecoder（编码探测：BOM/UTF-8/GB18030/Big5/UTF-16）。
+2. P1-04 ChapterSplitter。
+3. P1-05 ScriptSanitizer（最高风险移植点）。
 
 ## 日志
 
@@ -154,3 +173,4 @@
 - 2026-11-08：P0-11 完成；smoke 增加冷启动截图/设备信息/logcat；截图确认首页与 Room 卡片「通过（第 1 次，28 ms）」。
 - 2026-11-08：P0-12 门禁通过；Phase 0 完成（main CI + emulator smoke 全绿）。
 - 2026-11-08：P1-01 完成；枚举 wire/情绪前缀/RoleId 契约与 Python 对齐，`EnumsTest` 8/8。
+- 2026-11-08：P1-02 完成；提示词 SHA-256、63 音色快照、旁白排除全部锁定，23 个单测全绿。
