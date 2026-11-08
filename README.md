@@ -4,7 +4,7 @@
 > **不是套壳**：Kotlin + Jetpack Compose + Material 3 Expressive + FFmpegKit + WorkManager。
 
 - 仓库：**https://github.com/EstimateFaster/android-audioforge**
-- 状态：**Phase 0 初始配置完成**（本地实编 + CI 绿；业务功能按执行计划逐步实现）
+- 状态：**Phase 0 初始配置完成**（本地实编 + CI 绿 + v0.1.0 签名 release 已发布；业务功能按执行计划逐步实现）
 - 分发：只 GitHub Release / Artifact 侧载，不上架 Google Play
 
 ## 给 AI 的入口
@@ -50,6 +50,11 @@ LOCAL
 ```
 
 要求 SDK：`platforms;android-37.0`、`build-tools;37.0.0`。安装命令见 [docs/android-execution-plan.md §4](docs/android-execution-plan.md#4-环境与工具链)。
+
+## 下载
+
+- **v0.1.0 APK**：https://github.com/EstimateFaster/android-audioforge/releases/tag/v0.1.0
+- Actions：https://github.com/EstimateFaster/android-audioforge/actions
 
 ## CI / Release
 

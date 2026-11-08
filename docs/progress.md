@@ -15,7 +15,7 @@
 | P0-06 WorkManager 前台服务 smoke | ⏳ todo | 需要 Worker + 通知 + 真机 |
 | P0-07 FFmpeg smoke | ⏳ todo | 真机/模拟器 `-version` + 静音/拼接 |
 | P0-08 CI debug 构建与 APK 校验 | ✅ done | CI run 42442128213 绿；debug APK artifact 已上传 |
-| P0-09 Release 签名 CI | ⏳ in_progress | 4 个 Secrets 已配置；等 v0.1.0 tag 验证 |
+| P0-09 Release 签名 CI | ✅ done | v0.1.0 已发布；签名 release APK + checksums |
 | P0-10 进度/决策文档 | ✅ done | 本文件 + plan |
 | P0-11 真机/模拟器 smoke 清单 | ⏳ todo | 等 P0-05–P0-07 |
 | P0-12 Phase 0 门禁 | ⏳ todo | 全部 smoke 后 |
@@ -27,14 +27,21 @@
 - SDK 包名是 `platforms;android-37.0`。
 - Expressive 组件需要 `@OptIn(ExperimentalMaterial3ExpressiveApi::class)`。
 
+## 已发布
+
+- **v0.1.0**：https://github.com/EstimateFaster/android-audioforge/releases/tag/v0.1.0
+  - `audioforge-0.1.0.apk`（约 60.5 MB）
+  - `checksums.txt`
+- CI：https://github.com/EstimateFaster/android-audioforge/actions
+
 ## 下一步
 
-1. 等 CI 绿（P0-08）。
-2. DSH 做 P0-05 / P0-06 / P0-07 真机 smoke。
-3. 配 Secrets，打 `v0.1.0` 验证 release（P0-09）。
-4. 进入 P1-01。
+1. DSH 做 P0-05 / P0-06 / P0-07 真机 smoke。
+2. 完成 P0-11 / P0-12 门禁。
+3. 进入 P1-01（模型/枚举）与 P1-02（提示词/音色池）。
 
 ## 日志
 
 - 2026-11-08：初始仓库/构建配置/CI/文档落地；本地实编 `assembleDebug` 通过。
 - 2026-11-08：CI 首次失败（`android-actions/setup-android@v3` 的 `sdkmanager tools` 在新 cmdline-tools 下找不到包）；改为直接调用 runner 的 sdkmanager，CI 4m25s 绿。
+- 2026-11-08：`v0.1.0` release workflow 绿；签名 APK + checksums 已发布。
