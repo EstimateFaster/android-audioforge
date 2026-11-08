@@ -119,7 +119,7 @@ sealed interface StopResult {
  * 不会复活成可调度的任务。
  *
  * @param queue 生产用 [WorkManagerJobQueue]，测试用 fake
- * @param jobs 任务仓库（`data/**` 只读依赖）
+ * @param jobs 任务仓库（`data/` 只读依赖）
  * @param db 用于 [observe] 读取 `lastFinished`；也保证装配方传入的是同一实例
  * @param clock 时间戳来源，测试注入固定值
  */
