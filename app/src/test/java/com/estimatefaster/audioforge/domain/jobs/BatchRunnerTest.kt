@@ -114,7 +114,7 @@ class BatchRunnerTest {
     @Test
     fun different_novels_get_independent_jobs_and_work_names() = runTest {
         val firstNovel = fixture.createTwoChapterNovel()
-        val secondNovel = fixture.createTwoChapterNovel()
+        val secondNovel = fixture.createTwoChapterNovel("第二个项目")
 
         val a = startOrFail(params(firstNovel.first, firstNovel.second, firstNovel.third))
         val b = startOrFail(params(secondNovel.first, secondNovel.second, secondNovel.third))
