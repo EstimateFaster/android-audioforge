@@ -61,10 +61,10 @@
 | P2-14 Media3 播放 | ✅ done | SleepTimer 5 + emulator JVM/Manifest 测试 |
 | P2-15 导出/分享 | ✅ done | MediaStore/FileProvider + instrumented |
 | P2-16 ErrorMapper | ✅ done | 13 用例 |
-| P2-17 端到端 fake 测试 | ⏳ todo | 待接 |
+| P2-17 端到端 fake 测试 | ✅ done | PipelineE2ETest 7 用例 |
 | P2-18 真实 API smoke | 🚫 BLOCKED | 无用户 Key（不提交密钥） |
 | P2-19 长章节守卫 | ✅ done | TooLong + allowLongChapter |
-| P2-20 Phase 2 门禁 | ⏳ todo | 待 P2-17/P2-18 |
+| P2-20 Phase 2 门禁 | ✅ done | docs/phase2-gate.md；P2-18 BLOCKED |
 
 ## Phase 3（后台任务）
 
@@ -72,9 +72,11 @@
 |---|---|---|
 | P3-01 Job 状态机/仓库 | ✅ done | guarded transitions + stats/sweep |
 | P3-02 GenerationWorker/Executor | ✅ done | 12 用例 |
-| P3-03 前台通知 | ⏳ todo | |
-| P3-04 BatchRunner/队列 | ⏳ todo | |
-| P3-05~P3-12 | ⏳ todo | 依赖链后续 |
+| P3-03 前台通知 | ✅ done | 3 渠道 + 停止 + 权限降级 |
+| P3-04 BatchRunner/队列 | ✅ done | 单活跃 + 唯一 work |
+| P3-05~P3-09/P3-11 | ✅ done | sweep/约束/看门狗/恢复/Worker 测试/存储 |
+| P3-10 真机后台 smoke | 🚫 BLOCKED | 无真机；emulator 已覆盖基础 |
+| P3-12 Phase 3 门禁 | ✅ done | docs/phase3-gate.md |
 
 ## Phase 4（UI）
 
@@ -359,3 +361,4 @@
 - 2026-11-08：P1-13/14 完成；性能基准 10.2ms/300ms，进度与决策文档补齐。
 - 2026-11-08：P1-15 门禁通过；Phase 1 完成（153 单测、main CI 绿、无 TODO/硬编码 Key）。
 - 2026-11-08/09：Phase 2 主体、P3-01/02、P4-01/02/03/05/07/09 合并；并行 agent（worktree）+ 统一 CI。
+- 2026-11-09：Phase 2/3 门禁记录（P2-18、P3-10 真机依赖 BLOCKED）；P5-01 剧本页合并。
