@@ -614,6 +614,34 @@
     <string name="characters_loading">正在加载人物…</string>
     <string name="characters_load_error">加载人物失败：%1$s</string>
 
+    <!-- P5-06 角色微调 -->
+    <string name="tuning_sheet_title">角色微调</string>
+    <string name="tuning_character">角色：%1$s</string>
+    <string name="tuning_voice">音色：%1$s</string>
+    <string name="tuning_voice_unassigned">未分配音色</string>
+    <string name="tuning_role_unknown">未找到该角色资料，仍可保存微调。</string>
+    <string name="tuning_loading">正在加载微调…</string>
+    <string name="tuning_load_error">加载微调失败：%1$s</string>
+    <string name="tuning_section_title">语音参数</string>
+    <string name="tuning_section_subtitle">角色微调优先于全局默认；未调整时跟随全局。</string>
+    <string name="tuning_section_footer">显式调整会覆盖全局默认；点“恢复默认”可清除本角色的微调。</string>
+    <string name="tuning_speed_label">语速</string>
+    <string name="tuning_speed_range">0.5–2.0</string>
+    <string name="tuning_volume_label">音量</string>
+    <string name="tuning_volume_range">0–2.0</string>
+    <string name="tuning_pitch_label">音调</string>
+    <string name="tuning_pitch_range">-12–+12</string>
+    <string name="tuning_follow_global">跟随全局</string>
+    <string name="tuning_slider_content_description">%1$s，当前 %2$s，范围 %3$s</string>
+    <string name="tuning_action_reset">恢复默认</string>
+    <string name="tuning_validation_title">参数超出范围，请调整后再保存</string>
+    <string name="tuning_validation_speed">语速需在 0.5–2.0 之间。</string>
+    <string name="tuning_validation_volume">音量需在 0–2.0 之间。</string>
+    <string name="tuning_validation_pitch">音调需在 -12–+12 之间。</string>
+    <string name="tuning_save_error_title">保存失败</string>
+    <string name="tuning_save_error">保存失败：%1$s</string>
+    <string name="tuning_saving">保存中…</string>
+
     <!-- P5-05 音色选择 Sheet -->
     <string name="voice_picker_title">选择音色</string>
     <string name="voice_picker_subtitle">%1$s · 共 %2$d 个音色</string>

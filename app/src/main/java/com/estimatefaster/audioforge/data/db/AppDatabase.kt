@@ -38,6 +38,9 @@ abstract class AppDatabase : RoomDatabase() {
 
     abstract fun characterDao(): CharacterDao
 
+    /** P5-06 角色微调；复用 P2-01 的 `character_tuning` 表，version 不变。 */
+    abstract fun tuningDao(): TuningDao
+
     abstract fun segmentDao(): SegmentDao
 
     abstract fun jobDao(): JobDao
