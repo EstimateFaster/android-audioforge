@@ -20,7 +20,7 @@ import kotlinx.serialization.json.jsonPrimitive
  * 所有 fixture 都从 test classpath 读取（`app/src/test/resources`），不依赖
  * Android Context、Robolectric 或网络。测试资源命名约定：
  * - 原始/共享 fixture：`porting-vectors.json`、`voice-pool.json`、`sample_novel.txt`
- * - 冻结的 golden 快照：`golden/*.json`
+ * - 冻结的 golden 快照：`golden/` 下的 JSON 文件
  */
 object TestFixtures {
 
