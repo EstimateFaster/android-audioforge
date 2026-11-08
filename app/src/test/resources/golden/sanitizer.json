@@ -1,0 +1,105 @@
+{
+  "meta": {
+    "task": "P1-12",
+    "source_repo": "https://github.com/EstimateFaster/storyforge",
+    "source_commit": "f1d262b",
+    "derived_from": "app/src/test/resources/porting-vectors.json",
+    "note": "Frozen golden snapshot for the Kotlin port; regenerate only from the upstream Python reference."
+  },
+  "strip_speech_tail": [
+    {
+      "in": "他淡淡道：",
+      "out": ""
+    },
+    {
+      "in": "阿甲吃惊道。",
+      "out": "阿甲"
+    },
+    {
+      "in": "和蔼的对他说道。",
+      "out": ""
+    },
+    {
+      "in": "笑呵呵道：",
+      "out": ""
+    },
+    {
+      "in": "自言自语道。",
+      "out": ""
+    },
+    {
+      "in": "他幽幽道：",
+      "out": ""
+    },
+    {
+      "in": "缓缓的说",
+      "out": ""
+    },
+    {
+      "in": "有些恍然",
+      "out": ""
+    },
+    {
+      "in": "异口同声的",
+      "out": ""
+    },
+    {
+      "in": "他轻轻一笑。",
+      "out": "他轻轻一笑。"
+    },
+    {
+      "in": "递出了自己的卡，",
+      "out": "递出了自己的卡，"
+    },
+    {
+      "in": "眉头一皱，",
+      "out": "眉头一皱，"
+    },
+    {
+      "in": "知道",
+      "out": "知道"
+    },
+    {
+      "in": "正道",
+      "out": "正道"
+    },
+    {
+      "in": "他猛地站起，怒道",
+      "out": "他猛地站起"
+    }
+  ],
+  "split_long": [
+    {
+      "text": "短句。",
+      "limit": 10,
+      "out": [
+        "短句。"
+      ]
+    },
+    {
+      "text": "第一句。第二句。第三句。",
+      "limit": 8,
+      "out": [
+        "第一句。第二句。",
+        "第三句。"
+      ]
+    },
+    {
+      "text": "甲乙丙。丁戊己。庚辛壬。",
+      "limit": 6,
+      "out": [
+        "甲乙丙。",
+        "丁戊己。",
+        "庚辛壬。"
+      ]
+    },
+    {
+      "text": "无标点的超长句子",
+      "limit": 4,
+      "out": [
+        "无标点的",
+        "超长句子"
+      ]
+    }
+  ]
+}

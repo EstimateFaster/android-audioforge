@@ -1,0 +1,55 @@
+{
+  "meta": {
+    "task": "P1-12",
+    "source_repo": "https://github.com/EstimateFaster/storyforge",
+    "source_commit": "f1d262b",
+    "derived_from": "app/src/test/resources/porting-vectors.json",
+    "note": "Frozen golden snapshot for the Kotlin port; regenerate only from the upstream Python reference."
+  },
+  "threshold": 0.97,
+  "vectors": [
+    {
+      "raw": "他淡淡道：“我们走吧。”",
+      "segments": [
+        {
+          "type": "dialogue",
+          "text": "我们走吧。"
+        }
+      ],
+      "expect": {
+        "coverage": 1.0,
+        "missing": []
+      }
+    },
+    {
+      "raw": "夜色渐深。他站起身，走到窗前。远处传来钟声。",
+      "segments": [
+        {
+          "type": "narration",
+          "text": "夜色渐深。他站起身，走到窗前。"
+        }
+      ],
+      "expect": {
+        "coverage": 0.681818,
+        "missing": [
+          "远处传来钟声。"
+        ]
+      }
+    },
+    {
+      "raw": "第一句。第二句。第三句。",
+      "segments": [
+        {
+          "type": "narration",
+          "text": "第一句。第三句。"
+        }
+      ],
+      "expect": {
+        "coverage": 0.666667,
+        "missing": [
+          "句。第二"
+        ]
+      }
+    }
+  ]
+}
