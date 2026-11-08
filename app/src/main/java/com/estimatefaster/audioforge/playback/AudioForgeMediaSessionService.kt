@@ -17,6 +17,7 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
+import androidx.media3.session.SessionError
 import androidx.media3.session.SessionResult
 import com.estimatefaster.audioforge.R
 import com.google.common.util.concurrent.Futures
@@ -213,7 +214,7 @@ class AudioForgeMediaSessionService : MediaSessionService() {
         val queue = PlaybackQueueStore.current
         if (queue.isEmpty) {
             return Futures.immediateFuture(
-                SessionResult(SessionResult.RESULT_ERROR_INVALID_STATE),
+                SessionResult(SessionError.ERROR_INVALID_STATE),
             )
         }
         val current = resolveCurrentChapterIndex()
@@ -223,13 +224,13 @@ class AudioForgeMediaSessionService : MediaSessionService() {
             queue.previousChapterIndex(current)
         }
         if (target == null) {
-            return Futures.immediateFuture(SessionResult(SessionResult.RESULT_INFO_SKIPPED))
+            return Futures.immediateFuture(SessionResult(SessionError.INFO_CANCELLED))
         }
         val chapter = queue.chapterAt(target)
-            ?: return Futures.immediateFuture(SessionResult(SessionResult.RESULT_INFO_SKIPPED))
+            ?: return Futures.immediateFuture(SessionResult(SessionError.INFO_CANCELLED))
         if (!loadChapter(target, play = true)) {
             return Futures.immediateFuture(
-                SessionResult(SessionResult.RESULT_ERROR_INVALID_STATE),
+                SessionResult(SessionError.ERROR_INVALID_STATE),
             )
         }
         return Futures.immediateFuture(
@@ -287,7 +288,7 @@ class AudioForgeMediaSessionService : MediaSessionService() {
         val explicitMinutes = PlaybackSessionCommands.parseSleepMinutes(args)
         val minutes = explicitMinutes ?: PlaybackCommands.nextSleepMinutes(sleepMinutes)
         if (!PlaybackCommands.isValidSleepMinutes(minutes)) {
-            return Futures.immediateFuture(SessionResult(SessionResult.RESULT_ERROR_BAD_VALUE))
+            return Futures.immediateFuture(SessionResult(SessionError.ERROR_BAD_VALUE))
         }
         if (minutes == PlaybackCommands.SLEEP_OFF_MINUTES) {
             sleepTimer.cancel()
