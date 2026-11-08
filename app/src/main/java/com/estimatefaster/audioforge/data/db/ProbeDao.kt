@@ -5,7 +5,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 
-/** P0-05 探针 DAO；P2-01 建立正式 DAO 时删除。 */
+/** P0-05 探针 DAO；P2-01 保留（debug 卡片仍引用），P2-02 再移除。 */
 @Dao
 interface ProbeDao {
 
