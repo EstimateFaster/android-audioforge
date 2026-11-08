@@ -32,11 +32,11 @@
 | P1-05 ScriptSanitizer | ✅ done | CI 42454921455 绿；`ScriptSanitizerTest` 17/17（fixture+Python 用例） |
 | P1-06 CoverageChecker | ✅ done | CI 42455322583 绿；`CoverageCheckerTest` 11/11（含 `句。第二`） |
 | P1-07 CharacterRegistry | ✅ done | CI 42455746448 绿；`CharacterRegistryTest` 10/10 |
-| P1-08 VoicePool 完整 | ⏳ todo | |
-| P1-09 设置模型与校验 | ⏳ todo | |
-| P1-10 TTS 缓存键 | ⏳ todo | |
-| P1-11 错误模型 | ⏳ todo | |
-| P1-12 Golden fixtures 与测试脚手架 | ⏳ todo | |
+| P1-08 VoicePool 完整 | ✅ done | CI 42459172646 绿；`VoicePoolTest` 14/14 |
+| P1-09 设置模型与校验 | ✅ done | CI 42459330944 绿；`SettingsValidatorTest` 21/21 |
+| P1-10 TTS 缓存键 | ✅ done | CI 42459149838 绿；`TtsCacheKeyTest` 17/17 |
+| P1-11 错误模型 | ✅ done | CI 42459176062 绿；`PipelineErrorTest` 17/17 |
+| P1-12 Golden fixtures | ✅ done（50 真实语料 BLOCKED） | CI 42459571592 绿；`GoldenFixturesTest` 5/5 |
 | P1-13 性能基准 | ⏳ todo | |
 | P1-14 文档与进度 | ⏳ todo | |
 | P1-15 Phase 1 门禁 | ⏳ todo | |
@@ -186,7 +186,57 @@
 - 接口：`CharacterStore`（事务由 P2 的 Room 实现注入），附 `InMemoryCharacterStore`
 - 产出：`core/script/CharacterRegistry.kt`、`core/model/CharacterInfo.kt`、`CharacterRegistryTest.kt`
 
-## 已知实编坑（已处理）
+
+### P1-08 VoicePool 完整 — done
+- 完成：2026-11-08 15:30（Asia/Shanghai）
+- 分支：`feat/p1-08-voicepool-cache`（PR #14）
+- 提交：`9e32cf7`（含 `VoicePoolProvider.kt`）
+- 验证：CI [42459172646](https://github.com/EstimateFaster/android-audioforge/actions/runs/42459172646) 绿；`VoicePoolTest` 14/14
+  - fixture 全量、缓存同一实例、并发 get、label/note/categories/all、63 类、32-hex voice_id、旁白排除、fallback
+- 产出：`core/voice/VoicePool.kt`、`core/voice/VoicePoolProvider.kt`、`VoicePoolTest.kt`
+
+### P1-09 设置模型与校验 — done
+- 完成：2026-11-08 15:32（Asia/Shanghai）
+- 分支：`feat/p1-09-settings-model`（PR #16）
+- 提交：`7ae3eaa`
+- 验证：CI [42459330944](https://github.com/EstimateFaster/android-audioforge/actions/runs/42459330944) 绿；`SettingsValidatorTest` 21/21
+  - 默认值、全部范围边界、URL/model/theme、tuning 优先级/回退/裁剪、NaN/Infinity
+- 产出：`core/settings/AppSettings.kt`、`core/settings/SettingsValidator.kt`、测试
+
+### P1-10 TTS 缓存键 — done
+- 完成：2026-11-08 15:30（Asia/Shanghai）
+- 分支：`feat/p1-10-tts-cache-key`（PR #13）
+- 提交：`b772061`
+- 验证：CI [42459149838](https://github.com/EstimateFaster/android-audioforge/actions/runs/42459149838) 绿；`TtsCacheKeyTest` 17/17
+  - v2 字段序、golden 向量、7 字段敏感性、浮点格式（无科学计数）、键形状
+- 产出：`core/tts/TtsCacheKey.kt`、`TtsCacheKeyTest.kt`
+
+### P1-11 错误模型 — done
+- 完成：2026-11-08 15:31（Asia/Shanghai）
+- 分支：`feat/p1-11-pipeline-error`（PR #15）
+- 提交：`bd83ea7`
+- 验证：CI [42459176062](https://github.com/EstimateFaster/android-audioforge/actions/runs/42459176062) 绿；`PipelineErrorTest` 17/17
+  - 11 code/retryable/文案、TTS/FFmpeg detail、HTTP 映射、异常 message
+- 偏差：`userMessage` 在 core 层为中文常量（无 Context），UI 后续按 code 映射 strings.xml
+- 产出：`core/model/PipelineError.kt`、`PipelineErrorTest.kt`
+
+### P1-12 Golden fixtures 与测试脚手架 — done
+- 完成：2026-11-08 15:40（Asia/Shanghai）
+- 分支：`feat/p1-12-golden-fixtures`（PR #17）
+- 提交：`bbe70f0`
+- 验证：CI [42459571592](https://github.com/EstimateFaster/android-audioforge/actions/runs/42459571592) 绿；`GoldenFixturesTest` 5/5
+  - sanitizer 15+4、coverage 3、voice pool 63、chapter splitter 2 章全文 SHA-256
+  - 纯 JVM，不依赖 Android/Robolectric/网络
+- 产出：`TestFixtures.kt`、`GoldenFixturesTest.kt`、`app/src/test/resources/golden/*.json`
+- 说明：`TestFixtures.kt` KDoc 里曾写 `golden/*.json` 触发 Kotlin 嵌套注释导致 CI 编译失败，已改为 `golden/` 下描述
+
+### BLOCKED P1-12（部分）50 条真实章节快照
+- 现象：仓库没有 50 条脱敏真实章节语料，只有上游 `test/sample_novel.txt`（2 章）与 fixture 向量。
+- 复现：`GoldenFixturesTest` 仅能覆盖现有 fixture + 上游 sample；无法生成 50 条真实章节 golden。
+- 已尝试：用上游 sample 生成 2 章全文 golden（含 SHA-256），并用现有 sanitizer/coverage/voice fixture 建立参数化脚手架。
+- 怀疑：需要内容侧提供可脱敏的真实章节 txt。
+- 需要：人工提供 50 条脱敏章节；不阻塞 Phase 1 代码门禁，补语料后直接扩 `golden/`。
+
 ## 已知实编坑（已处理）
 
 - KSP + AGP 9 内置 Kotlin：`android.disallowKotlinSourceSets=false`。
@@ -207,9 +257,9 @@
 
 ## 下一步
 
-1. P1-08 VoicePool 完整（缓存 + fixture 全量锁定）。
-2. P1-09 设置模型与校验（§7.4 全部 key/default/range）。
-3. P1-10 TTS 缓存键 / P1-11 错误模型。
+1. P1-13 性能基准（20k 字符 / 100 段；清洗 <200ms、覆盖率 <500ms）。
+2. P1-14 文档与进度（与 Python 差异：v2 缓存键、错误码、ICU 替代）。
+3. P1-15 Phase 1 门禁（CI 全绿、无 TODO、无硬编码 Key）。
 
 ## 日志
 
@@ -231,3 +281,4 @@
 - 2026-11-08：P1-05 完成；最高风险清洗逻辑逐函数移植，fixture + Python 用例 17/17 全绿。
 - 2026-11-08：P1-06 完成；覆盖率校验与 Python difflib 片段级一致，11/11 全绿。
 - 2026-11-08：P1-07 完成；角色注册/复用/别名/音色锁定 10/10 全绿。
+- 2026-11-08：P1-08/09/10/11/12 完成；6 个 agent 并行（独立 worktree），统一 CI 验证后逐个合并。
