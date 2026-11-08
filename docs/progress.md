@@ -27,7 +27,7 @@
 |---|---|---|
 | P1-01 模型与枚举 | ✅ done | CI 42448583320 绿；`EnumsTest` 8/8 |
 | P1-02 Assets：提示词 + 音色池 | ✅ done | CI 42448901696 绿；Prompt/VoicePool 11 个用例 + 快照 |
-| P1-03 TextDecoder | 🟡 in_progress | BOM/UTF-8/ICU/GB18030/Big5 + CJK 占比；等 CI |
+| P1-03 TextDecoder | ✅ done | CI 42449492657 绿；`TextDecoderTest` 14/14 |
 | P1-04 ChapterSplitter | ⏳ todo | |
 | P1-05 ScriptSanitizer | ⏳ todo | |
 | P1-06 CoverageChecker | ⏳ todo | |
@@ -136,15 +136,16 @@
   - 合计 23 个单测全绿
 - 产出：`core/voice/PromptAssets.kt`、`core/voice/VoicePool.kt`、`app/src/test/resources/voice-pool.json`
 
-### P1-03 TextDecoder — in_progress
-- 开始：2026-11-08 13:24（Asia/Shanghai）
-- 分支：`feat/p1-03-text-decoder`
-- 目标：`core/ingest/TextDecoder.kt`：BOM → UTF-8 严格 → GB18030/Big5 严格解码 + 评分；
-  前 2 万字 CJK ≥15%；失败返回可手动选编码；64MB 上限；不抛未捕获异常
-- 依赖：P1-01 ✅
-- 验收：UTF-8/UTF-8 BOM/GBK/GB18030/UTF-16LE/BE/Big5/非法字节用例全过
-- 偏差：计划要求的 `android.icu.text.CharsetDetector` 不在公开 SDK，已改用启发式并记录到 `docs/decisions.md`
-- 首次 CI 失败：`Unresolved reference 'CharsetDetector'`；已重写探测逻辑，等第二次 CI
+### P1-03 TextDecoder — done
+- 完成：2026-11-08 13:34（Asia/Shanghai）
+- 分支：`feat/p1-03-text-decoder`（PR #8）
+- 提交：`a8df502`（初版）、`168281a`（去掉 ICU，改严格解码 + 评分）
+- 验证：CI [42449492657](https://github.com/EstimateFaster/android-audioforge/actions/runs/42449492657) 绿；`TextDecoderTest` 14/14
+  - UTF-8 / UTF-8 BOM / GBK / GB18030 / UTF-16LE+BE / Big5（自动+手动）
+  - 非法字节 → `ManualEncodingRequired`；纯 ASCII（CJK 不足）拒绝；空文件；超限；未知编码
+- 偏差：`android.icu.text.CharsetDetector` 不在公开 SDK（首次 CI `Unresolved reference`），
+  改为「严格解码 + CJK 占比 + 中文标点/异常字符评分」；已记录 `docs/decisions.md`
+- 产出：`core/ingest/TextDecoder.kt`、`TextDecoderTest.kt`
 
 ## 已知实编坑（已处理）
 
@@ -166,9 +167,9 @@
 
 ## 下一步
 
-1. P1-03 TextDecoder（编码探测：BOM/UTF-8/GB18030/Big5/UTF-16）。
-2. P1-04 ChapterSplitter。
-3. P1-05 ScriptSanitizer（最高风险移植点）。
+1. P1-04 ChapterSplitter（章节正则 + 短标题/假标题/无标题）。
+2. P1-05 ScriptSanitizer（最高风险移植点）。
+3. P1-06 CoverageChecker。
 
 ## 日志
 
@@ -185,3 +186,4 @@
 - 2026-11-08：P0-12 门禁通过；Phase 0 完成（main CI + emulator smoke 全绿）。
 - 2026-11-08：P1-01 完成；枚举 wire/情绪前缀/RoleId 契约与 Python 对齐，`EnumsTest` 8/8。
 - 2026-11-08：P1-02 完成；提示词 SHA-256、63 音色快照、旁白排除全部锁定，23 个单测全绿。
+- 2026-11-08：P1-03 完成；BOM/UTF-8/GBK/GB18030/UTF-16/Big5 全过；ICU 不可用改用启发式，已记 ADR。
