@@ -21,6 +21,26 @@
 | P0-11 真机/模拟器 smoke 清单 | ✅ done | Smoke 42447687152 绿；截图/设备信息/logcat 证据齐全 |
 | P0-12 Phase 0 门禁 | ✅ done | main CI 42448085423 + smoke 42448103444 全绿；tag 留待正式版本 |
 
+## Phase 1
+
+| 任务 | 状态 | 备注 |
+|---|---|---|
+| P1-01 模型与枚举 | 🟡 in_progress | `Enums.kt` + `RoleId.kt` + 单测；等 CI |
+| P1-02 Assets：提示词 + 音色池 | ⏳ todo | |
+| P1-03 TextDecoder | ⏳ todo | |
+| P1-04 ChapterSplitter | ⏳ todo | |
+| P1-05 ScriptSanitizer | ⏳ todo | |
+| P1-06 CoverageChecker | ⏳ todo | |
+| P1-07 CharacterRegistry | ⏳ todo | |
+| P1-08 VoicePool 完整 | ⏳ todo | |
+| P1-09 设置模型与校验 | ⏳ todo | |
+| P1-10 TTS 缓存键 | ⏳ todo | |
+| P1-11 错误模型 | ⏳ todo | |
+| P1-12 Golden fixtures 与测试脚手架 | ⏳ todo | |
+| P1-13 性能基准 | ⏳ todo | |
+| P1-14 文档与进度 | ⏳ todo | |
+| P1-15 Phase 1 门禁 | ⏳ todo | |
+
 ## 任务记录
 
 ### P0-05 Room smoke — done
@@ -88,6 +108,14 @@
 - 门禁表见 `docs/phase0-smoke.md` §5；四项 smoke（启动/Room/Worker/FFmpeg）全过
 - 可选 tag `v0.0.1-spike` 未打：等 Phase 1 有可演示功能后再发正式版本
 - 结论：Phase 0 完成，进入 Phase 1
+
+### P1-01 模型与枚举 — in_progress
+- 开始：2026-11-08 13:05（Asia/Shanghai）
+- 分支：`feat/p1-01-model-enums`
+- 目标：`core/model/Enums.kt`（ParseStatus/AudioStatus/SegmentStatus/SegmentType/Importance/Gender/BatchMode/Emotion）
+  + `core/model/RoleId.kt`（`narrator`/`unknown`/`role_%04d`）
+- 依赖：P0-02 ✅
+- 验收：wire 值与 Python 一致；`Emotion` 11 个且前缀与 fixture 对齐；单测覆盖 fromWire/兜底/RoleId 格式
 
 ## 已知实编坑（已处理）
 
