@@ -37,8 +37,8 @@ class ScreenStateSmokeTest {
     @Test
     fun emptyState_exposesTitleDescriptionAndAction() {
         var actionClicks = 0
-        val title = text(R.string.empty_state_demo_title)
-        val description = text(R.string.empty_state_demo_description)
+        val title = text(R.string.project_library_empty_title)
+        val description = text(R.string.project_library_empty_description)
         val action = text(R.string.project_library_empty_action)
 
         composeRule.setContent {

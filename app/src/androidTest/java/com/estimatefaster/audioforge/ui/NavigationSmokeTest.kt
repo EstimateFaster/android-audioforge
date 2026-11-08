@@ -93,7 +93,7 @@ class NavigationSmokeTest {
             .performClick()
 
         // 设置页没有「刷新」，它是存储页顶栏的稳定标记。
-        waitForText(text(R.string.storage_refresh))
+        waitForText(text(R.string.action_refresh))
         composeRule.onNodeWithText(text(R.string.storage_title)).assertIsDisplayed()
         composeRule.onNodeWithText(text(R.string.action_back)).assertIsDisplayed().performClick()
         waitForSettingsContent()
@@ -104,7 +104,7 @@ class NavigationSmokeTest {
             .performClick()
 
         // 同上：设置页没有「刷新」，用它判断关于页已经进入且转场结束。
-        waitForText(text(R.string.about_refresh))
+        waitForText(text(R.string.action_refresh))
         composeRule.onNodeWithText(text(R.string.about_title)).assertIsDisplayed()
         composeRule.onNodeWithText(text(R.string.action_back)).assertIsDisplayed().performClick()
         waitForSettingsContent()
