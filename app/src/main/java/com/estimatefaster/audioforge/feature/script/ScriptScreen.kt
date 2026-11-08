@@ -33,6 +33,8 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -71,7 +73,9 @@ import com.estimatefaster.audioforge.ui.theme.AudioForgeTheme
  *
  * 有状态入口：收集 [ScriptViewModel.state] 后委托给无状态版本。
  * 播放/编辑/重生成都只是回调，页面不直接访问仓库或播放器。
- * 播放器后续可通过无状态版本的 `playingSegmentIndex` 覆盖当前高亮段。
+ * 播放按钮先经过 [ScriptViewModel.playFrom]（跳过无音频段、更新跟随状态），
+ * 再把解析出的整章 index 交给宿主 `onPlaySegment` 起播；自动前进由 ViewModel 的
+ * `onPlaybackAdvanced` 回调通知宿主（或直接 collect [ScriptViewModel.followState]）。
  */
 @Composable
 fun ScriptScreen(
@@ -83,10 +87,14 @@ fun ScriptScreen(
     onEditSegment: (Int) -> Unit = {},
     onRegenerateSegment: (Int) -> Unit = {},
     onPlaySegment: (Int) -> Unit = {},
+    onPausePlayback: () -> Unit = {},
+    onResumePlayback: () -> Unit = {},
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val followState by viewModel.followState.collectAsStateWithLifecycle()
     ScriptScreen(
         state = state,
+        followState = followState,
         modifier = modifier,
         onBack = onBack,
         onQueryChange = viewModel::setQuery,
@@ -97,7 +105,21 @@ fun ScriptScreen(
         onSegmentClick = onSegmentClick,
         onEditSegment = onEditSegment,
         onRegenerateSegment = onRegenerateSegment,
-        onPlaySegment = onPlaySegment,
+        onPlaySegment = { index ->
+            // 由 ViewModel 决定真正要播哪一段（无音频段自动跳到下一段）。
+            viewModel.playFrom(index)?.let(onPlaySegment)
+        },
+        onPlayPause = {
+            when {
+                state.playing -> onPausePlayback()
+                state.playingSegmentIndex != null -> onResumePlayback()
+                else -> state.segments.firstOrNull { it.hasAudio }?.index
+                    ?.let { index -> viewModel.playFrom(index)?.let(onPlaySegment) }
+            }
+        },
+        onPlayPrevious = { viewModel.playPrevious()?.let(onPlaySegment) },
+        onPlayNext = { viewModel.playNext()?.let(onPlaySegment) },
+        onContinuousChange = viewModel::setContinuous,
     )
 }
 
@@ -108,6 +130,7 @@ fun ScriptScreen(
  * - 角色筛选（全部 + 人物 chips）+ 搜索台词；
  * - `LazyColumn` 稳定 key（片段主键/位置兜底），当前播放段高亮并自动滚动；
  * - 段落整行可点（编辑回调），长按/“更多”打开播放/编辑/重新生成菜单；
+ * - 底部迷你播放条：播放/暂停、上一句/下一句、连续播放开关、跳过无音频提示；
  * - 空态区分“整章没有剧本”和“筛选后为空”，加载/错误复用 P4-02 组件。
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -115,6 +138,7 @@ fun ScriptScreen(
 fun ScriptScreen(
     state: ScriptUiState,
     modifier: Modifier = Modifier,
+    followState: FollowState = FollowState(currentIndex = state.playingSegmentIndex),
     onBack: () -> Unit = {},
     onQueryChange: (String) -> Unit = {},
     onRoleFilterChange: (String?) -> Unit = {},
@@ -125,6 +149,10 @@ fun ScriptScreen(
     onEditSegment: (Int) -> Unit = {},
     onRegenerateSegment: (Int) -> Unit = {},
     onPlaySegment: (Int) -> Unit = {},
+    onPlayPause: () -> Unit = {},
+    onPlayPrevious: () -> Unit = {},
+    onPlayNext: () -> Unit = {},
+    onContinuousChange: (Boolean) -> Unit = {},
     playingSegmentIndex: Int? = state.playingSegmentIndex,
 ) {
     val loadError = state.loadError
@@ -159,6 +187,18 @@ fun ScriptScreen(
                     containerColor = MaterialTheme.colorScheme.background,
                 ),
             )
+        },
+        bottomBar = {
+            if (state.segments.isNotEmpty()) {
+                ScriptMiniPlayer(
+                    state = state,
+                    followState = followState,
+                    onPlayPause = onPlayPause,
+                    onPlayPrevious = onPlayPrevious,
+                    onPlayNext = onPlayNext,
+                    onContinuousChange = onContinuousChange,
+                )
+            }
         },
     ) { padding ->
         Column(
@@ -256,6 +296,7 @@ fun ScriptScreen(
                         onEditSegment = onEditSegment,
                         onRegenerateSegment = onRegenerateSegment,
                         onPlaySegment = onPlaySegment,
+                        onPlayPause = onPlayPause,
                     )
                 }
             }
@@ -298,6 +339,7 @@ private fun ScriptSegmentList(
     onEditSegment: (Int) -> Unit,
     onRegenerateSegment: (Int) -> Unit,
     onPlaySegment: (Int) -> Unit,
+    onPlayPause: () -> Unit,
 ) {
     val listState = rememberLazyListState()
     val scrollTarget = state.scrollTargetFor(playingSegmentIndex)
@@ -320,13 +362,16 @@ private fun ScriptSegmentList(
             key = { segment -> segment.key },
             contentType = { segment -> segment.type.wire },
         ) { segment ->
+            val isCurrent = state.isPlaying(segment, playingSegmentIndex)
             ScriptSegmentRow(
                 segment = segment,
-                isPlaying = state.isPlaying(segment, playingSegmentIndex),
+                isCurrent = isCurrent,
+                isPlaying = isCurrent && state.playing,
                 onSegmentClick = onSegmentClick,
                 onEditSegment = onEditSegment,
                 onRegenerateSegment = onRegenerateSegment,
                 onPlaySegment = onPlaySegment,
+                onPlayPause = onPlayPause,
             )
         }
     }
@@ -335,11 +380,13 @@ private fun ScriptSegmentList(
 @Composable
 private fun ScriptSegmentRow(
     segment: ScriptSegmentUi,
+    isCurrent: Boolean,
     isPlaying: Boolean,
     onSegmentClick: (Int) -> Unit,
     onEditSegment: (Int) -> Unit,
     onRegenerateSegment: (Int) -> Unit,
     onPlaySegment: (Int) -> Unit,
+    onPlayPause: () -> Unit,
 ) {
     var menuExpanded by rememberSaveable(segment.key) { mutableStateOf(false) }
 
@@ -349,7 +396,7 @@ private fun ScriptSegmentRow(
     } else {
         MaterialTheme.colorScheme.primary
     }
-    val container = if (isPlaying) {
+    val container = if (isCurrent) {
         MaterialTheme.colorScheme.primaryContainer
     } else {
         MaterialTheme.colorScheme.surface
@@ -360,6 +407,9 @@ private fun ScriptSegmentRow(
     val moreDescription = stringResource(
         R.string.script_segment_more_content_description,
         segment.number,
+    )
+    val playLabel = stringResource(
+        if (isPlaying) R.string.script_segment_action_pause else R.string.script_segment_action_play,
     )
 
     Card(
@@ -372,7 +422,7 @@ private fun ScriptSegmentRow(
                 onLongClick = { menuExpanded = true },
                 onClick = { onSegmentClick(segment.index) },
             )
-            .semantics { selected = isPlaying },
+            .semantics { selected = isCurrent },
         shape = shape,
         colors = CardDefaults.cardColors(containerColor = container),
     ) {
@@ -398,6 +448,16 @@ private fun ScriptSegmentRow(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
+                    TextButton(
+                        onClick = {
+                            // 当前段：播放中→暂停，已暂停→恢复；其他段：从该段起播。
+                            if (isCurrent) onPlayPause() else onPlaySegment(segment.index)
+                        },
+                        enabled = segment.hasAudio,
+                        modifier = Modifier.heightIn(min = 48.dp),
+                    ) {
+                        Text(playLabel)
+                    }
                     Box {
                         TextButton(
                             onClick = { menuExpanded = true },
@@ -452,6 +512,14 @@ private fun ScriptSegmentRow(
                         color = MaterialTheme.colorScheme.error,
                     )
                 }
+                if (!segment.hasAudio) {
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        text = stringResource(R.string.script_segment_no_audio_hint),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
         }
     }
@@ -483,6 +551,127 @@ private fun ScriptSegmentMenu(
             text = { Text(stringResource(R.string.script_segment_action_regenerate)) },
             onClick = onRegenerate,
         )
+    }
+}
+
+@Composable
+private fun ScriptMiniPlayer(
+    state: ScriptUiState,
+    followState: FollowState,
+    onPlayPause: () -> Unit,
+    onPlayPrevious: () -> Unit,
+    onPlayNext: () -> Unit,
+    onContinuousChange: (Boolean) -> Unit,
+) {
+    val current = state.currentSegment
+    val hasAudio = state.hasPlayableAudio
+    val continuousLabel = stringResource(R.string.script_playback_continuous)
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        tonalElevation = 3.dp,
+        shadowElevation = 3.dp,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = when {
+                            followState.nextChapterRequested -> stringResource(
+                                R.string.script_playback_chapter_done_next,
+                            )
+
+                            followState.chapterFinished -> stringResource(
+                                R.string.script_playback_chapter_done,
+                            )
+
+                            current != null -> stringResource(
+                                R.string.script_playback_now_playing,
+                                current.number,
+                            )
+
+                            !hasAudio -> stringResource(R.string.script_playback_no_audio)
+                            else -> stringResource(R.string.script_playback_idle)
+                        },
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    if (current != null) {
+                        Text(
+                            text = stringResource(
+                                R.string.script_playback_subtitle,
+                                segmentName(current),
+                                current.text,
+                            ),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }
+                Text(
+                    text = continuousLabel,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Switch(
+                    checked = state.continuousPlayback,
+                    onCheckedChange = onContinuousChange,
+                    enabled = hasAudio,
+                    modifier = Modifier.semantics { contentDescription = continuousLabel },
+                )
+            }
+            if (followState.skippedNoAudio && hasAudio) {
+                Text(
+                    text = stringResource(R.string.script_playback_skipped_no_audio),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                TextButton(
+                    onClick = onPlayPrevious,
+                    enabled = hasAudio,
+                    modifier = Modifier.heightIn(min = 48.dp),
+                ) {
+                    Text(stringResource(R.string.script_playback_prev))
+                }
+                TextButton(
+                    onClick = onPlayPause,
+                    enabled = hasAudio,
+                    modifier = Modifier.heightIn(min = 48.dp),
+                ) {
+                    Text(
+                        stringResource(
+                            if (state.playing) {
+                                R.string.script_playback_pause
+                            } else {
+                                R.string.script_playback_play
+                            },
+                        ),
+                    )
+                }
+                TextButton(
+                    onClick = onPlayNext,
+                    enabled = hasAudio,
+                    modifier = Modifier.heightIn(min = 48.dp),
+                ) {
+                    Text(stringResource(R.string.script_playback_next))
+                }
+            }
+        }
     }
 }
 
@@ -582,7 +771,7 @@ private fun Emotion.labelRes(): Int = when (this) {
 }
 
 // ---------------------------------------------------------------------------
-// Preview：正常列表（含播放高亮）/ 筛选空结果（深色 200%）/ 整章空态。
+// Preview：播放中（连播开）/ 播放中（连播关）/ 筛选空结果（深色 200%）/ 整章空态。
 // 演示文本只是预览数据；所有 UI 文案来自 strings.xml。
 // ---------------------------------------------------------------------------
 
@@ -651,9 +840,9 @@ private fun previewSegments(): List<ScriptSegmentUi> = listOf(
     ),
 )
 
-@Preview(name = "Script Normal", showBackground = true, backgroundColor = 0xFFF7F8FC)
+@Preview(name = "Script Playing", showBackground = true, backgroundColor = 0xFFF7F8FC)
 @Composable
-private fun ScriptNormalPreview() {
+private fun ScriptPlayingPreview() {
     AudioForgeTheme(dynamicColor = false) {
         ScriptScreen(
             state = ScriptUiState(
@@ -662,7 +851,29 @@ private fun ScriptNormalPreview() {
                 segments = previewSegments(),
                 characters = previewCharacters(),
                 playingSegmentIndex = 1,
+                continuousPlayback = true,
+                playing = true,
             ),
+            followState = FollowState(currentIndex = 1, shouldScroll = true),
+        )
+    }
+}
+
+@Preview(name = "Script Continuous Off", showBackground = true, backgroundColor = 0xFFF7F8FC)
+@Composable
+private fun ScriptContinuousOffPreview() {
+    AudioForgeTheme(dynamicColor = false) {
+        ScriptScreen(
+            state = ScriptUiState(
+                loading = false,
+                chapterTitle = "第三章 旧信",
+                segments = previewSegments(),
+                characters = previewCharacters(),
+                playingSegmentIndex = 2,
+                continuousPlayback = false,
+                playing = true,
+            ),
+            followState = FollowState(currentIndex = 2, shouldScroll = true),
         )
     }
 }
