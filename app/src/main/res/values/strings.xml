@@ -143,4 +143,35 @@
     <string name="project_delete_title">删除项目</string>
     <string name="project_delete_message">删除《%1$s》会同时移除章节、片段和音频，且无法恢复。</string>
 
+    <!-- P4-07 章节列表 -->
+    <string name="chapter_list_title">章节</string>
+    <string name="chapter_list_search_label">搜索章节标题</string>
+    <string name="chapter_list_search_placeholder">输入标题关键词</string>
+    <string name="chapter_list_search_clear">清除</string>
+    <string name="chapter_list_filter_all">全部</string>
+    <string name="chapter_list_filter_parsing">解析中</string>
+    <string name="chapter_list_filter_parse_failed">解析失败</string>
+    <string name="chapter_list_filter_audio_done">音频完成</string>
+    <string name="chapter_list_filter_incomplete">未完成</string>
+    <string name="chapter_list_empty_title">还没有章节</string>
+    <string name="chapter_list_empty_description">回到项目页导入章节，或重新解析这本书。</string>
+    <string name="chapter_list_empty_action">返回项目</string>
+    <string name="chapter_list_filtered_empty_title">没有匹配的章节</string>
+    <string name="chapter_list_filtered_empty_description">换个标题关键词，或把筛选条件改成“全部”。</string>
+    <string name="chapter_list_filtered_empty_action">清除筛选</string>
+    <string name="chapter_list_load_error">加载章节失败：%1$s</string>
+    <string name="chapter_list_loading">正在加载章节…</string>
+    <string name="chapter_list_loading_more">正在加载更多…</string>
+    <string name="chapter_list_load_more_error">加载更多失败：%1$s</string>
+    <string name="chapter_list_load_more_hint">继续上滑加载更多</string>
+    <string name="chapter_list_all_loaded">已加载全部 %1$d 章</string>
+    <string name="chapter_list_item_segments">片段 %1$d/%2$d</string>
+    <string name="chapter_list_item_warning">有解析告警</string>
+    <string name="chapter_list_item_more">更多</string>
+    <string name="chapter_list_item_more_content_description">第 %1$d 章的操作</string>
+    <string name="chapter_list_action_quick_parse">快速解析</string>
+    <string name="chapter_list_action_rerender">重新生成音频</string>
+    <string name="chapter_list_action_open_script">打开剧本</string>
+
+
 </resources>
