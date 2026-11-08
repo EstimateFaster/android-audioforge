@@ -13,7 +13,7 @@
 | P0-03 Manifest / 权限 / Service | ✅ done | WorkManager `dataSync` 合并；FileProvider；占位图标 |
 | P0-04 Compose 空壳与 Expressive 主题 | ✅ done | `MaterialExpressiveTheme` + `MotionScheme.expressive()`；首页空壳 |
 | P0-05 Room smoke | ✅ done | CI 42444925547 绿；`RoomProbeTest` 3/3；schema `1.json` 已入库 |
-| P0-06 WorkManager 前台服务 smoke | ⏳ todo | 需要 Worker + 通知 + 真机 |
+| P0-06 WorkManager 前台服务 smoke | 🟡 in_progress | Worker+通知+调试卡已提交；等 emulator smoke |
 | P0-07 FFmpeg smoke | ⏳ todo | 真机/模拟器 `-version` + 静音/拼接 |
 | P0-08 CI debug 构建与 APK 校验 | ✅ done | CI run 42442128213 绿；debug APK artifact 已上传 |
 | P0-09 Release 签名 CI | ✅ done | v0.1.0 已发布；签名 release APK + checksums |
@@ -36,6 +36,16 @@
   - debug APK artifact 已上传
 - 说明：本机不再跑本地 Gradle/CI（新约束），验证以 GitHub Actions 为准
 - 遗留：真机/模拟器上的启动 smoke 归入 P0-11；P2-01 建正式实体时删除 `probe` 表并升 version
+
+### P0-06 WorkManager / 前台服务 smoke — in_progress
+- 开始：2026-11-08 12:20（Asia/Shanghai）
+- 分支：`feat/p0-06-workmanager-smoke`
+- 目标：`ProbeWorker`（CoroutineWorker + `setForeground` dataSync + 进度）→ Room 写入 → 完成通知；
+  首页 Debug 卡片可启动/停止并显示状态
+- 依赖：P0-03、P0-05
+- 验收：模拟器上 Worker SUCCEEDED、运行期间通知可见、取消后 CANCELLED 不崩
+- 手段：新增 `.github/workflows/smoke.yml`（手动触发，`reactivecircus/android-emulator-runner` + API 35），
+  跑 `connectedDebugAndroidTest`；本机不构建
 
 ## 已知实编坑（已处理）
 
