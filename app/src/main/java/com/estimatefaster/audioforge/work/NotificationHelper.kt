@@ -27,6 +27,7 @@ object NotificationHelper {
     const val CHANNEL_DONE = "generation_done"
     const val PROBE_NOTIFICATION_ID = 1001
     const val DONE_NOTIFICATION_ID = 1002
+    const val GENERATION_NOTIFICATION_ID = 1003
 
     private const val TAG = "AudioForgeNotify"
 
@@ -62,6 +63,31 @@ object NotificationHelper {
             .build()
         return ForegroundInfo(
             PROBE_NOTIFICATION_ID,
+            notification,
+            ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC,
+        )
+    }
+
+    /**
+     * P3-02 生成批次的前台通知：复用 `generation` 渠道与现有图标，只显示标题与百分比。
+     *
+     * P3-03 会补「停止」action、完成/失败通知和 POST_NOTIFICATIONS 引导；本方法保持最小实现，
+     * 避免在 P3-02 里提前定死通知交互。
+     */
+    fun generationForegroundInfo(context: Context, progress: Int): ForegroundInfo {
+        val percent = progress.coerceIn(0, 100)
+        val notification = NotificationCompat.Builder(context, CHANNEL_GENERATION)
+            .setSmallIcon(R.drawable.ic_stat_audioforge)
+            .setContentTitle(context.getString(R.string.status_audio_running))
+            .setContentText(context.getString(R.string.notif_probe_progress, percent))
+            .setContentIntent(openAppIntent(context))
+            .setOngoing(true)
+            .setOnlyAlertOnce(true)
+            .setProgress(100, percent, false)
+            .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
+            .build()
+        return ForegroundInfo(
+            GENERATION_NOTIFICATION_ID,
             notification,
             ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC,
         )
