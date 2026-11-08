@@ -26,6 +26,7 @@ import org.junit.Test
  *
  * 覆盖：正常 JSON、截断、非法 JSON / 空 content、401/402/404/400 不重试、
  * 400 去掉 response_format 回退、429 指数退避后成功、5xx 重试耗尽、
+ * `Retry-After`（429/503、上限 60s、非法值回退）、jitter 上限 250ms、
  * 超时 / 连接失败 → Network，以及请求体与 Authorization 字段。
  *
  * 所有退避等待都通过注入的 no-op sleeper 记录，不产生真实延迟；
@@ -232,6 +233,60 @@ class LlmClientTest {
     }
 
     @Test
+    fun retry_after_seconds_are_honored_on_429() = runBlocking {
+        server.enqueue(errorResponse(429, "rate limited", retryAfter = "5"))
+        server.enqueue(jsonResponse(SUCCESS_RESPONSE))
+
+        val content = newClient().chat(PROMPT)
+
+        assertEquals("""{"ok":true}""", content)
+        assertEquals(2, server.requestCount)
+        assertEquals("必须按 Retry-After 的秒数等待", listOf(5_000L), delays)
+    }
+
+    @Test
+    fun retry_after_seconds_are_honored_on_503() = runBlocking {
+        server.enqueue(errorResponse(503, "service unavailable", retryAfter = "1"))
+        server.enqueue(jsonResponse(SUCCESS_RESPONSE))
+
+        val content = newClient().chat(PROMPT)
+
+        assertEquals("""{"ok":true}""", content)
+        assertEquals(2, server.requestCount)
+        assertEquals("Retry-After 优先于指数退避（首轮本应 2s）", listOf(1_000L), delays)
+    }
+
+    @Test
+    fun retry_after_is_capped_at_sixty_seconds() = runBlocking {
+        server.enqueue(errorResponse(429, "rate limited", retryAfter = "3600"))
+        server.enqueue(jsonResponse(SUCCESS_RESPONSE))
+
+        newClient().chat(PROMPT)
+
+        assertEquals("服务端给再久也只等 60s", listOf(60_000L), delays)
+    }
+
+    @Test
+    fun invalid_retry_after_falls_back_to_exponential_backoff() = runBlocking {
+        server.enqueue(errorResponse(429, "rate limited", retryAfter = "later"))
+        server.enqueue(jsonResponse(SUCCESS_RESPONSE))
+
+        newClient().chat(PROMPT)
+
+        assertEquals("非数字 Retry-After 应回退到 2s 指数退避", listOf(2_000L), delays)
+    }
+
+    @Test
+    fun jitter_is_capped_at_250ms() = runBlocking {
+        server.enqueue(errorResponse(429, "rate limited"))
+        server.enqueue(jsonResponse(SUCCESS_RESPONSE))
+
+        newClient(jitterSeconds = { 5.0 }).chat(PROMPT)
+
+        assertEquals("jitter 上限 250ms：2s + 0.25s", listOf(2_250L), delays)
+    }
+
+    @Test
     fun read_timeout_maps_to_network() {
         repeat(2) {
             server.enqueue(MockResponse().setSocketPolicy(SocketPolicy.NO_RESPONSE))
@@ -276,11 +331,12 @@ class LlmClientTest {
     private fun newClient(
         config: LlmConfig = testConfig(),
         responseFormatFallback: Boolean = true,
+        jitterSeconds: () -> Double = { 0.0 },
     ): LlmClient = LlmClient(
         config = config,
         responseFormatFallback = responseFormatFallback,
         sleeper = { delays += it },
-        jitterSeconds = { 0.0 },
+        jitterSeconds = jitterSeconds,
     )
 
     private fun <T : PipelineError> chatErrorOf(
@@ -296,11 +352,15 @@ class LlmClientTest {
             .setHeader("Content-Type", "application/json")
             .setBody(body)
 
-    private fun errorResponse(code: Int, message: String): MockResponse =
-        MockResponse()
-            .setResponseCode(code)
-            .setHeader("Content-Type", "application/json")
-            .setBody("""{"error":{"message":"$message"}}""")
+    private fun errorResponse(
+        code: Int,
+        message: String,
+        retryAfter: String? = null,
+    ): MockResponse = MockResponse()
+        .setResponseCode(code)
+        .setHeader("Content-Type", "application/json")
+        .apply { if (retryAfter != null) addHeader("Retry-After", retryAfter) }
+        .setBody("""{"error":{"message":"$message"}}""")
 
     private fun RecordedRequest.jsonBody(): JsonObject =
         Json.parseToJsonElement(body.readUtf8()).jsonObject
