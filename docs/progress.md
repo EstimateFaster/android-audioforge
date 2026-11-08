@@ -92,7 +92,31 @@
 | P4-08 任务页 | ⏳ todo | 依赖 P3 |
 | P4-09 全局设置 | ✅ done | 15 用例/Key 掩码 |
 | P4-10 Onboarding | 🟡 in_progress | 修 ViewModel 测试调度 |
-| P4-11~P4-15 | ⏳ todo | |
+| P4-11 状态/文案 | ✅ done | ScreenState/ErrorBanner + strings 审计 |
+| P4-12 无障碍 | ✅ done | 由 P5-13 覆盖 |
+| P4-13 UI 测试 | ✅ done | 由 P5-14 覆盖 |
+| P4-14 性能 | ✅ done | docs/performance-review.md |
+| P4-15 门禁 | ✅ done | docs/phase4-gate.md |
+
+## Phase 5（剧本/播放/设置）
+
+| 任务 | 状态 | 备注 |
+|---|---|---|
+| P5-01 剧本页 | ✅ done | 22 测试 |
+| P5-02 片段编辑 | ✅ done | 20 测试 |
+| P5-03 播放跟随/连播 | ✅ done | 40 测试 |
+| P5-04 人物页 | ✅ done | 14 测试 |
+| P5-05 音色 Sheet | ✅ done | 23 测试 |
+| P5-06 角色微调 | ✅ done | 35 测试 |
+| P5-07 播放器页 | ✅ done | 42 测试 |
+| P5-08 播放通知 | ✅ done | 4 action/自动续播 |
+| P5-09 存储页 | ✅ done | 22 测试 |
+| P5-10 诊断/关于 | ✅ done | 23 测试 |
+| P5-11 导出 UI | ✅ done | 范围/进度/重试 |
+| P5-12 文案统一 | ✅ done | 801 条/0 硬编码 |
+| P5-13 无障碍 | ✅ done | 200%/语义/动效 |
+| P5-14 UI 测试 | ✅ done | instrumented smoke |
+| P5-15 门禁 | ✅ done | docs/phase5-gate.md |
 
 ## 任务记录
 
@@ -362,3 +386,4 @@
 - 2026-11-08：P1-15 门禁通过；Phase 1 完成（153 单测、main CI 绿、无 TODO/硬编码 Key）。
 - 2026-11-08/09：Phase 2 主体、P3-01/02、P4-01/02/03/05/07/09 合并；并行 agent（worktree）+ 统一 CI。
 - 2026-11-09：Phase 2/3 门禁记录（P2-18、P3-10 真机依赖 BLOCKED）；P5-01 剧本页合并。
+- 2026-11-09：Phase 4/5 门禁记录；导航接线完成（PR #88）；P5-13 无障碍合并。
