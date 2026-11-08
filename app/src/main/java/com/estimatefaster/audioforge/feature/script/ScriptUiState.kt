@@ -93,6 +93,10 @@ data class ScriptCharacterUi(
  *
  * [playingSegmentIndex] 是整章 0 基位置（不是筛选后的行号）。它可能被筛掉，
  * 此时 [scrollTargetFor] 返回 null，不强制滚动。
+ *
+ * [continuousPlayback]/[playing] 由 P5-03 的
+ * [PlaybackFollowController][FollowState] 同步，只影响迷你播放条与行内按钮，
+ * 不参与筛选。
  */
 data class ScriptUiState(
     val loading: Boolean = true,
@@ -103,10 +107,19 @@ data class ScriptUiState(
     val selectedRoleId: String? = null,
     val query: String = "",
     val playingSegmentIndex: Int? = null,
+    val continuousPlayback: Boolean = true,
+    val playing: Boolean = false,
 ) {
     /** 已按角色/关键词过滤后的行；构造时预计算，item 内不再过滤。 */
     val visibleSegments: List<ScriptSegmentUi> =
         filterScriptSegments(segments, selectedRoleId, query)
+
+    /** 本章有音频的段数；迷你播放条据此决定控制按钮是否可用。 */
+    val playableCount: Int = segments.count { it.hasAudio }
+
+    /** 本章是否至少有一段可播放音频。 */
+    val hasPlayableAudio: Boolean
+        get() = playableCount > 0
 
     /** 首屏加载中：显示居中加载而不是空态。 */
     val isInitialLoading: Boolean
@@ -127,6 +140,12 @@ data class ScriptUiState(
     val playingSegment: ScriptSegmentUi?
         get() = playingSegmentIndex?.let { index ->
             visibleSegments.firstOrNull { it.index == index }
+        }
+
+    /** 当前播放段在**整章**里的投影；即使被筛选掉也能给迷你播放条显示标题。 */
+    val currentSegment: ScriptSegmentUi?
+        get() = playingSegmentIndex?.let { index ->
+            segments.firstOrNull { it.index == index }
         }
 
     /**

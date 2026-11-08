@@ -559,4 +559,20 @@
     <string name="segment_edit_error_unknown_role">所选角色不存在，请重新选择</string>
     <string name="segment_edit_save_error">保存失败：%1$s</string>
     <string name="segment_edit_retry">重试</string>
+
+    <!-- P5-03 播放跟随 / 连播 -->
+    <string name="script_segment_action_pause">暂停此句</string>
+    <string name="script_segment_no_audio_hint">暂无音频，播放时自动跳过</string>
+    <string name="script_playback_now_playing">正在播放：第 %1$d 段</string>
+    <string name="script_playback_idle">点按片段或播放按钮开始连播</string>
+    <string name="script_playback_no_audio">本章还没有可播放的音频</string>
+    <string name="script_playback_chapter_done">本章已播完</string>
+    <string name="script_playback_chapter_done_next">本章已播完，正在加载下一章…</string>
+    <string name="script_playback_subtitle">%1$s：%2$s</string>
+    <string name="script_playback_skipped_no_audio">已跳过无音频片段</string>
+    <string name="script_playback_continuous">连续播放</string>
+    <string name="script_playback_prev">上一句</string>
+    <string name="script_playback_next">下一句</string>
+    <string name="script_playback_play">播放</string>
+    <string name="script_playback_pause">暂停</string>
 </resources>
