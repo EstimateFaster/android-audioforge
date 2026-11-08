@@ -18,7 +18,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
@@ -45,7 +44,9 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.estimatefaster.audioforge.R
 import com.estimatefaster.audioforge.ui.components.EmptyState
+import com.estimatefaster.audioforge.ui.components.ErrorBanner
 import com.estimatefaster.audioforge.ui.components.ErrorState
+import com.estimatefaster.audioforge.ui.components.LoadingState
 import com.estimatefaster.audioforge.ui.components.SectionHeader
 import com.estimatefaster.audioforge.ui.theme.AudioForgeTheme
 import kotlin.math.roundToInt
@@ -132,7 +133,7 @@ fun StorageScreen(
                         enabled = !state.isBusy,
                         modifier = Modifier.heightIn(min = 48.dp),
                     ) {
-                        Text(stringResource(R.string.storage_refresh))
+                        Text(stringResource(R.string.action_refresh))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -142,7 +143,8 @@ fun StorageScreen(
         },
     ) { padding ->
         when {
-            state.loading && state.overview == null -> LoadingContent(
+            state.loading && state.overview == null -> LoadingState(
+                message = stringResource(R.string.storage_loading),
                 modifier = Modifier.padding(padding),
             )
 
@@ -184,23 +186,6 @@ fun StorageScreen(
 }
 
 @Composable
-private fun LoadingContent(modifier: Modifier = Modifier) {
-    Column(
-        modifier = modifier.fillMaxSize(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        CircularProgressIndicator()
-        Spacer(Modifier.height(12.dp))
-        Text(
-            text = stringResource(R.string.storage_loading),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
-}
-
-@Composable
 private fun StorageContent(
     state: StorageUiState,
     contentPadding: PaddingValues,
@@ -228,10 +213,12 @@ private fun StorageContent(
         }
         if (state.loadError != null) {
             item(key = "load-error") {
-                Text(
-                    text = stringResource(R.string.storage_load_error, state.loadError.orEmpty()),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error,
+                ErrorBanner(
+                    message = stringResource(
+                        R.string.storage_load_error,
+                        state.loadError.orEmpty(),
+                    ),
+                    onRetry = onRefresh,
                 )
             }
         }

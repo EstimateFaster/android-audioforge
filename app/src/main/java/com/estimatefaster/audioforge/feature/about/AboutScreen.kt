@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
@@ -40,7 +39,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.estimatefaster.audioforge.R
 import com.estimatefaster.audioforge.feature.storage.formatByteSize
 import com.estimatefaster.audioforge.ui.components.EmptyState
+import com.estimatefaster.audioforge.ui.components.ErrorBanner
 import com.estimatefaster.audioforge.ui.components.ErrorState
+import com.estimatefaster.audioforge.ui.components.LoadingState
 import com.estimatefaster.audioforge.ui.components.SectionHeader
 import com.estimatefaster.audioforge.ui.theme.AudioForgeTheme
 
@@ -124,7 +125,7 @@ fun AboutScreen(
                         enabled = !state.isLoadingFirstTime,
                         modifier = Modifier.heightIn(min = 48.dp),
                     ) {
-                        Text(stringResource(R.string.about_refresh))
+                        Text(stringResource(R.string.action_refresh))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -134,7 +135,8 @@ fun AboutScreen(
         },
     ) { padding ->
         when {
-            state.isLoadingFirstTime -> LoadingContent(
+            state.isLoadingFirstTime -> LoadingState(
+                message = stringResource(R.string.about_loading),
                 modifier = Modifier.padding(padding),
             )
 
@@ -167,23 +169,6 @@ fun AboutScreen(
 }
 
 @Composable
-private fun LoadingContent(modifier: Modifier = Modifier) {
-    Column(
-        modifier = modifier.fillMaxSize(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        CircularProgressIndicator()
-        Spacer(Modifier.height(12.dp))
-        Text(
-            text = stringResource(R.string.about_loading),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
-}
-
-@Composable
 private fun AboutContent(
     state: AboutUiState,
     contentPadding: PaddingValues,
@@ -209,13 +194,12 @@ private fun AboutContent(
         }
         if (state.loadError != null) {
             item(key = "inline-error") {
-                Text(
-                    text = stringResource(
+                ErrorBanner(
+                    message = stringResource(
                         R.string.about_load_error,
                         state.loadError.orEmpty(),
                     ),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error,
+                    onRetry = onRefresh,
                 )
             }
         }

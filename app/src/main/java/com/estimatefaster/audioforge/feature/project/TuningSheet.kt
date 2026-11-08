@@ -168,7 +168,7 @@ fun TuningSheetContent(
                     ) {
                         Text(
                             text = if (state.saving) {
-                                stringResource(R.string.tuning_saving)
+                                stringResource(R.string.action_saving)
                             } else {
                                 stringResource(R.string.action_save)
                             },
@@ -394,7 +394,7 @@ private fun TuningSaveErrorCard(message: String, onRetry: () -> Unit) {
                 color = MaterialTheme.colorScheme.onErrorContainer,
             )
             Text(
-                text = stringResource(R.string.tuning_save_error, message),
+                text = stringResource(R.string.action_save_error, message),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onErrorContainer,
             )

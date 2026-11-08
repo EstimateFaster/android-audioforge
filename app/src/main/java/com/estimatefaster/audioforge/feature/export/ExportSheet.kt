@@ -154,6 +154,8 @@ fun ExportSheetContent(
             state.isEmpty -> EmptyState(
                 title = stringResource(R.string.export_empty_title),
                 description = stringResource(R.string.export_empty_description),
+                actionText = stringResource(R.string.export_action_retry_load),
+                onAction = onRetryLoad,
             )
 
             else -> when (state.phase) {

@@ -119,7 +119,7 @@ fun ProjectLibraryScreen(
 
     val snackbarHostState = remember { SnackbarHostState() }
     val actionErrorMessage = state.actionError?.let { message ->
-        stringResource(R.string.project_library_action_error, message)
+        stringResource(R.string.action_failed, message)
     }
     LaunchedEffect(actionErrorMessage) {
         if (actionErrorMessage != null) {
@@ -327,7 +327,7 @@ private fun ProjectLibraryCard(
     modifier: Modifier = Modifier,
 ) {
     val openLabel = stringResource(R.string.project_library_open)
-    val moreLabel = stringResource(R.string.project_more)
+    val moreLabel = stringResource(R.string.action_more)
     Card(
         modifier = modifier
             .fillMaxWidth()
@@ -382,13 +382,13 @@ private fun ProjectLibraryCard(
                         onDismissRequest = onMenuDismiss,
                     ) {
                         DropdownMenuItem(
-                            text = { Text(stringResource(R.string.project_more_rename)) },
+                            text = { Text(stringResource(R.string.action_rename)) },
                             onClick = onRename,
                         )
                         DropdownMenuItem(
                             text = {
                                 Text(
-                                    text = stringResource(R.string.project_more_delete),
+                                    text = stringResource(R.string.action_delete),
                                     color = MaterialTheme.colorScheme.error,
                                 )
                             },

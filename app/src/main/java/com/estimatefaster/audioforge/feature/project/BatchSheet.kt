@@ -206,7 +206,7 @@ fun BatchSheetContent(
                     .weight(1f)
                     .heightIn(min = 48.dp),
             ) {
-                Text(stringResource(R.string.batch_action_cancel))
+                Text(stringResource(R.string.action_cancel))
             }
         }
     }

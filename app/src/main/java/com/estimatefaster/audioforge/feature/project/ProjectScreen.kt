@@ -192,7 +192,7 @@ fun ProjectScreen(
                                 onClick = { menuExpanded = true },
                                 modifier = Modifier.heightIn(min = 48.dp),
                             ) {
-                                Text(stringResource(R.string.project_more))
+                                Text(stringResource(R.string.action_more))
                             }
                             DropdownMenu(
                                 expanded = menuExpanded,
@@ -243,7 +243,7 @@ fun ProjectScreen(
                                     },
                                 )
                                 DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.project_more_rename)) },
+                                    text = { Text(stringResource(R.string.action_rename)) },
                                     onClick = {
                                         menuExpanded = false
                                         renameText = project.title
@@ -253,7 +253,7 @@ fun ProjectScreen(
                                 DropdownMenuItem(
                                     text = {
                                         Text(
-                                            text = stringResource(R.string.project_more_delete),
+                                            text = stringResource(R.string.action_delete),
                                             color = MaterialTheme.colorScheme.error,
                                         )
                                     },

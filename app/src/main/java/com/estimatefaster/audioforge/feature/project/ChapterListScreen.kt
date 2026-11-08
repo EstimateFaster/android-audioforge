@@ -63,6 +63,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.estimatefaster.audioforge.R
 import com.estimatefaster.audioforge.ui.components.EmptyState
+import com.estimatefaster.audioforge.ui.components.ErrorBanner
 import com.estimatefaster.audioforge.ui.components.ErrorState
 import com.estimatefaster.audioforge.ui.components.StatusKind
 import com.estimatefaster.audioforge.ui.components.StatusPill
@@ -375,7 +376,7 @@ private fun ChapterRow(
     var menuExpanded by rememberSaveable(chapter.id) { mutableStateOf(false) }
     val cardShape = MaterialTheme.shapes.medium
     val openScriptLabel = stringResource(R.string.chapter_list_action_open_script)
-    val moreLabel = stringResource(R.string.chapter_list_item_more)
+    val moreLabel = stringResource(R.string.action_more)
     val moreDescription = stringResource(
         R.string.chapter_list_item_more_content_description,
         chapter.number,
@@ -550,23 +551,10 @@ private fun ChapterListFooter(
         contentAlignment = Alignment.Center,
     ) {
         if (loadMoreError != null) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                Text(
-                    text = stringResource(R.string.chapter_list_load_more_error, loadMoreError),
-                    modifier = Modifier.weight(1f, fill = false),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error,
-                )
-                TextButton(
-                    onClick = onRetryLoadMore,
-                    modifier = Modifier.heightIn(min = 48.dp),
-                ) {
-                    Text(stringResource(R.string.action_retry))
-                }
-            }
+            ErrorBanner(
+                message = stringResource(R.string.chapter_list_load_more_error, loadMoreError),
+                onRetry = onRetryLoadMore,
+            )
         } else if (state.loadingMore) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,

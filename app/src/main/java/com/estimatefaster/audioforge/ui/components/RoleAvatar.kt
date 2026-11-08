@@ -112,6 +112,10 @@ private fun avatarColors(index: Int): Pair<Color, Color> {
     }
 }
 
+// ---------------------------------------------------------------------------
+// Preview：头像样例（浅色 / 深色 200%）
+// ---------------------------------------------------------------------------
+
 @Composable
 private fun RoleAvatarSamples() {
     Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {

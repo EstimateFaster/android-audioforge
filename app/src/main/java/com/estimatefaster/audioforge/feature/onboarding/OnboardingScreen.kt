@@ -48,6 +48,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.estimatefaster.audioforge.R
+import com.estimatefaster.audioforge.ui.components.ErrorBanner
 import com.estimatefaster.audioforge.ui.components.SectionHeader
 import com.estimatefaster.audioforge.ui.theme.AudioForgeTheme
 
@@ -503,19 +504,7 @@ private fun SaveErrorBanner(error: OnboardingSaveError) {
         is OnboardingSaveError.PersistFailed ->
             stringResource(R.string.onboarding_save_failed)
     }
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.errorContainer,
-        ),
-    ) {
-        Text(
-            text = message,
-            modifier = Modifier.padding(14.dp),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onErrorContainer,
-        )
-    }
+    ErrorBanner(message = message)
 }
 
 @Composable
@@ -566,7 +555,7 @@ private fun OnboardingBottomBar(
                     ) {
                         Text(
                             text = if (state.saving) {
-                                stringResource(R.string.onboarding_action_saving)
+                                stringResource(R.string.action_saving)
                             } else {
                                 stringResource(R.string.onboarding_action_save_and_continue)
                             },

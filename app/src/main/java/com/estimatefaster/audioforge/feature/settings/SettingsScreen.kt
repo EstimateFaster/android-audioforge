@@ -3,7 +3,6 @@ package com.estimatefaster.audioforge.feature.settings
 import android.content.res.Configuration
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
@@ -21,7 +20,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
@@ -54,7 +52,8 @@ import com.estimatefaster.audioforge.BuildConfig
 import com.estimatefaster.audioforge.R
 import com.estimatefaster.audioforge.core.settings.AppSettings
 import com.estimatefaster.audioforge.core.settings.ThemeMode
-import com.estimatefaster.audioforge.ui.components.ErrorState
+import com.estimatefaster.audioforge.ui.components.ErrorBanner
+import com.estimatefaster.audioforge.ui.components.ScreenState
 import com.estimatefaster.audioforge.ui.components.SectionHeader
 import com.estimatefaster.audioforge.ui.theme.AudioForgeTheme
 
@@ -173,25 +172,24 @@ fun SettingsScreen(
             )
         },
     ) { padding ->
-        when {
-            state.loading -> LoadingContent(modifier = Modifier.padding(padding))
+        val screenState = when {
+            state.loading -> ScreenState.Loading(stringResource(R.string.settings_loading))
 
-            state.loadError != null -> Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-                contentAlignment = Alignment.Center,
-            ) {
-                ErrorState(
-                    message = stringResource(
-                        R.string.settings_load_error,
-                        state.loadError,
-                    ),
-                    onRetry = onRetry,
-                )
-            }
+            state.loadError != null -> ScreenState.Error(
+                message = stringResource(
+                    R.string.settings_load_error,
+                    state.loadError,
+                ),
+                onRetry = onRetry,
+            )
 
-            else -> SettingsContent(
+            else -> ScreenState.Content
+        }
+        ScreenState(
+            state = screenState,
+            modifier = Modifier.padding(padding),
+        ) {
+            SettingsContent(
                 state = state,
                 versionName = versionName,
                 contentPadding = padding,
@@ -210,6 +208,7 @@ fun SettingsScreen(
                 onOpenStorage = onOpenStorage,
                 onOpenAbout = onOpenAbout,
                 onRestartOnboarding = onRestartOnboarding,
+                onSave = onSave,
             )
         }
     }
@@ -244,23 +243,6 @@ fun SettingsScreen(
 }
 
 @Composable
-private fun LoadingContent(modifier: Modifier = Modifier) {
-    Column(
-        modifier = modifier.fillMaxSize(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        CircularProgressIndicator()
-        Spacer(Modifier.heightIn(min = 12.dp))
-        Text(
-            text = stringResource(R.string.settings_loading),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
-}
-
-@Composable
 private fun SettingsContent(
     state: SettingsUiState,
     versionName: String,
@@ -273,6 +255,7 @@ private fun SettingsContent(
     onOpenStorage: () -> Unit,
     onOpenAbout: () -> Unit,
     onRestartOnboarding: () -> Unit,
+    onSave: () -> Unit,
 ) {
     val enabled = !state.saving
 
@@ -285,7 +268,7 @@ private fun SettingsContent(
     ) {
         if (state.saving || state.saved || state.saveError != null) {
             item(key = "save-status") {
-                SaveStatus(state = state)
+                SaveStatus(state = state, onSave = onSave)
             }
         }
         if (state.isDirty && state.hasErrors) {
@@ -359,7 +342,7 @@ private fun SettingsContent(
 }
 
 @Composable
-private fun SaveStatus(state: SettingsUiState) {
+private fun SaveStatus(state: SettingsUiState, onSave: () -> Unit) {
     when {
         state.saving -> Row(
             modifier = Modifier.fillMaxWidth(),
@@ -368,16 +351,15 @@ private fun SaveStatus(state: SettingsUiState) {
         ) {
             LinearProgressIndicator(modifier = Modifier.weight(1f))
             Text(
-                text = stringResource(R.string.settings_saving),
+                text = stringResource(R.string.action_saving),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
 
-        state.saveError != null -> Text(
-            text = stringResource(R.string.settings_save_error, state.saveError),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.error,
+        state.saveError != null -> ErrorBanner(
+            message = stringResource(R.string.action_save_error, state.saveError),
+            onRetry = onSave,
         )
 
         else -> Text(
@@ -477,10 +459,8 @@ private fun ApiSection(
         )
 
         if (state.keyError != null) {
-            Text(
-                text = stringResource(R.string.settings_key_error, state.keyError),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.error,
+            ErrorBanner(
+                message = stringResource(R.string.settings_key_error, state.keyError),
             )
         }
     }

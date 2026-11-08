@@ -465,7 +465,7 @@ private fun ScriptSegmentRow(
                                 .heightIn(min = 48.dp)
                                 .semantics { contentDescription = moreDescription },
                         ) {
-                            Text(stringResource(R.string.script_segment_more))
+                            Text(stringResource(R.string.action_more))
                         }
                         ScriptSegmentMenu(
                             expanded = menuExpanded,
