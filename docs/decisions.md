@@ -25,3 +25,13 @@
 - 验证：`./gradlew testDebugUnitTest`（CI）覆盖 UTF-8/BOM/GBK/GB18030/UTF-16LE/BE/Big5/非法字节；
   GB18030 与 Big5 互相都能严格解码时，用中文标点密度与异常字符评分选择。
 - 影响：不新增依赖、不扩大 APK；无 BOM 的 UTF-16 自动识别能力弱于 ICU，失败时走手动选编码。
+
+## 2026-11-08 Phase 1 与 Python 参考实现的有意差异
+
+- **TtsCacheKey v2**：字段序 `e/m/p/s/t/v/vol`，SHA-1 前 12；与 Python v1 JSON 缓存键不同，直接使用 v2、不复用旧键；
+  浮点用 `BigDecimal.valueOf(...).stripTrailingZeros().toPlainString()`。
+- **PipelineError**：core 层持有 `code + retryable + 中文 userMessage`；UI 后续按 code 映射 `strings.xml`，
+  `userMessage` 不直接出现在资源文件里。HTTP 400 统一映射 `MODEL_NOT_FOUND`（计划表口径）。
+- **VoicePoolProvider**：为满足 P1-08 的缓存要求放在 `core/voice`，依赖 `AssetManager`；P2 可迁到 data/app 层。
+- **P1-12 真实语料**：仓库只有上游 `test/sample_novel.txt`（2 章）与 fixture，50 条脱敏真实章节待人工提供（BLOCKED），
+  已用现有 fixture + 上游 sample 建立 golden 脚手架。
