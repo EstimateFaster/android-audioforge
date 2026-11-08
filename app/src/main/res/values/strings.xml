@@ -391,4 +391,46 @@
     <string name="chapter_list_action_quick_parse">快速解析</string>
     <string name="chapter_list_action_rerender">重新生成音频</string>
     <string name="chapter_list_action_open_script">打开剧本</string>
+
+    <!-- P4-08 任务页 -->
+    <string name="tasks_title">任务</string>
+    <string name="tasks_subtitle">当前任务、队列与最近结果</string>
+    <string name="tasks_loading">正在加载任务…</string>
+    <string name="tasks_load_error">加载任务失败：%1$s</string>
+    <string name="tasks_empty_title">没有任务</string>
+    <string name="tasks_empty_description">从项目页开始生成后，任务进度会显示在这里。</string>
+    <string name="tasks_current_title">当前任务</string>
+    <string name="tasks_no_running">当前没有正在运行的任务。已结束的结果会留在最近任务里。</string>
+    <string name="tasks_control_unavailable">任务模块接入后可停止</string>
+    <string name="tasks_started_elapsed">开始于 %1$s · 已运行 %2$s</string>
+    <string name="tasks_eta">预计剩余 %1$s</string>
+    <string name="tasks_eta_unknown">预计剩余：计算中</string>
+    <string name="tasks_status_stopping">停止中</string>
+    <string name="tasks_current_chapter">当前：%1$s</string>
+    <string name="tasks_progress_chapters">已完成 %1$d/%2$d 章</string>
+    <string name="tasks_progress_segments">片段 %1$d/%2$d</string>
+    <string name="tasks_progress_tts">语音 %1$d 成功 · %2$d 失败</string>
+    <string name="tasks_progress_ring_segments">片段进度</string>
+    <string name="tasks_progress_ring_chapters">章节进度</string>
+    <string name="tasks_progress_ring_empty">等待进度</string>
+    <string name="tasks_action_stop">停止</string>
+    <string name="tasks_stop_confirm_title">停止任务</string>
+    <string name="tasks_stop_confirm_message">停止《%1$s》后，会在当前片段收尾时停下；已完成的章节会保留。</string>
+    <string name="tasks_action_stop_confirm">停止任务</string>
+    <string name="tasks_queue_title">队列</string>
+    <string name="tasks_queue_subtitle">还有 %1$d 个任务等待或进行中</string>
+    <string name="tasks_queue_item_meta">%1$s · %2$d%%</string>
+    <string name="tasks_history_title">最近任务</string>
+    <string name="tasks_history_subtitle">最近 %1$d 条结果</string>
+    <string name="tasks_history_meta">%1$s · 耗时 %2$s</string>
+    <string name="tasks_history_finished">结束于 %1$s</string>
+    <string name="tasks_history_error">失败：%1$s</string>
+    <string name="tasks_mode_full">解析 + 生成</string>
+    <string name="tasks_mode_parse">仅解析</string>
+    <string name="tasks_mode_render">仅生成</string>
+    <string name="tasks_mode_unknown">未知模式</string>
+    <string name="tasks_mode_label">模式：%1$s</string>
+    <string name="tasks_action_error">操作失败：%1$s</string>
+    <string name="tasks_action_dismiss">知道了</string>
+    <string name="tasks_value_unknown">—</string>
 </resources>
