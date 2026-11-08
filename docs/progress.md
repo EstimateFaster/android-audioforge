@@ -139,10 +139,12 @@
 ### P1-03 TextDecoder — in_progress
 - 开始：2026-11-08 13:24（Asia/Shanghai）
 - 分支：`feat/p1-03-text-decoder`
-- 目标：`core/ingest/TextDecoder.kt`：BOM → UTF-8 严格 → ICU CharsetDetector → GB18030 → Big5；
-  每种候选严格解码 + 前 2 万字 CJK ≥15%；失败返回可手动选编码；64MB 上限；不抛未捕获异常
+- 目标：`core/ingest/TextDecoder.kt`：BOM → UTF-8 严格 → GB18030/Big5 严格解码 + 评分；
+  前 2 万字 CJK ≥15%；失败返回可手动选编码；64MB 上限；不抛未捕获异常
 - 依赖：P1-01 ✅
 - 验收：UTF-8/UTF-8 BOM/GBK/GB18030/UTF-16LE/BE/Big5/非法字节用例全过
+- 偏差：计划要求的 `android.icu.text.CharsetDetector` 不在公开 SDK，已改用启发式并记录到 `docs/decisions.md`
+- 首次 CI 失败：`Unresolved reference 'CharsetDetector'`；已重写探测逻辑，等第二次 CI
 
 ## 已知实编坑（已处理）
 
@@ -153,6 +155,7 @@
 - Room 2.8.5 的 `onOpen` 里 `execSQL("PRAGMA busy_timeout=...")` 在真机必崩，必须用 `query(...)`。
 - `connectedDebugAndroidTest` 跑完会卸载 APK；要在模拟器截图需重新 `installDebug`。
 - `reactivecircus/android-emulator-runner` 按行执行 `script`，多行 `{}` / 跨行变量不生效。
+- `android.icu.text.CharsetDetector` 不在公开 SDK（android.jar 无此类），编码识别需自研或换依赖。
 
 ## 已发布
 

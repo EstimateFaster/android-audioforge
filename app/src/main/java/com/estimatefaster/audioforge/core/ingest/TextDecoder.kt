@@ -15,16 +15,18 @@ sealed interface TextDecodeResult {
 
 /**
  * txt 编码识别（执行计划 §7.7 / §8.1）：
- * BOM（UTF-8/UTF-16LE/BE）→ UTF-8 严格 → ICU `CharsetDetector` → GB18030 → Big5。
- * 每种候选都必须能严格解码且前 2 万字中文占比 ≥15%，否则交给用户手动选编码；不静默乱码。
+ * BOM（UTF-8/UTF-16LE/BE）→ UTF-8 严格 → GB18030 / Big5（严格解码 + 评分）。
  *
- * 纯 JVM + `android.icu`；不抛未捕获异常，所有失败都返回 [TextDecodeResult]。
+ * 计划原本要求 `android.icu.text.CharsetDetector`，但该类不在 Android 公开 SDK
+ * （compileSdk 37 的 android.jar 中不存在）。这里改用启发式：
+ * 候选都必须严格解码且前 2 万字中文占比 ≥15%；GB18030 与 Big5 都能解时，
+ * 用「中文标点密度 + CJK 密度 - 异常字符」评分选更可信的一个。
+ * 失败返回 [TextDecodeResult.ManualEncodingRequired]，不静默乱码、不抛未捕获异常。
  */
 class TextDecoder(
     private val maxBytes: Long = MAX_IMPORT_BYTES,
     private val sampleChars: Int = CJK_SAMPLE_CHARS,
     private val minCjkRatio: Double = MIN_CJK_RATIO,
-    private val detector: (ByteArray) -> Charset? = ::detectWithIcu,
 ) {
 
     fun decode(bytes: ByteArray, manualCharset: String? = null): TextDecodeResult {
@@ -74,30 +76,30 @@ class TextDecoder(
             return TextDecodeResult.Success(utf8, "UTF-8")
         }
 
-        val detected = try {
-            detector(bytes)
-        } catch (e: Exception) {
-            // 检测器自身异常不应中断回退链。
-            null
-        }
-        if (detected != null && !detected.equals(Charsets.UTF_8)) {
-            val text = strictDecode(bytes, detected)
-            if (text != null && passesCjkCheck(text)) {
-                return TextDecodeResult.Success(text, detected.name())
+        val best = FALLBACK_CHARSETS
+            .mapIndexedNotNull { order, name ->
+                val charset = Charset.forName(name)
+                val text = strictDecode(bytes, charset) ?: return@mapIndexedNotNull null
+                if (!passesCjkCheck(text)) return@mapIndexedNotNull null
+                Candidate(order, charset.name(), text, plausibility(text))
             }
-        }
+            .sortedWith(compareByDescending<Candidate> { it.score }.thenBy { it.order })
+            .firstOrNull()
 
-        for (name in FALLBACK_CHARSETS) {
-            val charset = Charset.forName(name)
-            val text = strictDecode(bytes, charset) ?: continue
-            if (passesCjkCheck(text)) return TextDecodeResult.Success(text, charset.name())
-        }
+        if (best != null) return TextDecodeResult.Success(best.text, best.charsetName)
 
         return TextDecodeResult.ManualEncodingRequired(
             "无法自动识别编码（前 ${sampleChars} 字中文占比需 ≥${(minCjkRatio * 100).toInt()}%）",
             MANUAL_CANDIDATES,
         )
     }
+
+    private data class Candidate(
+        val order: Int,
+        val charsetName: String,
+        val text: String,
+        val score: Double,
+    )
 
     private fun passesCjkCheck(text: String): Boolean = cjkRatio(text) >= minCjkRatio
 
@@ -106,6 +108,28 @@ class TextDecoder(
         val sample = if (text.length > sampleChars) text.substring(0, sampleChars) else text
         val cjk = sample.count { it in '\u4e00'..'\u9fff' }
         return cjk.toDouble() / sample.length
+    }
+
+    /**
+     * 同一串字节用 GB18030 / Big5 都能严格解码时，选更像正常中文小说的那个：
+     * 正确解码保留中文标点，错误解码多产生生僻字/假名/私用区字符。
+     */
+    private fun plausibility(text: String): Double {
+        val sample = if (text.length > sampleChars) text.substring(0, sampleChars) else text
+        if (sample.isEmpty()) return 0.0
+        var punctuation = 0
+        var cjk = 0
+        var weird = 0
+        for (ch in sample) {
+            when {
+                ch in CHINESE_PUNCTUATION -> punctuation++
+                ch in '\u4e00'..'\u9fff' -> cjk++
+                ch.isWhitespace() || ch.code < 0x80 -> Unit // 换行/ASCII 不区分
+                ch.code in 0x3000..0x303F -> punctuation++
+                else -> weird++
+            }
+        }
+        return (punctuation * 6.0 + cjk * 0.5 - weird * 2.0) / sample.length
     }
 
     private fun bomCharset(bytes: ByteArray): Pair<Charset, Int>? = when {
@@ -145,16 +169,10 @@ class TextDecoder(
         const val MIN_CJK_RATIO = 0.15
 
         val MANUAL_CANDIDATES = listOf("GB18030", "Big5", "UTF-8", "UTF-16LE", "UTF-16BE")
+
+        /** 顺序即平局优先级：GB18030 优先。 */
         private val FALLBACK_CHARSETS = listOf("GB18030", "Big5")
 
-        private fun detectWithIcu(bytes: ByteArray): Charset? = try {
-            android.icu.text.CharsetDetector()
-                .setText(bytes)
-                .detect()
-                ?.name
-                ?.let { Charset.forName(it) }
-        } catch (e: Exception) {
-            null
-        }
+        private const val CHINESE_PUNCTUATION = "，。！？；：、“”‘’（）《》〈〉【】…—～·"
     }
 }

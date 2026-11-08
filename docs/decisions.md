@@ -16,3 +16,12 @@
 ## 待记录（DSH 填写）
 
 - 日期 / 变更 / 原因 / 验证命令 / 影响。
+
+## 2026-11-08 TextDecoder 不使用 `android.icu.text.CharsetDetector`
+
+- 变更：P1-03 的编码识别改为「BOM → UTF-8 严格 → GB18030/Big5 严格解码 + CJK 占比 + 标点评分」。
+- 原因：`android.icu.text.CharsetDetector` 不在 Android 公开 SDK；compileSdk 37 的 `android.jar` 中不存在该类，
+  计划 §7.7 给出的 API 在本基线不可编译（CI 报 `Unresolved reference 'CharsetDetector'`）。
+- 验证：`./gradlew testDebugUnitTest`（CI）覆盖 UTF-8/BOM/GBK/GB18030/UTF-16LE/BE/Big5/非法字节；
+  GB18030 与 Big5 互相都能严格解码时，用中文标点密度与异常字符评分选择。
+- 影响：不新增依赖、不扩大 APK；无 BOM 的 UTF-16 自动识别能力弱于 ICU，失败时走手动选编码。
