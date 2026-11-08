@@ -329,13 +329,13 @@ class VoicePickerUiStateTest {
         advanceUntilIdle()
 
         assertTrue(viewModel.state.value.pendingLockedConfirm)
-        assertEquals(0, assigner.calls)
+        assertTrue(assigner.calls.isEmpty())
 
         viewModel.dismissLockedConfirm()
         advanceUntilIdle()
 
         assertFalse(viewModel.state.value.pendingLockedConfirm)
-        assertEquals(0, assigner.calls)
+        assertTrue(assigner.calls.isEmpty())
 
         viewModel.save()
         assertTrue(viewModel.state.value.pendingLockedConfirm)
@@ -356,7 +356,7 @@ class VoicePickerUiStateTest {
         advanceUntilIdle()
 
         assertFalse(viewModel.state.value.pendingLockedConfirm)
-        assertEquals(0, assigner.calls)
+        assertTrue(assigner.calls.isEmpty())
     }
 
     @Test
@@ -394,7 +394,7 @@ class VoicePickerUiStateTest {
         viewModel.cancel()
         advanceUntilIdle()
 
-        assertEquals(0, assigner.calls)
+        assertTrue(assigner.calls.isEmpty())
         assertEquals("male_lead_steady", viewModel.state.value.selectedCategory)
         assertEquals(VoicePickerEvent.Cancelled, viewModel.events.first())
     }
@@ -408,7 +408,7 @@ class VoicePickerUiStateTest {
         viewModel.save()
         advanceUntilIdle()
 
-        assertEquals(0, assigner.calls)
+        assertTrue(assigner.calls.isEmpty())
     }
 
     @Test
@@ -424,7 +424,7 @@ class VoicePickerUiStateTest {
         viewModel.save()
         advanceUntilIdle()
 
-        assertEquals(0, assigner.calls)
+        assertTrue(assigner.calls.isEmpty())
     }
 
     @Test
@@ -435,13 +435,13 @@ class VoicePickerUiStateTest {
 
         viewModel.save()
         assertTrue(viewModel.state.value.saving)
-        assertEquals(0, assigner.calls)
+        assertTrue(assigner.calls.isEmpty())
 
         runCurrent()
-        assertEquals(1, assigner.calls)
+        assertEquals(1, assigner.calls.size)
         viewModel.save()
         runCurrent()
-        assertEquals(1, assigner.calls)
+        assertEquals(1, assigner.calls.size)
 
         assigner.gate.complete(Result.success(Unit))
         advanceUntilIdle()
@@ -459,12 +459,12 @@ class VoicePickerUiStateTest {
         viewModel.save()
         viewModel.save()
         assertTrue(viewModel.state.value.pendingLockedConfirm)
-        assertEquals(0, assigner.calls)
+        assertTrue(assigner.calls.isEmpty())
 
         viewModel.confirmLockedSave()
         assertTrue(viewModel.state.value.saving)
         runCurrent()
-        assertEquals(1, assigner.calls)
+        assertEquals(1, assigner.calls.size)
 
         assigner.gate.complete(Result.success(Unit))
         advanceUntilIdle()
@@ -597,14 +597,14 @@ class VoicePickerUiStateTest {
 
         val gate = CompletableDeferred<Result<Unit>>()
 
-        var calls: Int = 0
+        val calls: MutableList<Unit> = mutableListOf()
 
         override suspend fun assign(
             roleId: String,
             category: String,
             voiceId: String,
         ): Result<Unit> {
-            calls++
+            calls += Unit
             return gate.await()
         }
     }
