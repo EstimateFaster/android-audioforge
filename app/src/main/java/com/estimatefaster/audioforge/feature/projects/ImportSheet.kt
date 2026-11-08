@@ -31,6 +31,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -332,24 +337,29 @@ private fun ImportProgress(
             if (state.isProgressDeterminate) {
                 Text(
                     text = stringResource(R.string.progress_percent, state.percent),
+                    // 百分比只做视觉提示；进度条自身会向 TalkBack 播报数值。
+                    modifier = Modifier.clearAndSetSemantics { },
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
+        val progressDescription = stringResource(R.string.import_importing_title)
         if (state.isProgressDeterminate) {
             LinearProgressIndicator(
                 progress = { state.safeProgress },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(min = 4.dp),
+                    .heightIn(min = 4.dp)
+                    .semantics { contentDescription = progressDescription },
             )
         } else {
             // SAF 未提供 SIZE：用不确定进度，绝不伪造百分比。
             LinearProgressIndicator(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(min = 4.dp),
+                    .heightIn(min = 4.dp)
+                    .semantics { contentDescription = progressDescription },
             )
         }
     }
@@ -401,6 +411,9 @@ private fun ImportErrorPanel(
     ) {
         Text(
             text = stringResource(R.string.import_error_title),
+            modifier = Modifier.semantics {
+                liveRegion = LiveRegionMode.Polite
+            },
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.error,

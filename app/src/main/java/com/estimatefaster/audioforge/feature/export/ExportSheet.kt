@@ -41,6 +41,12 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
@@ -48,6 +54,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.estimatefaster.audioforge.R
+import com.estimatefaster.audioforge.ui.components.AdaptiveFieldRow
 import com.estimatefaster.audioforge.ui.components.EmptyState
 import com.estimatefaster.audioforge.ui.components.ErrorState
 import com.estimatefaster.audioforge.ui.components.SectionHeader
@@ -342,26 +349,30 @@ private fun RangeFields(
         error == ExportValidationError.StartAfterEnd
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            OutlinedTextField(
-                value = state.startText,
-                onValueChange = onStartTextChange,
-                label = { Text(stringResource(R.string.export_range_start)) },
-                singleLine = true,
-                isError = startInvalid,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                modifier = Modifier.weight(1f),
-            )
-            OutlinedTextField(
-                value = state.endText,
-                onValueChange = onEndTextChange,
-                label = { Text(stringResource(R.string.export_range_end)) },
-                singleLine = true,
-                isError = endInvalid,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                modifier = Modifier.weight(1f),
-            )
-        }
+        AdaptiveFieldRow(
+            {
+                OutlinedTextField(
+                    value = state.startText,
+                    onValueChange = onStartTextChange,
+                    label = { Text(stringResource(R.string.export_range_start)) },
+                    singleLine = true,
+                    isError = startInvalid,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            },
+            {
+                OutlinedTextField(
+                    value = state.endText,
+                    onValueChange = onEndTextChange,
+                    label = { Text(stringResource(R.string.export_range_end)) },
+                    singleLine = true,
+                    isError = endInvalid,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            },
+        )
         Text(
             text = stringResource(R.string.export_range_hint, state.chapters.size),
             style = MaterialTheme.typography.bodySmall,
@@ -385,23 +396,31 @@ private fun ChapterRow(
     } else {
         stringResource(R.string.export_value_unknown)
     }
+    val notReadyLabel = stringResource(R.string.export_chapter_not_ready)
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp),
+            .padding(vertical = 4.dp)
+            .semantics(mergeDescendants = true) {
+                this.selected = selected
+                if (!chapter.audioDone) {
+                    stateDescription = notReadyLabel
+                }
+            },
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Checkbox(
             checked = selected,
             onCheckedChange = null,
+            modifier = Modifier.clearAndSetSemantics { },
         )
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = chapter.title,
                 style = MaterialTheme.typography.bodyLarge,
-                maxLines = 1,
+                maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
@@ -412,7 +431,7 @@ private fun ChapterRow(
         }
         if (!chapter.audioDone) {
             Text(
-                text = stringResource(R.string.export_chapter_not_ready),
+                text = notReadyLabel,
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.error,
             )
@@ -488,7 +507,8 @@ private fun ExportingSection(
         progress = { state.progress },
         modifier = Modifier
             .fillMaxWidth()
-            .height(6.dp),
+            .height(6.dp)
+            .semantics { liveRegion = LiveRegionMode.Polite },
     )
     val currentTitle = state.currentChapterTitle
     if (currentTitle != null) {
@@ -651,7 +671,7 @@ private fun ExportedFileRow(file: ExportedFile) {
         Text(
             text = file.displayName,
             style = MaterialTheme.typography.bodyMedium,
-            maxLines = 1,
+            maxLines = 2,
             overflow = TextOverflow.Ellipsis,
         )
         Text(

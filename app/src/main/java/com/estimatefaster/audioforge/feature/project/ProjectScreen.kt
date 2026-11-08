@@ -46,8 +46,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -165,6 +167,7 @@ fun ProjectScreen(
                         Text(
                             text = project?.title
                                 ?: stringResource(R.string.project_screen_title),
+                            modifier = Modifier.semantics { heading() },
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.SemiBold,
                             maxLines = 1,
@@ -646,15 +649,18 @@ private fun CharacterStrip(
 @Composable
 private fun CharacterItem(character: CharacterUi) {
     Column(
-        modifier = Modifier.widthIn(min = 64.dp, max = 88.dp),
+        modifier = Modifier
+            .widthIn(min = 64.dp, max = 88.dp)
+            .semantics(mergeDescendants = true) {},
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        RoleAvatar(name = character.name)
+        // 头像旁已有可见名字，装饰化以避免同一个人物被读两遍。
+        RoleAvatar(name = character.name, decorative = true)
         Spacer(Modifier.height(4.dp))
         Text(
             text = character.name,
             style = MaterialTheme.typography.labelMedium,
-            maxLines = 1,
+            maxLines = 2,
             overflow = TextOverflow.Ellipsis,
         )
     }

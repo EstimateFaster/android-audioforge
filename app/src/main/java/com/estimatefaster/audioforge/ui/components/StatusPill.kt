@@ -162,8 +162,9 @@ fun StatusPill(
     onClick: (() -> Unit)? = null,
 ) {
     val colors = resolveStatusPillColors(tone, MaterialTheme.colorScheme)
+    val animationsEnabled = rememberSystemAnimationsEnabled()
 
-    val pulseAlpha = if (tone == StatusTone.Running) {
+    val pulseAlpha = if (tone == StatusTone.Running && animationsEnabled) {
         val transition = rememberInfiniteTransition(label = "statusPillPulse")
         val alpha by transition.animateFloat(
             initialValue = 0.35f,

@@ -35,6 +35,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -128,6 +130,7 @@ fun TasksScreen(
                     Column {
                         Text(
                             text = stringResource(R.string.tasks_title),
+                            modifier = Modifier.semantics { heading() },
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.SemiBold,
                         )
@@ -292,7 +295,7 @@ private fun CurrentTaskCard(
                         text = card.novelTitle,
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.SemiBold,
-                        maxLines = 1,
+                        maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                     )
                     Text(
@@ -321,6 +324,7 @@ private fun CurrentTaskCard(
                     label = progressRingLabel(card),
                     diameter = 96.dp,
                     strokeWidth = 8.dp,
+                    liveRegion = true,
                 )
                 Spacer(Modifier.width(18.dp))
                 Column(
@@ -447,7 +451,7 @@ private fun QueueTaskRow(
                     text = card.novelTitle,
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
                 Text(
@@ -464,7 +468,7 @@ private fun QueueTaskRow(
                         text = card.currentTitle,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
+                        maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
@@ -496,7 +500,7 @@ private fun HistoryRow(
                     text = item.novelTitle,
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f),
                 )
