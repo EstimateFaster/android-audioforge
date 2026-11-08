@@ -41,6 +41,57 @@
 | P1-14 文档与进度 | ⏳ todo | |
 | P1-15 Phase 1 门禁 | ✅ done | `docs/phase1-gate.md`；153/153 单测 + main CI 绿 |
 
+## Phase 2（数据/网络/音频）
+
+| 任务 | 状态 | 备注 |
+|---|---|---|
+| P2-01 Room 实体/DAO/DB | ✅ done | schema 1.json；RoomDaoTest 10/10 |
+| P2-02 仓库层 + AppContainer | ✅ done | 5 仓库 + AppViewModelFactory |
+| P2-03 DataStore 设置 | ✅ done | SettingsRepositoryTest 13/13 |
+| P2-04 SecureKeyStore | ✅ done | Keystore AES-GCM + instrumented |
+| P2-05 AudioStorage/ProjectFiles | ✅ done | ProjectFilesTest 27 + AudioStorageTest 10 |
+| P2-06 ImportNovelUseCase | ✅ done | 8 用例 |
+| P2-07 LlmClient | ✅ done | MockWebServer 15 场景 |
+| P2-08 FishTtsClient | ✅ done | MockWebServer 10 场景；退避 ms 修复 |
+| P2-09 TtsSynthesizer/后处理 | ✅ done | 24 用例 |
+| P2-10 ChapterStitcher/Silence | ✅ done | emulator 拼接测试 |
+| P2-11 AnalyzeChapterUseCase | ✅ done | 8 用例（降级/截断/修复） |
+| P2-12 RenderChapterUseCase | ✅ done | 9 用例（worker/停止/拼接） |
+| P2-13 CharacterRegistryAdapter | ✅ done | 9 用例 |
+| P2-14 Media3 播放 | ✅ done | SleepTimer 5 + emulator JVM/Manifest 测试 |
+| P2-15 导出/分享 | ✅ done | MediaStore/FileProvider + instrumented |
+| P2-16 ErrorMapper | ✅ done | 13 用例 |
+| P2-17 端到端 fake 测试 | ⏳ todo | 待接 |
+| P2-18 真实 API smoke | 🚫 BLOCKED | 无用户 Key（不提交密钥） |
+| P2-19 长章节守卫 | ✅ done | TooLong + allowLongChapter |
+| P2-20 Phase 2 门禁 | ⏳ todo | 待 P2-17/P2-18 |
+
+## Phase 3（后台任务）
+
+| 任务 | 状态 | 备注 |
+|---|---|---|
+| P3-01 Job 状态机/仓库 | ✅ done | guarded transitions + stats/sweep |
+| P3-02 GenerationWorker/Executor | ✅ done | 12 用例 |
+| P3-03 前台通知 | ⏳ todo | |
+| P3-04 BatchRunner/队列 | ⏳ todo | |
+| P3-05~P3-12 | ⏳ todo | 依赖链后续 |
+
+## Phase 4（UI）
+
+| 任务 | 状态 | 备注 |
+|---|---|---|
+| P4-01 导航与自适应壳 | ✅ done | 类型安全路由/深链/rail |
+| P4-02 设计系统组件 | ✅ done | 6 组件 + 12 Preview |
+| P4-03 项目库 | ✅ done | 搜索/卡片/删除/空态 |
+| P4-04 导入 Sheet | ⏳ todo | 依赖 P4-03（已满足） |
+| P4-05 项目详情 | ✅ done | 14 用例 |
+| P4-06 批次 Sheet | ⏳ todo | 依赖 P3-04 |
+| P4-07 章节列表/筛选/分页 | ✅ done | 分页/筛选/2000 章 |
+| P4-08 任务页 | ⏳ todo | 依赖 P3 |
+| P4-09 全局设置 | ✅ done | 15 用例/Key 掩码 |
+| P4-10 Onboarding | 🟡 in_progress | 修 ViewModel 测试调度 |
+| P4-11~P4-15 | ⏳ todo | |
+
 ## 任务记录
 
 ### P0-05 Room smoke — done
@@ -307,3 +358,4 @@
 - 2026-11-08：P1-08/09/10/11/12 完成；6 个 agent 并行（独立 worktree），统一 CI 验证后逐个合并。
 - 2026-11-08：P1-13/14 完成；性能基准 10.2ms/300ms，进度与决策文档补齐。
 - 2026-11-08：P1-15 门禁通过；Phase 1 完成（153 单测、main CI 绿、无 TODO/硬编码 Key）。
+- 2026-11-08/09：Phase 2 主体、P3-01/02、P4-01/02/03/05/07/09 合并；并行 agent（worktree）+ 统一 CI。
