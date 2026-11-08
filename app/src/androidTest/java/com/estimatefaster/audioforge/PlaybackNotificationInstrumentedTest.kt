@@ -120,10 +120,11 @@ class PlaybackNotificationInstrumentedTest {
     @Test
     fun chapterCommand_withoutQueue_doesNotPretendSuccess() {
         val connected = connect()
+        var state = Player.STATE_IDLE
+        runOnMain { state = connected.playbackState }
         assertTrue(
-            "未起播时播放器应处于 IDLE/ENDED，实际=${connected.playbackState}",
-            connected.playbackState == Player.STATE_IDLE ||
-                connected.playbackState == Player.STATE_ENDED,
+            "未起播时播放器应处于 IDLE/ENDED，实际=$state",
+            state == Player.STATE_IDLE || state == Player.STATE_ENDED,
         )
         val result = send(PlaybackCommands.ACTION_NEXT_CHAPTER, Bundle.EMPTY)
         assertNotEquals(
