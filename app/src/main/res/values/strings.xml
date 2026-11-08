@@ -48,6 +48,23 @@
     <string name="notif_done_success">冒烟任务完成</string>
     <string name="notif_done_failure">冒烟任务失败</string>
     <string name="notif_done_probe_success">已写入并回读 Room（第 %1$d 次）</string>
+
+    <!-- P3-03 生成前台通知 -->
+    <string name="notif_channel_failed">生成失败或停止</string>
+    <string name="notif_channel_failed_desc">生成失败、取消或手动停止的通知</string>
+    <string name="notif_generation_title">正在生成：%1$s</string>
+    <string name="notif_generation_progress">%1$d%% · 已完成 %2$d/%3$d 章</string>
+    <string name="notif_generation_stop">停止</string>
+    <string name="notif_generation_unknown_novel">当前项目</string>
+    <string name="notif_generation_done_title">生成完成</string>
+    <string name="notif_generation_done_text">《%1$s》已生成 %2$d 章</string>
+    <string name="notif_generation_partial_title">生成完成（部分章节失败）</string>
+    <string name="notif_generation_partial_text">《%1$s》：%2$s</string>
+    <string name="notif_generation_failed_title">生成失败</string>
+    <string name="notif_generation_failed_text">《%1$s》：%2$s</string>
+    <string name="notif_generation_failed_unknown">生成失败，请重试</string>
+    <string name="notif_generation_cancelled_title">已停止生成</string>
+    <string name="notif_generation_cancelled_text">《%1$s》已停止，完成 %2$d/%3$d 章</string>
     <string name="footer">MIT · 上游 StoryForge · FFmpegKit LGPL</string>
 
     <!-- P4-01 导航与自适应壳 -->
