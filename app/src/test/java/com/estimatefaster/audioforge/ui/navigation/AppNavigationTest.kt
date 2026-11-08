@@ -104,7 +104,7 @@ class AppNavigationTest {
         graph = navController.createGraph(startDestination = Route.Projects) {
             appNavGraph(navController)
         }
-        navController.setGraph(graph)
+        navController.setGraph(graph, null)
     }
 
     @Test
