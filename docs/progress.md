@@ -29,7 +29,7 @@
 | P1-02 Assets：提示词 + 音色池 | ✅ done | CI 42448901696 绿；Prompt/VoicePool 11 个用例 + 快照 |
 | P1-03 TextDecoder | ✅ done | CI 42449492657 绿；`TextDecoderTest` 14/14 |
 | P1-04 ChapterSplitter | ✅ done | CI 42449986934 绿；`ChapterSplitterTest` 9/9（含上游样例 145/664 字） |
-| P1-05 ScriptSanitizer | ⏳ todo | |
+| P1-05 ScriptSanitizer | 🟡 in_progress | 逐函数移植 + fixture/Python 用例；等 CI |
 | P1-06 CoverageChecker | ⏳ todo | |
 | P1-07 CharacterRegistry | ⏳ todo | |
 | P1-08 VoicePool 完整 | ⏳ todo | |
@@ -155,6 +155,15 @@
   - 上游 `sample_novel.txt`（f1d262b）切出 2 章：145/664 字、idx 0/1、标题与 fixture 一致
   - 无标题单章「全文」、假标题跳过、idx 连续、CRLF、超长标题、中文数字/Chapter/卷/节/回/部、序言丢弃、空文本
 - 产出：`core/ingest/ChapterSplitter.kt`、`ChapterSplitterTest.kt`、`app/src/test/resources/sample_novel.txt`
+
+### P1-05 ScriptSanitizer — in_progress
+- 开始：2026-11-08 14:30（Asia/Shanghai）
+- 分支：`feat/p1-05-script-sanitizer`
+- 目标：`core/script/ScriptSanitizer.kt` 逐函数移植上游 `core/analyzer.py`：
+  `stripSpeechTail` / `isResidue` / `findQuoted` / `splitDialogueMixed` / `splitMixed` / `splitLong` / `sanitize`
+- 依赖：P1-01 ✅
+- 验收：fixture `strip_speech_tail` 15 条 + `split_long` 4 条；上游 `tests/test_analyzer.py` 清洗用例
+- 方法：先用上游 Python 跑通断言再写 Kotlin，避免盲改正则
 
 ## 已知实编坑（已处理）
 
