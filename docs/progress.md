@@ -74,3 +74,5 @@
 - 2026-11-08：`v0.1.0` release workflow 绿；签名 APK + checksums 已发布。
 - 2026-11-08：新约束「不再本地构建/本地 CI」生效；验证改由 GitHub Actions 承担（CI 回传 schema 与单测报告 artifact）。
 - 2026-11-08：P0-05 完成；Room Probe + Robolectric 读写测试 + KSP schema 入库。
+- 2026-11-08：设备 smoke 暴露真问题——`AppDatabase.create()` 的 `onOpen` 用 `execSQL("PRAGMA busy_timeout=5000")`
+  在真实 SQLite 上抛 `SQLiteException`（Robolectric 未覆盖到该回调）；改用 `query(...).close()`，并补 `create()` 单测。
