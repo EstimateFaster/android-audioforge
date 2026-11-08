@@ -36,7 +36,8 @@ abstract class AppDatabase : RoomDatabase() {
                 .addCallback(object : RoomDatabase.Callback() {
                     override fun onOpen(db: SupportSQLiteDatabase) {
                         db.execSQL("PRAGMA foreign_keys=ON")
-                        db.execSQL("PRAGMA busy_timeout=5000")
+                        // busy_timeout 会返回一行结果，Android 的 execSQL 不接受，必须用 query。
+                        db.query("PRAGMA busy_timeout=5000").close()
                     }
                 })
                 .build()

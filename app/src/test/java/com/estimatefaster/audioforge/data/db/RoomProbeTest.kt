@@ -64,4 +64,23 @@ class RoomProbeTest {
         val result = probe.run()
         assertTrue("期望失败状态，实际是 $result", result is RoomProbeState.Failed)
     }
+
+    /** 覆盖 AppDatabase.create() 的 onOpen 回调（设备上 execSQL PRAGMA 曾失败过）。 */
+    @Test
+    fun create_builder_applies_pragmas() = runTest {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        context.deleteDatabase(AppDatabase.DB_NAME)
+        val fileDb = AppDatabase.create(context)
+        try {
+            val result = RoomProbe(fileDb.probeDao()).run()
+            assertTrue("期望通过，实际是 $result", result is RoomProbeState.Passed)
+            fileDb.openHelper.writableDatabase.query("PRAGMA foreign_keys").use { cursor ->
+                assertTrue(cursor.moveToFirst())
+                assertEquals(1, cursor.getInt(0))
+            }
+        } finally {
+            fileDb.close()
+            context.deleteDatabase(AppDatabase.DB_NAME)
+        }
+    }
 }

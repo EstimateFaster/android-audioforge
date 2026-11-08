@@ -13,7 +13,7 @@
 | P0-03 Manifest / 权限 / Service | ✅ done | WorkManager `dataSync` 合并；FileProvider；占位图标 |
 | P0-04 Compose 空壳与 Expressive 主题 | ✅ done | `MaterialExpressiveTheme` + `MotionScheme.expressive()`；首页空壳 |
 | P0-05 Room smoke | ✅ done | CI 42444925547 绿；`RoomProbeTest` 3/3；schema `1.json` 已入库 |
-| P0-06 WorkManager 前台服务 smoke | ⏳ todo | 需要 Worker + 通知 + 真机 |
+| P0-06 WorkManager 前台服务 smoke | ✅ done | Smoke 42446113920 绿；Worker SUCCEEDED + 通知可见 + 取消 CANCELLED |
 | P0-07 FFmpeg smoke | ⏳ todo | 真机/模拟器 `-version` + 静音/拼接 |
 | P0-08 CI debug 构建与 APK 校验 | ✅ done | CI run 42442128213 绿；debug APK artifact 已上传 |
 | P0-09 Release 签名 CI | ✅ done | v0.1.0 已发布；签名 release APK + checksums |
@@ -37,6 +37,23 @@
 - 说明：本机不再跑本地 Gradle/CI（新约束），验证以 GitHub Actions 为准
 - 遗留：真机/模拟器上的启动 smoke 归入 P0-11；P2-01 建正式实体时删除 `probe` 表并升 version
 
+### P0-06 WorkManager / 前台服务 smoke — done
+- 完成：2026-11-08 12:26（Asia/Shanghai）
+- 分支：`feat/p0-06-workmanager-smoke`（PR #2）
+- 目标：`ProbeWorker`（CoroutineWorker + `setForeground` dataSync + 进度）→ Room 写入 → 完成通知；
+  首页 Debug 卡片可启动/停止并显示状态
+- 依赖：P0-03、P0-05
+- 提交：`2ceeb2b`（实现）、`6c42715`（smoke 触发）、`a523c89`（设备 smoke 发现的 PRAGMA 修复）
+- 验证：
+  - 普通 CI [42446113912](https://github.com/EstimateFaster/android-audioforge/actions/runs/42446113912) 绿；
+    `RoomProbeTest` 4/4（新增 `create()` + PRAGMA 用例）
+  - Smoke [42446113920](https://github.com/EstimateFaster/android-audioforge/actions/runs/42446113920) 绿，API 35 emulator：
+    - `foreground_worker_runs_and_posts_notification`：Worker SUCCEEDED 且运行期间 `dataSync` 通知可见
+    - `cancelling_worker_ends_with_cancelled_state`：取消后 CANCELLED，进程不崩
+    - `probe_writes_and_reads_back_on_device`：设备 SQLite 读写通过
+- 新增：`.github/workflows/smoke.yml`（PR 改动 `app/src/main`/`androidTest` 时自动跑，也可手动 dispatch）
+- 遗留：通知「停止」action、锁屏 30 分钟、国产 ROM 归入 P0-11 / P3
+
 ## 已知实编坑（已处理）
 
 - KSP + AGP 9 内置 Kotlin：`android.disallowKotlinSourceSets=false`。
@@ -53,8 +70,8 @@
 
 ## 下一步
 
-1. P0-06 WorkManager / 前台服务 smoke（依赖 P0-05 ✅）。
-2. P0-07 FFmpeg smoke；P0-11 真机/模拟器清单；P0-12 门禁。
+1. P0-07 FFmpeg smoke（`-version` + 350ms 静音 + 两段拼接），用 emulator smoke 验证。
+2. P0-11 真机/模拟器清单；P0-12 门禁。
 3. 进入 P1-01（模型/枚举）与 P1-02（提示词/音色池）。
 
 ## 日志
@@ -64,3 +81,5 @@
 - 2026-11-08：`v0.1.0` release workflow 绿；签名 APK + checksums 已发布。
 - 2026-11-08：新约束「不再本地构建/本地 CI」生效；验证改由 GitHub Actions 承担（CI 回传 schema 与单测报告 artifact）。
 - 2026-11-08：P0-05 完成；Room Probe + Robolectric 读写测试 + KSP schema 入库。
+- 2026-11-08：设备 smoke 暴露真问题——`AppDatabase.create()` 的 `onOpen` 用 `execSQL("PRAGMA busy_timeout=5000")`
+  在真实 SQLite 上抛 `SQLiteException`（Robolectric 未覆盖到该回调）；改用 `query(...).close()`，并补 `create()` 单测。
