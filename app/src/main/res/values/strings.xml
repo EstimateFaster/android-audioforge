@@ -711,4 +711,73 @@
     <!-- P5-08 播放通知/后台 -->
     <string name="player_notification_sleep_minutes">睡眠定时：%1$d 分钟</string>
     <string name="player_notification_sleep_off">睡眠定时：关闭</string>
+
+    <!-- P5-09 存储页 -->
+    <string name="storage_title">存储</string>
+    <string name="storage_refresh">刷新</string>
+    <string name="storage_loading">正在统计存储…</string>
+    <string name="storage_load_error">统计失败：%1$s</string>
+    <string name="storage_empty_title">还没有占用空间</string>
+    <string name="storage_empty_description">导入小说并生成音频后，这里会显示占用、按项目分布与清理选项。</string>
+    <string name="storage_empty_action">重新统计</string>
+
+    <string name="storage_overview_title">空间概览</string>
+    <string name="storage_overview_subtitle">应用私有目录（filesDir）</string>
+    <string name="storage_total_used">总占用</string>
+    <string name="storage_free_space">可用空间</string>
+    <string name="storage_area_audio">音频</string>
+    <string name="storage_area_imports">导入</string>
+    <string name="storage_area_exports">导出</string>
+    <string name="storage_file_count">共 %1$d 个文件</string>
+    <string name="storage_scan_failures">有 %1$d 个路径无法扫描，统计可能不完整。</string>
+
+    <string name="storage_projects_title">按项目</string>
+    <string name="storage_projects_subtitle">共 %1$d 个项目</string>
+    <string name="storage_projects_empty">还没有项目占用空间。</string>
+    <string name="storage_project_chapters">%1$d 章</string>
+    <string name="storage_project_no_chapters">没有章节</string>
+    <string name="storage_project_unknown">未关联项目（#%1$d）</string>
+
+    <string name="storage_retention_title">保留期</string>
+    <string name="storage_retention_subtitle">超过保留期的项目音频可被清理；仍被引用的会被跳过。</string>
+    <string name="storage_retention_value">保留 %1$d 天</string>
+    <string name="storage_retention_label">保留天数</string>
+    <string name="storage_retention_range">7–365 天</string>
+    <string name="storage_retention_hint">修改后点右上角“刷新”重新统计；过期清理会使用此保留期。</string>
+    <string name="storage_retention_slider_description">保留期：%1$d 天</string>
+    <string name="storage_retention_error_blank">请填写保留天数</string>
+    <string name="storage_retention_error_number">保留天数必须是整数</string>
+    <string name="storage_retention_error_range">保留天数需在 7–365 之间</string>
+
+    <string name="storage_cleanup_title">清理</string>
+    <string name="storage_cleanup_subtitle">只删除不再被项目引用的文件</string>
+    <string name="storage_cleanup_orphans_title">清理孤儿</string>
+    <string name="storage_cleanup_orphans_desc">无引用且超过 6 小时的文件（含导出残留与临时文件）。</string>
+    <string name="storage_cleanup_expired_title">清理过期</string>
+    <string name="storage_cleanup_expired_desc">超过 %1$d 天且不再被引用的项目音频。</string>
+    <string name="storage_cleanup_meta">共 %1$d 个文件 · %2$s</string>
+    <string name="storage_cleanup_hint">确认后显示释放量、删除数与失败数。</string>
+    <string name="storage_expired_protected">仍被引用的过期音频不会删除，会显示为“跳过”。</string>
+    <string name="storage_action_clean_orphans">清理孤儿</string>
+    <string name="storage_action_clean_expired">清理过期</string>
+    <string name="storage_cleaning_orphans">正在清理孤儿文件…</string>
+    <string name="storage_cleaning_expired">正在清理过期音频…</string>
+
+    <string name="storage_cleanup_confirm_title_orphans">清理孤儿文件？</string>
+    <string name="storage_cleanup_confirm_title_expired">清理过期音频？</string>
+    <string name="storage_cleanup_confirm_message_orphans">将删除不再被任何项目引用、且超过 6 小时的文件。仍被引用的文件会被保留，清理后无法恢复。</string>
+    <string name="storage_cleanup_confirm_message_expired">将删除超过 %1$d 天且不再被任何项目引用的项目音频。仍被引用的文件会被保留，清理后无法恢复。</string>
+    <string name="storage_cleanup_confirm_action">确认清理</string>
+
+    <string name="storage_cleanup_result_title">清理完成</string>
+    <string name="storage_cleanup_result_failed_title">清理未完成</string>
+    <string name="storage_cleanup_result_summary">释放 %1$s · 删除 %2$d 个文件</string>
+    <string name="storage_cleanup_result_none_deleted">没有文件被删除。</string>
+    <string name="storage_cleanup_result_failures">有 %1$d 个文件清理失败，可重试。</string>
+    <string name="storage_cleanup_result_skipped_referenced">跳过 %1$d 个仍被引用的文件。</string>
+    <string name="storage_cleanup_result_skipped_recent">跳过 %1$d 个未到保留期的文件。</string>
+    <string name="storage_cleanup_result_skipped_missing">跳过 %1$d 个已不存在的文件。</string>
+    <string name="storage_cleanup_action_retry">重试清理</string>
+    <string name="storage_cleanup_action_dismiss">关闭</string>
+    <string name="storage_cleanup_error">清理失败：%1$s</string>
 </resources>
