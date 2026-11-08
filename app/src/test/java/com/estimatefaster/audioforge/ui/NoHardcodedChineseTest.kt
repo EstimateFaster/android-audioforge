@@ -34,7 +34,7 @@ class NoHardcodedChineseTest {
                 directory.walkTopDown()
                     .filter { it.isFile && it.extension == "kt" }
                     .sortedBy { it.absolutePath }
-                    .flatMap { file -> scan(file, displayPath = file.relativeTo(rootOf(file, roots))) }
+                    .flatMap { file -> scan(file, displayPath = file.relativeTo(rootOf(file, roots)).path) }
                     .toList()
             }
 
