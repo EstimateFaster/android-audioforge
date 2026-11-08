@@ -25,7 +25,7 @@ object TuningKeys {
  *
  * 注意：任务约束里音量是 `0..2`；全局设置的 `SettingsValidator` 目前仍用
  * `0.5..2.0` 校验 `AppSettings.defaultVolume`。两者是不同层（角色覆盖 vs 全局默认），
- * 本任务不改 `core/**`，因此这里按 P5-06 的 0..2 执行。
+ * 本任务不改 `core/`，因此这里按 P5-06 的 0..2 执行。
  */
 object TuningRanges {
     val SPEED: ClosedFloatingPointRange<Double> = 0.5..2.0
