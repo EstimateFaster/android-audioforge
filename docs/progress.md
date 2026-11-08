@@ -27,7 +27,7 @@
 |---|---|---|
 | P1-01 模型与枚举 | ✅ done | CI 42448583320 绿；`EnumsTest` 8/8 |
 | P1-02 Assets：提示词 + 音色池 | ✅ done | CI 42448901696 绿；Prompt/VoicePool 11 个用例 + 快照 |
-| P1-03 TextDecoder | ⏳ todo | |
+| P1-03 TextDecoder | 🟡 in_progress | BOM/UTF-8/ICU/GB18030/Big5 + CJK 占比；等 CI |
 | P1-04 ChapterSplitter | ⏳ todo | |
 | P1-05 ScriptSanitizer | ⏳ todo | |
 | P1-06 CoverageChecker | ⏳ todo | |
@@ -135,6 +135,14 @@
   - `VoicePoolTest` 6/6：63 类别与 fixture 逐项一致、`male_brother=1.15`、8 个 note、旁白不进 LLM 池、兜底全覆盖
   - 合计 23 个单测全绿
 - 产出：`core/voice/PromptAssets.kt`、`core/voice/VoicePool.kt`、`app/src/test/resources/voice-pool.json`
+
+### P1-03 TextDecoder — in_progress
+- 开始：2026-11-08 13:24（Asia/Shanghai）
+- 分支：`feat/p1-03-text-decoder`
+- 目标：`core/ingest/TextDecoder.kt`：BOM → UTF-8 严格 → ICU CharsetDetector → GB18030 → Big5；
+  每种候选严格解码 + 前 2 万字 CJK ≥15%；失败返回可手动选编码；64MB 上限；不抛未捕获异常
+- 依赖：P1-01 ✅
+- 验收：UTF-8/UTF-8 BOM/GBK/GB18030/UTF-16LE/BE/Big5/非法字节用例全过
 
 ## 已知实编坑（已处理）
 
