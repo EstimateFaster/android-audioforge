@@ -489,4 +489,44 @@
     <string name="batch_status_stopping">已请求停止批次 #%1$d，当前内容收尾后结束。</string>
     <string name="batch_status_not_running">当前没有正在运行的批次。</string>
     <string name="batch_status_stop_failure">停止失败：%1$s</string>
+
+    <!-- P5-01 剧本页 -->
+    <string name="script_title">剧本</string>
+    <string name="script_search_label">搜索台词</string>
+    <string name="script_search_placeholder">输入台词关键词</string>
+    <string name="script_search_clear">清除</string>
+    <string name="script_filter_all">全部</string>
+    <string name="script_role_unknown">未知角色</string>
+    <string name="script_type_dialogue">对白</string>
+    <string name="script_type_narration">旁白</string>
+
+    <string name="script_emotion_neutral">平静</string>
+    <string name="script_emotion_happy">开心</string>
+    <string name="script_emotion_sad">悲伤</string>
+    <string name="script_emotion_angry">愤怒</string>
+    <string name="script_emotion_anxious">焦虑</string>
+    <string name="script_emotion_excited">兴奋</string>
+    <string name="script_emotion_surprised">惊讶</string>
+    <string name="script_emotion_soft_tone">轻柔</string>
+    <string name="script_emotion_serious">严肃</string>
+    <string name="script_emotion_calm">冷静</string>
+    <string name="script_emotion_whispering">低语</string>
+
+    <string name="script_segment_more">更多</string>
+    <string name="script_segment_more_content_description">第 %1$d 段的操作</string>
+    <string name="script_segment_action_play">播放此句</string>
+    <string name="script_segment_action_edit">编辑片段</string>
+    <string name="script_segment_action_regenerate">重新生成此片段</string>
+    <string name="script_segment_click_edit">编辑此片段</string>
+    <string name="script_segment_long_click_more">更多操作</string>
+    <string name="script_segment_error">生成失败：%1$s</string>
+
+    <string name="script_empty_title">本章还没有剧本</string>
+    <string name="script_empty_description">解析本章后，角色台词和旁白会显示在这里。</string>
+    <string name="script_empty_action_parse">解析本章</string>
+    <string name="script_filtered_empty_title">没有匹配的片段</string>
+    <string name="script_filtered_empty_description">换个角色或关键词，或清除筛选后查看全部片段。</string>
+    <string name="script_filtered_empty_action">清除筛选</string>
+    <string name="script_loading">正在加载剧本…</string>
+    <string name="script_load_error">加载剧本失败：%1$s</string>
 </resources>
