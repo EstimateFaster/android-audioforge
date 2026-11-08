@@ -575,4 +575,42 @@
     <string name="script_playback_next">下一句</string>
     <string name="script_playback_play">播放</string>
     <string name="script_playback_pause">暂停</string>
+
+    <!-- P5-04 人物音色页 -->
+    <string name="characters_title">人物音色</string>
+    <string name="characters_count">已用角色 %1$d / %2$d</string>
+    <string name="characters_count_filtered">筛选结果 %1$d / %2$d</string>
+    <string name="characters_search_label">搜索人物</string>
+    <string name="characters_search_placeholder">输入名字或别名</string>
+    <string name="characters_search_clear">清除</string>
+    <string name="characters_filter_gender">性别</string>
+    <string name="characters_filter_importance">重要性</string>
+    <string name="characters_filter_all">全部</string>
+    <string name="characters_gender_male">男性</string>
+    <string name="characters_gender_female">女性</string>
+    <string name="characters_gender_unknown">未知</string>
+    <string name="characters_importance_protagonist">主角</string>
+    <string name="characters_importance_supporting">配角</string>
+    <string name="characters_importance_minor">龙套</string>
+    <string name="characters_alias">别名：%1$s</string>
+    <string name="characters_alias_separator">、</string>
+    <string name="characters_voice_current">当前音色：%1$s</string>
+    <string name="characters_voice_unassigned">未分配音色</string>
+    <string name="characters_voice_change">更换</string>
+    <string name="characters_voice_change_content_description">更换音色</string>
+    <string name="characters_locked">已锁定</string>
+    <string name="characters_category">类别：%1$s</string>
+    <string name="characters_more">更多</string>
+    <string name="characters_more_content_description">%1$s 的更多操作</string>
+    <string name="characters_action_rename">重命名</string>
+    <string name="characters_action_edit_alias">编辑别名</string>
+    <string name="characters_action_exclude">排除该角色</string>
+    <string name="characters_empty_title">还没有人物</string>
+    <string name="characters_empty_description">解析章节后，识别到的角色会显示在这里。</string>
+    <string name="characters_empty_action_parse">去解析章节</string>
+    <string name="characters_filtered_empty_title">没有匹配的人物</string>
+    <string name="characters_filtered_empty_description">换个名字、别名或筛选条件再试试。</string>
+    <string name="characters_filtered_empty_action">清除筛选</string>
+    <string name="characters_loading">正在加载人物…</string>
+    <string name="characters_load_error">加载人物失败：%1$s</string>
 </resources>
