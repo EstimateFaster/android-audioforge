@@ -17,7 +17,7 @@
 |---|---|---|
 | 核心域单测 | ✅ 153 / 153，0 failures | CI [42459961060](https://github.com/EstimateFaster/android-audioforge/actions/runs/42459961060) `unit-test-reports` |
 | main CI（lint / unit / assembleDebug / APK 校验） | ✅ | CI [42460233513](https://github.com/EstimateFaster/android-audioforge/actions/runs/42460233513) |
-| P1-15 文档 PR CI | ✅ | CI P1_15_ID |
+| P1-15 文档 PR CI | ✅ | CI [42460356828](https://github.com/EstimateFaster/android-audioforge/actions/runs/42460356828) |
 | TODO / FIXME | 0 | `grep -rn "TODO\|FIXME" app/src` |
 | 硬编码 Key / 私钥 | 0 | 扫描 `sk-*`、`gho_*`、`AIza*`、`BEGIN PRIVATE KEY` |
 | 版本矩阵 | 未改 | AGENTS.md 基线 |
