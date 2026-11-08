@@ -11,7 +11,7 @@
 | P0-02 Gradle 工程与版本矩阵 | ✅ done | AGP 9.5.1 / Kotlin 2.2.10 / compileSdk 37；本地实编通过 |
 | P0-03 Manifest / 权限 / Service | ✅ done | WorkManager `dataSync` 合并；FileProvider；占位图标 |
 | P0-04 Compose 空壳与 Expressive 主题 | ✅ done | `MaterialExpressiveTheme` + `MotionScheme.expressive()`；首页空壳 |
-| P0-05 Room smoke | ⏳ todo | 需要 Entity/DAO/Database + 真机读写 |
+| P0-05 Room smoke | 🟡 in_progress | 代码+Robolectric 读写测试已提交，等 CI 绿 |
 | P0-06 WorkManager 前台服务 smoke | ⏳ todo | 需要 Worker + 通知 + 真机 |
 | P0-07 FFmpeg smoke | ⏳ todo | 真机/模拟器 `-version` + 静音/拼接 |
 | P0-08 CI debug 构建与 APK 校验 | ✅ done | CI run 42442128213 绿；debug APK artifact 已上传 |
@@ -19,6 +19,17 @@
 | P0-10 进度/决策文档 | ✅ done | 本文件 + plan |
 | P0-11 真机/模拟器 smoke 清单 | ⏳ todo | 等 P0-05–P0-07 |
 | P0-12 Phase 0 门禁 | ⏳ todo | 全部 smoke 后 |
+
+## 任务记录
+
+### P0-05 Room smoke — in_progress
+- 开始：2026-11-08 11:55（Asia/Shanghai）
+- 分支：`feat/p0-05-room-smoke`
+- 目标：最小 `ProbeEntity` / `ProbeDao` / `AppDatabase`；Debug 启动写入+回读；KSP 导出 schema
+- 依赖：P0-02
+- 验收：CI 的 `assembleDebug`（含 KSP）无错；`testDebugUnitTest` 的 Room 读写用例绿；
+  `app/schemas/com.estimatefaster.audioforge.data.db.AppDatabase/1.json` 生成并入库
+- 说明：本 VM 不再跑本地 Gradle/CI（新约束），验证以 GitHub Actions 为准
 
 ## 已知实编坑（已处理）
 

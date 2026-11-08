@@ -14,5 +14,11 @@
     <string name="next_body">执行计划在 docs/android-execution-plan.md。从 P0-01 开始；先跑真机 smoke，再进入 P1/P2。</string>
     <string name="next_action">查看 Phase 0 入口</string>
     <string name="phase0_details">1. 导入一本 txt；2. 解析一章；3. 合成并播放；4. 锁屏后台测试；5. 生成签名 release。</string>
+    <string name="diag_title">P0-05 · Room 冒烟</string>
+    <string name="diag_room_idle">未运行（Debug 启动会自动跑一次）</string>
+    <string name="diag_room_running">正在写入并回读…</string>
+    <string name="diag_room_passed">通过：probe 写入并回读成功（第 %1$d 次，%2$d ms）</string>
+    <string name="diag_room_failed">失败：%1$s</string>
+    <string name="diag_room_action">重新检测</string>
     <string name="footer">MIT · 上游 StoryForge · FFmpegKit LGPL</string>
 </resources>
