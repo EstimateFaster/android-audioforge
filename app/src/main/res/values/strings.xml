@@ -433,4 +433,60 @@
     <string name="tasks_action_error">操作失败：%1$s</string>
     <string name="tasks_action_dismiss">知道了</string>
     <string name="tasks_value_unknown">—</string>
+
+    <!-- P4-06 批次 Sheet -->
+    <string name="batch_sheet_title">批次设置</string>
+    <string name="batch_sheet_subtitle">选择模式与章节范围；开始后才会创建任务。</string>
+
+    <string name="batch_mode_title">生成模式</string>
+    <string name="batch_mode_full">全量</string>
+    <string name="batch_mode_parse">仅解析</string>
+    <string name="batch_mode_render">仅渲染</string>
+
+    <string name="batch_range_title">章节范围</string>
+    <string name="batch_range_start">起始章</string>
+    <string name="batch_range_end">结束章</string>
+    <string name="batch_range_hint">共 %1$d 章；起止章需在 1–%2$d 内。</string>
+    <string name="batch_range_default_hint">默认选中全部未完成章节。</string>
+    <string name="batch_action_select_unfinished">全选未完成</string>
+    <string name="batch_action_select_all">全选</string>
+
+    <string name="batch_force_title">强制重跑</string>
+    <string name="batch_force_description">忽略完成状态，重新解析并合成选中章节。</string>
+
+    <string name="batch_concurrency_title">并发</string>
+    <string name="batch_concurrency_value">%1$d</string>
+    <string name="batch_concurrency_hint">1–%1$d；默认跟随设置。</string>
+
+    <string name="batch_estimate_title">本次预计</string>
+    <string name="batch_estimate_detail">%1$d 章 · 约 %2$d 分钟 · 约 ¥%3$s</string>
+    <string name="batch_estimate_empty">选择有效范围后显示估算。</string>
+
+    <string name="batch_validation_title">请先修正以下问题</string>
+    <string name="batch_error_no_chapters">没有可处理的章节。</string>
+    <string name="batch_error_start">起始章必须是 1–%1$d 的整数。</string>
+    <string name="batch_error_end">结束章必须是 1–%1$d 的整数。</string>
+    <string name="batch_error_order">起始章不能大于结束章。</string>
+    <string name="batch_error_too_many">单批最多 %1$d 章，请缩小范围后分批处理。</string>
+    <string name="batch_error_concurrency">并发必须在 1–%1$d 之间。</string>
+
+    <string name="batch_missing_keys_title">缺少 API Key</string>
+    <string name="batch_missing_keys_message">缺少 %1$s，填写后才能开始。</string>
+    <string name="batch_missing_key_llm">LLM Key</string>
+    <string name="batch_missing_key_fish">Fish Audio Key</string>
+    <string name="batch_action_open_settings">去设置</string>
+
+    <string name="batch_action_start">开始生成</string>
+    <string name="batch_action_cancel">取消</string>
+    <string name="batch_action_stop">停止批次</string>
+
+    <string name="batch_status_title">批次状态</string>
+    <string name="batch_status_starting">正在启动…</string>
+    <string name="batch_status_started">已开始批次 #%1$d。</string>
+    <string name="batch_status_already_running">已有批次 #%1$d 在运行，请先停止或等待完成。</string>
+    <string name="batch_status_failure">启动失败：%1$s</string>
+    <string name="batch_status_requesting_stop">正在请求停止…</string>
+    <string name="batch_status_stopping">已请求停止批次 #%1$d，当前内容收尾后结束。</string>
+    <string name="batch_status_not_running">当前没有正在运行的批次。</string>
+    <string name="batch_status_stop_failure">停止失败：%1$s</string>
 </resources>
