@@ -842,4 +842,64 @@
     <string name="about_license_expand">展开全文</string>
     <string name="about_license_collapse">收起</string>
     <string name="about_license_placeholder">完整许可证文本将在 release 构建中随 assets/licenses 提供；此处为占位，可访问项目主页查看 %1$s 的 %2$s 全文。</string>
+
+    <!-- P5-11 导出/分享 -->
+    <string name="export_sheet_title">导出/分享</string>
+    <string name="export_sheet_subtitle">选择要导出的章节，导出完成后可一次分享多个音频文件。</string>
+    <string name="export_action_close">关闭</string>
+    <string name="export_action_done">完成</string>
+    <string name="export_action_share">分享</string>
+    <string name="export_action_start">开始导出</string>
+    <string name="export_action_start_count">开始导出（%1$d 章）</string>
+    <string name="export_action_cancel_export">取消导出</string>
+    <string name="export_action_retry_failed">重试失败章节</string>
+    <string name="export_action_retry_load">重新加载</string>
+
+    <string name="export_loading">正在读取章节…</string>
+    <string name="export_load_error">读取章节失败：%1$s</string>
+    <string name="export_empty_title">还没有可导出的章节</string>
+    <string name="export_empty_description">章节音频生成完成后才能导出。先去生成音频，再回来分享。</string>
+
+    <string name="export_range_title">导出范围</string>
+    <string name="export_range_subtitle">只有已完成音频的章节会被导出。</string>
+    <string name="export_range_all">全部已完成</string>
+    <string name="export_range_current">当前章</string>
+    <string name="export_range_custom">起止章节</string>
+    <string name="export_range_start">起始章</string>
+    <string name="export_range_end">结束章</string>
+    <string name="export_range_hint">共 %1$d 章；起止章号都包含在范围内。</string>
+    <string name="export_range_current_missing">当前章还没有完成音频，请换一章或改用其他范围。</string>
+    <string name="export_range_empty">所选范围内没有已完成音频的章节。</string>
+    <string name="export_error_no_chapters">项目还没有章节，无法导出。</string>
+    <string name="export_error_no_completed">还没有任何章节完成音频。</string>
+    <string name="export_error_start">起始章必须是 1–%1$d 之间的数字。</string>
+    <string name="export_error_end">结束章必须是 1–%1$d 之间的数字。</string>
+    <string name="export_error_order">起始章不能大于结束章。</string>
+
+    <string name="export_list_title">章节</string>
+    <string name="export_list_subtitle">共 %1$d 章，已完成 %2$d 章</string>
+    <string name="export_list_truncated">仅显示前 %1$d 项，共 %2$d 项；操作仍包含全部已选章节。</string>
+    <string name="export_chapter_meta">第 %1$d 章 · %2$s · %3$s</string>
+    <string name="export_chapter_not_ready">音频未完成</string>
+    <string name="export_value_unknown">未知</string>
+
+    <string name="export_summary_title">导出预估</string>
+    <string name="export_summary">已选 %1$d 章 · 约 %2$s · %3$s</string>
+    <string name="export_summary_empty">请选择至少一章。</string>
+
+    <string name="export_progress_title">正在导出</string>
+    <string name="export_progress_count">已处理 %1$d/%2$d 章</string>
+    <string name="export_progress_current">当前：%1$s</string>
+    <string name="export_progress_succeeded">成功 %1$d</string>
+    <string name="export_progress_failed">失败 %1$d</string>
+    <string name="export_cancel_note">取消后不会删除已导出的文件，未开始的章节不会写入。</string>
+
+    <string name="export_result_title">导出结果</string>
+    <string name="export_result_summary">成功 %1$d 章 · 失败 %2$d 章</string>
+    <string name="export_result_cancelled">已取消导出；下面是取消前完成的文件。</string>
+    <string name="export_result_success_title">已导出文件</string>
+    <string name="export_result_no_success">没有成功导出的文件。</string>
+    <string name="export_result_failure_title">导出失败的章节</string>
+    <string name="export_result_failure_line">%1$s：%2$s</string>
+    <string name="export_result_share_hint">分享会把这些音频一起发送给其他应用。</string>
 </resources>
