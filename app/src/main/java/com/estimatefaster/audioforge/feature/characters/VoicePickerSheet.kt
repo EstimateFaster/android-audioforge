@@ -43,7 +43,11 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -307,7 +311,7 @@ private fun CurrentVoiceSummary(state: VoicePickerUiState) {
                     modifier = Modifier.weight(1f),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
                 if (state.locked) {
@@ -414,7 +418,9 @@ private fun VoiceSectionHeader(section: VoiceSectionUi) {
             localeLabel(section.locale),
             section.gender.label(),
         ),
-        modifier = Modifier.padding(top = 8.dp),
+        modifier = Modifier
+            .padding(top = 8.dp)
+            .semantics { heading() },
         style = MaterialTheme.typography.titleSmall,
         fontWeight = FontWeight.SemiBold,
     )
@@ -546,6 +552,9 @@ private fun VoiceSaveError(
         ) {
             Text(
                 text = stringResource(R.string.action_save_error, message),
+                modifier = Modifier.semantics {
+                    liveRegion = LiveRegionMode.Polite
+                },
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onErrorContainer,
             )

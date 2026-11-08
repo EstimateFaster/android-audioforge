@@ -6,6 +6,8 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -49,6 +51,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -142,6 +145,7 @@ fun PlayerScreen(
                         ?: stringResource(R.string.player_book_untitled)
                     Text(
                         text = bookTitle,
+                        modifier = Modifier.semantics { heading() },
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.SemiBold,
                         maxLines = 1,
@@ -356,8 +360,6 @@ private fun PlayerSegmentCard(state: PlayerUiState) {
                 text = text,
                 style = MaterialTheme.typography.bodyLarge,
                 textAlign = TextAlign.Center,
-                maxLines = 4,
-                overflow = TextOverflow.Ellipsis,
             )
         }
     }
@@ -376,6 +378,13 @@ private fun PlayerProgress(
         ?.let { fraction -> seekTargetMs(fraction, state.durationMs) }
         ?: state.positionMs
     val progressLabel = stringResource(R.string.player_progress_content_description)
+    val positionText = formatPlaybackTime(displayedPosition)
+    val durationText = formatPlaybackTime(state.durationMs)
+    val progressState = stringResource(
+        R.string.player_progress_state_description,
+        positionText,
+        durationText,
+    )
     Slider(
         value = dragFraction ?: state.progress,
         onValueChange = { dragFraction = it },
@@ -386,25 +395,29 @@ private fun PlayerProgress(
         enabled = state.durationMs > 0L,
         modifier = Modifier
             .fillMaxWidth()
-            .semantics { contentDescription = progressLabel },
+            .semantics {
+                contentDescription = progressLabel
+                stateDescription = progressState
+            },
     )
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         Text(
-            text = formatPlaybackTime(displayedPosition),
+            text = positionText,
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Text(
-            text = formatPlaybackTime(state.durationMs),
+            text = durationText,
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun PlayerControls(
     state: PlayerUiState,
@@ -414,10 +427,11 @@ private fun PlayerControls(
     onPreviousSegment: () -> Unit,
     onNextSegment: () -> Unit,
 ) {
-    Row(
+    // 200% 字体下按钮会换行而不是被挤出屏幕；正常字体仍是单行居中。
+    FlowRow(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceEvenly,
-        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         TextButton(
             onClick = onPreviousChapter,
@@ -446,10 +460,10 @@ private fun PlayerControls(
         }
     }
     Spacer(Modifier.height(4.dp))
-    Row(
+    FlowRow(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceEvenly,
-        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         OutlinedButton(
             onClick = onPreviousSegment,
@@ -476,6 +490,7 @@ private fun PlayerSpeedSelector(
     Column(modifier = Modifier.fillMaxWidth()) {
         Text(
             text = stringResource(R.string.player_speed_title),
+            modifier = Modifier.semantics { heading() },
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.SemiBold,
         )
@@ -516,7 +531,9 @@ private fun PlayerSleepSelector(
         ) {
             Text(
                 text = stringResource(R.string.player_sleep_title),
-                modifier = Modifier.weight(1f),
+                modifier = Modifier
+                    .weight(1f)
+                    .semantics { heading() },
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.SemiBold,
             )
@@ -572,6 +589,7 @@ private fun PlayerChapterHeader(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = stringResource(R.string.player_chapters_title),
+                modifier = Modifier.semantics { heading() },
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.SemiBold,
             )
@@ -658,7 +676,7 @@ private fun PlayerChapterRow(
                 Text(
                     text = title,
                     style = MaterialTheme.typography.bodyLarge,
-                    maxLines = 1,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
                 if (!chapter.hasAudio) {

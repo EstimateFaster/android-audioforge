@@ -39,7 +39,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -118,6 +121,7 @@ fun OnboardingScreen(
                 title = {
                     Text(
                         text = stringResource(R.string.onboarding_title),
+                        modifier = Modifier.semantics { heading() },
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.SemiBold,
                     )
@@ -204,6 +208,8 @@ private fun StepProgress(step: OnboardingStep) {
                     modifier = Modifier
                         .weight(1f)
                         .height(4.dp)
+                        // 步骤文字已说明第几步；色条只是视觉辅助，不单独进入读屏。
+                        .clearAndSetSemantics { }
                         .background(
                             color = if (entry.ordinal <= step.ordinal) {
                                 MaterialTheme.colorScheme.primary
@@ -461,6 +467,9 @@ private fun TestStatus(state: OnboardingTestState) {
         OnboardingTestState.Idle -> Unit
 
         OnboardingTestState.Testing -> Row(
+            modifier = Modifier.semantics {
+                liveRegion = LiveRegionMode.Polite
+            },
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -477,6 +486,9 @@ private fun TestStatus(state: OnboardingTestState) {
 
         OnboardingTestState.Ok -> Text(
             text = stringResource(R.string.onboarding_test_passed),
+            modifier = Modifier.semantics {
+                liveRegion = LiveRegionMode.Polite
+            },
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.primary,
         )
@@ -489,6 +501,9 @@ private fun TestStatus(state: OnboardingTestState) {
             }
             Text(
                 text = message,
+                modifier = Modifier.semantics {
+                    liveRegion = LiveRegionMode.Polite
+                },
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.error,
             )

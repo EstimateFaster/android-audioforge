@@ -35,7 +35,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -123,6 +126,7 @@ fun StorageScreen(
                 title = {
                     Text(
                         text = stringResource(R.string.storage_title),
+                        modifier = Modifier.semantics { heading() },
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.SemiBold,
                     )
@@ -353,11 +357,17 @@ private fun AreaRow(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+        val shareDescription = stringResource(
+            R.string.storage_area_progress_content_description,
+            label,
+            (share.coerceIn(0f, 1f) * 100f).roundToInt(),
+        )
         LinearProgressIndicator(
             progress = { share },
             modifier = Modifier
                 .fillMaxWidth()
-                .height(4.dp),
+                .height(4.dp)
+                .semantics { contentDescription = shareDescription },
         )
     }
 }
@@ -565,7 +575,9 @@ private fun CleanupCard(
             val cleaning = state.cleaning
             if (cleaning != null) {
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .semantics { liveRegion = LiveRegionMode.Polite },
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
@@ -654,6 +666,7 @@ private fun CleanupResultSection(
                 R.string.storage_cleanup_result_title
             },
         ),
+        modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
         style = MaterialTheme.typography.titleSmall,
         fontWeight = FontWeight.SemiBold,
         color = if (failed) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,

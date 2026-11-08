@@ -62,6 +62,8 @@ fun avatarColorIndex(
  *
  * @param size 默认 48dp；若把头像放进可点区域，请保持 ≥48dp。
  * @param contentDescription 为 null 时按名字生成“角色头像：xxx”。
+ * @param decorative 为 true 时不产生 TalkBack 节点；用于旁边已有可见名字的场景，
+ *   避免同一个人物被朗读两次。
  */
 @Composable
 fun RoleAvatar(
@@ -69,6 +71,7 @@ fun RoleAvatar(
     modifier: Modifier = Modifier,
     size: Dp = 48.dp,
     contentDescription: String? = null,
+    decorative: Boolean = false,
 ) {
     val displayName = name.trim()
     val (container, content) = avatarColors(avatarColorIndex(displayName))
@@ -82,12 +85,18 @@ fun RoleAvatar(
     // 头像字号随尺寸固定，但用 toSp 抵消系统字体放大，避免 200% 时撑破圆形。
     val fontSize = with(LocalDensity.current) { (size.toPx() * 0.4f).toSp() }
 
+    val semanticsModifier = if (decorative) {
+        Modifier.clearAndSetSemantics { }
+    } else {
+        Modifier.clearAndSetSemantics { this.contentDescription = description }
+    }
+
     Box(
         modifier = modifier
             .size(size)
             .clip(CircleShape)
             .background(container)
-            .clearAndSetSemantics { this.contentDescription = description },
+            .then(semanticsModifier),
         contentAlignment = Alignment.Center,
     ) {
         Text(

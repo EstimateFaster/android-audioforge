@@ -8,6 +8,8 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -51,7 +53,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.text.font.FontWeight
@@ -177,6 +183,7 @@ fun ScriptScreen(
                     }
                     Text(
                         text = titleText,
+                        modifier = Modifier.semantics { heading() },
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.SemiBold,
                         maxLines = 1,
@@ -436,7 +443,8 @@ private fun ScriptSegmentRow(
         ) {
             ScriptNumberBadge(number = segment.number)
             Spacer(Modifier.width(8.dp))
-            RoleAvatar(name = displayName, size = 40.dp)
+            // 名字在右侧可见，头像只做装饰，避免 TalkBack 把同一人物读两遍。
+            RoleAvatar(name = displayName, size = 40.dp, decorative = true)
             Spacer(Modifier.width(10.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -445,7 +453,7 @@ private fun ScriptSegmentRow(
                         modifier = Modifier.weight(1f),
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.SemiBold,
-                        maxLines = 1,
+                        maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                     )
                     TextButton(
@@ -554,6 +562,7 @@ private fun ScriptSegmentMenu(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun ScriptMiniPlayer(
     state: ScriptUiState,
@@ -599,10 +608,11 @@ private fun ScriptMiniPlayer(
                             !hasAudio -> stringResource(R.string.script_playback_no_audio)
                             else -> stringResource(R.string.script_playback_idle)
                         },
+                        modifier = Modifier.semantics {
+                            liveRegion = LiveRegionMode.Polite
+                        },
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.SemiBold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
                     )
                     if (current != null) {
                         Text(
@@ -613,13 +623,15 @@ private fun ScriptMiniPlayer(
                             ),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
+                            maxLines = 2,
                             overflow = TextOverflow.Ellipsis,
                         )
                     }
                 }
                 Text(
                     text = continuousLabel,
+                    // 开关本身已有 contentDescription；可视化标签不重复进入读屏。
+                    modifier = Modifier.clearAndSetSemantics { },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -633,13 +645,17 @@ private fun ScriptMiniPlayer(
             if (followState.skippedNoAudio && hasAudio) {
                 Text(
                     text = stringResource(R.string.script_playback_skipped_no_audio),
+                    modifier = Modifier.semantics {
+                        liveRegion = LiveRegionMode.Polite
+                    },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
+            FlowRow(
+                modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 TextButton(
                     onClick = onPlayPrevious,

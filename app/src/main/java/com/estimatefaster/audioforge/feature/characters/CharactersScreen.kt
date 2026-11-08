@@ -44,6 +44,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -143,6 +144,7 @@ fun CharactersScreen(
                     Column {
                         Text(
                             text = stringResource(R.string.characters_title),
+                            modifier = Modifier.semantics { heading() },
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.SemiBold,
                             maxLines = 1,
@@ -414,7 +416,8 @@ private fun CharacterCard(
             modifier = Modifier.padding(start = 16.dp, end = 8.dp, top = 12.dp, bottom = 12.dp),
             verticalAlignment = Alignment.Top,
         ) {
-            RoleAvatar(name = displayName, size = 48.dp)
+            // 名字在右侧可见，头像只做装饰，避免 TalkBack 把同一人物读两遍。
+            RoleAvatar(name = displayName, size = 48.dp, decorative = true)
             Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -423,7 +426,7 @@ private fun CharacterCard(
                         modifier = Modifier.weight(1f),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
-                        maxLines = 1,
+                        maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                     )
                     if (character.locked) {
@@ -487,7 +490,7 @@ private fun CharacterCard(
                     } else {
                         MaterialTheme.colorScheme.onSurfaceVariant
                     },
-                    maxLines = 1,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
                 if (character.note.isNotEmpty()) {
@@ -496,7 +499,7 @@ private fun CharacterCard(
                         text = character.note,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
+                        maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                     )
                 }

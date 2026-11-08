@@ -22,9 +22,11 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.progressBarRangeInfo
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -46,6 +48,13 @@ fun clampProgress(progress: Float): Float = when {
 fun progressPercent(progress: Float): Int = (clampProgress(progress) * 100f).roundToInt()
 
 /**
+ * 圆环中心百分比允许的最大字号：按直径等比缩放，并通过 toSp 抵消系统字体放大。
+ * 正常字体下不改变排版；200% 时用它封顶，避免数字撑出圆环。
+ * 纯函数便于单元测试边界。
+ */
+fun progressRingMaxTextSize(diameter: Dp): Dp = diameter * 0.24f
+
+/**
  * 环形进度：Canvas 绘制轨道 + 进度弧，中心显示百分比。
  *
  * 无障碍：整个圆环是一个 `progressBarRangeInfo` 节点，百分比文字不重复朗读；
@@ -53,6 +62,7 @@ fun progressPercent(progress: Float): Int = (clampProgress(progress) * 100f).rou
  *
  * @param progress 0..1，越界自动 clamp。
  * @param label 可选的说明文字（例如“项目进度”），同时用作无障碍描述。
+ * @param liveRegion 为 true 时进度变化会以 Polite 播报；用于任务等持续更新的进度。
  */
 @Composable
 fun ProgressRing(
@@ -61,6 +71,7 @@ fun ProgressRing(
     label: String? = null,
     diameter: Dp = 120.dp,
     strokeWidth: Dp = 10.dp,
+    liveRegion: Boolean = false,
 ) {
     val clamped = clampProgress(progress)
     val animatedProgress by animateFloatAsState(
@@ -72,6 +83,13 @@ fun ProgressRing(
     val strokePx = with(density) { strokeWidth.toPx() }
     val resolvedLabel = label?.takeIf { it.isNotBlank() }
     val description = resolvedLabel ?: stringResource(R.string.progress_default_description)
+    val styleTextSize = MaterialTheme.typography.titleMedium.fontSize
+    val cappedTextSize = with(density) { progressRingMaxTextSize(diameter).toSp() }
+    val percentTextSize = if (styleTextSize.value <= cappedTextSize.value) {
+        styleTextSize
+    } else {
+        cappedTextSize
+    }
 
     Column(
         modifier = modifier,
@@ -83,6 +101,9 @@ fun ProgressRing(
                 .clearAndSetSemantics {
                     progressBarRangeInfo = ProgressBarRangeInfo(clamped, 0f..1f)
                     contentDescription = description
+                    if (liveRegion) {
+                        this.liveRegion = LiveRegionMode.Polite
+                    }
                 },
             contentAlignment = Alignment.Center,
         ) {
@@ -116,6 +137,7 @@ fun ProgressRing(
             Text(
                 text = stringResource(R.string.progress_percent, progressPercent(clamped)),
                 style = MaterialTheme.typography.titleMedium,
+                fontSize = percentTextSize,
                 fontWeight = FontWeight.SemiBold,
                 color = scheme.onSurface,
                 textAlign = TextAlign.Center,

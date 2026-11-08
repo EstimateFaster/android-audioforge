@@ -41,7 +41,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.error
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -52,6 +57,7 @@ import com.estimatefaster.audioforge.BuildConfig
 import com.estimatefaster.audioforge.R
 import com.estimatefaster.audioforge.core.settings.AppSettings
 import com.estimatefaster.audioforge.core.settings.ThemeMode
+import com.estimatefaster.audioforge.ui.components.AdaptiveFieldRow
 import com.estimatefaster.audioforge.ui.components.ErrorBanner
 import com.estimatefaster.audioforge.ui.components.ScreenState
 import com.estimatefaster.audioforge.ui.components.SectionHeader
@@ -145,6 +151,7 @@ fun SettingsScreen(
                     Column {
                         Text(
                             text = stringResource(R.string.settings_title),
+                            modifier = Modifier.semantics { heading() },
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.SemiBold,
                         )
@@ -278,6 +285,9 @@ private fun SettingsContent(
                         R.string.settings_error_summary,
                         state.errors.size + state.formatErrors.size,
                     ),
+                    modifier = Modifier.semantics {
+                        liveRegion = LiveRegionMode.Polite
+                    },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error,
                 )
@@ -345,7 +355,9 @@ private fun SettingsContent(
 private fun SaveStatus(state: SettingsUiState, onSave: () -> Unit) {
     when {
         state.saving -> Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .semantics { liveRegion = LiveRegionMode.Polite },
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
@@ -364,6 +376,7 @@ private fun SaveStatus(state: SettingsUiState, onSave: () -> Unit) {
 
         else -> Text(
             text = stringResource(R.string.settings_saved),
+            modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.primary,
         )
@@ -476,50 +489,54 @@ private fun GenerationSection(
         title = stringResource(R.string.settings_section_generation),
         subtitle = stringResource(R.string.settings_section_generation_desc),
     ) {
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            SettingsTextField(
-                field = SettingsField.LLM_CONCURRENCY,
-                state = state,
-                label = stringResource(R.string.settings_field_llm_concurrency),
-                hint = stringResource(R.string.settings_field_llm_concurrency_hint),
-                keyboardType = KeyboardType.Number,
-                enabled = enabled,
-                onFieldChange = onFieldChange,
-                modifier = Modifier.weight(1f),
-            )
-            SettingsTextField(
-                field = SettingsField.TTS_CONCURRENCY,
-                state = state,
-                label = stringResource(R.string.settings_field_tts_concurrency),
-                hint = stringResource(R.string.settings_field_tts_concurrency_hint),
-                keyboardType = KeyboardType.Number,
-                enabled = enabled,
-                onFieldChange = onFieldChange,
-                modifier = Modifier.weight(1f),
-            )
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            SettingsTextField(
-                field = SettingsField.SEGMENT_MAX_CHARS,
-                state = state,
-                label = stringResource(R.string.settings_field_segment_max_chars),
-                hint = stringResource(R.string.settings_field_segment_max_chars_hint),
-                keyboardType = KeyboardType.Number,
-                enabled = enabled,
-                onFieldChange = onFieldChange,
-                modifier = Modifier.weight(1f),
-            )
-            SettingsTextField(
-                field = SettingsField.BATCH_SIZE,
-                state = state,
-                label = stringResource(R.string.settings_field_batch_size),
-                hint = stringResource(R.string.settings_field_batch_size_hint),
-                keyboardType = KeyboardType.Number,
-                enabled = enabled,
-                onFieldChange = onFieldChange,
-                modifier = Modifier.weight(1f),
-            )
-        }
+        AdaptiveFieldRow(
+            {
+                SettingsTextField(
+                    field = SettingsField.LLM_CONCURRENCY,
+                    state = state,
+                    label = stringResource(R.string.settings_field_llm_concurrency),
+                    hint = stringResource(R.string.settings_field_llm_concurrency_hint),
+                    keyboardType = KeyboardType.Number,
+                    enabled = enabled,
+                    onFieldChange = onFieldChange,
+                )
+            },
+            {
+                SettingsTextField(
+                    field = SettingsField.TTS_CONCURRENCY,
+                    state = state,
+                    label = stringResource(R.string.settings_field_tts_concurrency),
+                    hint = stringResource(R.string.settings_field_tts_concurrency_hint),
+                    keyboardType = KeyboardType.Number,
+                    enabled = enabled,
+                    onFieldChange = onFieldChange,
+                )
+            },
+        )
+        AdaptiveFieldRow(
+            {
+                SettingsTextField(
+                    field = SettingsField.SEGMENT_MAX_CHARS,
+                    state = state,
+                    label = stringResource(R.string.settings_field_segment_max_chars),
+                    hint = stringResource(R.string.settings_field_segment_max_chars_hint),
+                    keyboardType = KeyboardType.Number,
+                    enabled = enabled,
+                    onFieldChange = onFieldChange,
+                )
+            },
+            {
+                SettingsTextField(
+                    field = SettingsField.BATCH_SIZE,
+                    state = state,
+                    label = stringResource(R.string.settings_field_batch_size),
+                    hint = stringResource(R.string.settings_field_batch_size_hint),
+                    keyboardType = KeyboardType.Number,
+                    enabled = enabled,
+                    onFieldChange = onFieldChange,
+                )
+            },
+        )
         SettingsTextField(
             field = SettingsField.MIN_COVERAGE,
             state = state,
@@ -529,28 +546,30 @@ private fun GenerationSection(
             enabled = enabled,
             onFieldChange = onFieldChange,
         )
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            SettingsTextField(
-                field = SettingsField.NARRATOR_SILENCE_MS,
-                state = state,
-                label = stringResource(R.string.settings_field_narrator_silence),
-                hint = stringResource(R.string.settings_field_narrator_silence_hint),
-                keyboardType = KeyboardType.Number,
-                enabled = enabled,
-                onFieldChange = onFieldChange,
-                modifier = Modifier.weight(1f),
-            )
-            SettingsTextField(
-                field = SettingsField.PARAGRAPH_SILENCE_MS,
-                state = state,
-                label = stringResource(R.string.settings_field_paragraph_silence),
-                hint = stringResource(R.string.settings_field_paragraph_silence_hint),
-                keyboardType = KeyboardType.Number,
-                enabled = enabled,
-                onFieldChange = onFieldChange,
-                modifier = Modifier.weight(1f),
-            )
-        }
+        AdaptiveFieldRow(
+            {
+                SettingsTextField(
+                    field = SettingsField.NARRATOR_SILENCE_MS,
+                    state = state,
+                    label = stringResource(R.string.settings_field_narrator_silence),
+                    hint = stringResource(R.string.settings_field_narrator_silence_hint),
+                    keyboardType = KeyboardType.Number,
+                    enabled = enabled,
+                    onFieldChange = onFieldChange,
+                )
+            },
+            {
+                SettingsTextField(
+                    field = SettingsField.PARAGRAPH_SILENCE_MS,
+                    state = state,
+                    label = stringResource(R.string.settings_field_paragraph_silence),
+                    hint = stringResource(R.string.settings_field_paragraph_silence_hint),
+                    keyboardType = KeyboardType.Number,
+                    enabled = enabled,
+                    onFieldChange = onFieldChange,
+                )
+            },
+        )
         SettingsTextField(
             field = SettingsField.DEFAULT_VOICE_CATEGORY,
             state = state,
@@ -559,38 +578,41 @@ private fun GenerationSection(
             enabled = enabled,
             onFieldChange = onFieldChange,
         )
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            SettingsTextField(
-                field = SettingsField.DEFAULT_SPEED,
-                state = state,
-                label = stringResource(R.string.settings_field_default_speed),
-                hint = stringResource(R.string.settings_field_default_speed_hint),
-                keyboardType = KeyboardType.Decimal,
-                enabled = enabled,
-                onFieldChange = onFieldChange,
-                modifier = Modifier.weight(1f),
-            )
-            SettingsTextField(
-                field = SettingsField.DEFAULT_VOLUME,
-                state = state,
-                label = stringResource(R.string.settings_field_default_volume),
-                hint = stringResource(R.string.settings_field_default_volume_hint),
-                keyboardType = KeyboardType.Decimal,
-                enabled = enabled,
-                onFieldChange = onFieldChange,
-                modifier = Modifier.weight(1f),
-            )
-            SettingsTextField(
-                field = SettingsField.DEFAULT_PITCH,
-                state = state,
-                label = stringResource(R.string.settings_field_default_pitch),
-                hint = stringResource(R.string.settings_field_default_pitch_hint),
-                keyboardType = KeyboardType.Text,
-                enabled = enabled,
-                onFieldChange = onFieldChange,
-                modifier = Modifier.weight(1f),
-            )
-        }
+        AdaptiveFieldRow(
+            {
+                SettingsTextField(
+                    field = SettingsField.DEFAULT_SPEED,
+                    state = state,
+                    label = stringResource(R.string.settings_field_default_speed),
+                    hint = stringResource(R.string.settings_field_default_speed_hint),
+                    keyboardType = KeyboardType.Decimal,
+                    enabled = enabled,
+                    onFieldChange = onFieldChange,
+                )
+            },
+            {
+                SettingsTextField(
+                    field = SettingsField.DEFAULT_VOLUME,
+                    state = state,
+                    label = stringResource(R.string.settings_field_default_volume),
+                    hint = stringResource(R.string.settings_field_default_volume_hint),
+                    keyboardType = KeyboardType.Decimal,
+                    enabled = enabled,
+                    onFieldChange = onFieldChange,
+                )
+            },
+            {
+                SettingsTextField(
+                    field = SettingsField.DEFAULT_PITCH,
+                    state = state,
+                    label = stringResource(R.string.settings_field_default_pitch),
+                    hint = stringResource(R.string.settings_field_default_pitch_hint),
+                    keyboardType = KeyboardType.Text,
+                    enabled = enabled,
+                    onFieldChange = onFieldChange,
+                )
+            },
+        )
     }
 }
 
@@ -671,6 +693,7 @@ private fun AppearanceSection(
     ) {
         Text(
             text = stringResource(R.string.settings_theme_title),
+            modifier = Modifier.semantics { heading() },
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.SemiBold,
         )
@@ -772,6 +795,7 @@ private fun AboutSection(
 private fun SectionLabel(text: String) {
     Text(
         text = text,
+        modifier = Modifier.semantics { heading() },
         style = MaterialTheme.typography.titleSmall,
         fontWeight = FontWeight.SemiBold,
         color = MaterialTheme.colorScheme.primary,
@@ -804,7 +828,13 @@ private fun SettingsTextField(
     OutlinedTextField(
         value = state.draft.textOf(field),
         onValueChange = { value -> onFieldChange(field, value) },
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .semantics {
+                if (errorText != null) {
+                    error(errorText)
+                }
+            },
         enabled = enabled,
         label = { Text(label) },
         singleLine = true,
