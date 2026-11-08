@@ -1,5 +1,8 @@
 # AudioForge — Android
 
+[![Android CI](https://github.com/EstimateFaster/android-audioforge/actions/workflows/ci.yml/badge.svg)](https://github.com/EstimateFaster/android-audioforge/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/EstimateFaster/android-audioforge)](https://github.com/EstimateFaster/android-audioforge/releases)
+
 > StoryForge 的 Android 原生重构：把小说 txt 变成多人演播有声书。
 > **不是套壳**：Kotlin + Jetpack Compose + Material 3 Expressive + FFmpegKit + WorkManager。
 
