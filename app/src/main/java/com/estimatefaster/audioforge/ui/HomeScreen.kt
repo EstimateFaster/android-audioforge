@@ -33,12 +33,17 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.estimatefaster.audioforge.BuildConfig
 import com.estimatefaster.audioforge.R
+import com.estimatefaster.audioforge.data.db.RoomProbeState
 import com.estimatefaster.audioforge.ui.theme.AudioForgeTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen() {
+fun HomeScreen(
+    roomProbeState: RoomProbeState = RoomProbeState.Idle,
+    onRunRoomProbe: () -> Unit = {},
+) {
     var showDetails by rememberSaveable { mutableStateOf(false) }
 
     Scaffold(
@@ -75,6 +80,9 @@ fun HomeScreen() {
             item { Spacer(Modifier.height(4.dp)) }
             item { HeroCard() }
             item { ChecklistCard() }
+            if (BuildConfig.DEBUG) {
+                item { RoomProbeCard(roomProbeState, onRunRoomProbe) }
+            }
             item { NextCard(showDetails) { showDetails = !showDetails } }
             item {
                 AnimatedVisibility(visible = showDetails) {
@@ -177,6 +185,52 @@ private fun ChecklistCard() {
 }
 
 @Composable
+private fun RoomProbeCard(state: RoomProbeState, onReRun: () -> Unit) {
+    val failed = state is RoomProbeState.Failed
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+    ) {
+        Column(modifier = Modifier.padding(18.dp)) {
+            Text(
+                text = stringResource(R.string.diag_title),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Spacer(Modifier.height(6.dp))
+            Text(
+                text = when (state) {
+                    RoomProbeState.Idle -> stringResource(R.string.diag_room_idle)
+                    RoomProbeState.Running -> stringResource(R.string.diag_room_running)
+                    is RoomProbeState.Passed -> stringResource(
+                        R.string.diag_room_passed,
+                        state.counter,
+                        state.elapsedMs,
+                    )
+                    is RoomProbeState.Failed -> stringResource(
+                        R.string.diag_room_failed,
+                        state.message,
+                    )
+                },
+                style = MaterialTheme.typography.bodyMedium,
+                color = if (failed) {
+                    MaterialTheme.colorScheme.error
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                },
+            )
+            Spacer(Modifier.height(12.dp))
+            FilledTonalButton(
+                onClick = onReRun,
+                enabled = state !is RoomProbeState.Running,
+            ) {
+                Text(stringResource(R.string.diag_room_action))
+            }
+        }
+    }
+}
+
+@Composable
 private fun NextCard(showDetails: Boolean, onToggle: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -209,5 +263,16 @@ private fun NextCard(showDetails: Boolean, onToggle: () -> Unit) {
 private fun HomeScreenPreview() {
     AudioForgeTheme(dynamicColor = false) {
         HomeScreen()
+    }
+}
+
+@Preview(showBackground = true, backgroundColor = 0xFFF7F8FC)
+@Composable
+private fun RoomProbeCardPreview() {
+    AudioForgeTheme(dynamicColor = false) {
+        RoomProbeCard(
+            state = RoomProbeState.Passed(counter = 3, elapsedMs = 12),
+            onReRun = {},
+        )
     }
 }
