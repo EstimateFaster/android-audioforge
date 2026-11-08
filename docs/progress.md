@@ -18,7 +18,7 @@
 | P0-08 CI debug 构建与 APK 校验 | ✅ done | CI run 42442128213 绿；debug APK artifact 已上传 |
 | P0-09 Release 签名 CI | ✅ done | v0.1.0 已发布；签名 release APK + checksums |
 | P0-10 进度/决策文档 | ✅ done | 本文件 + plan |
-| P0-11 真机/模拟器 smoke 清单 | ⏳ todo | 等 P0-05–P0-07 |
+| P0-11 真机/模拟器 smoke 清单 | 🟡 in_progress | 清单 `docs/phase0-smoke.md`；补截图/设备信息 |
 | P0-12 Phase 0 门禁 | ⏳ todo | 全部 smoke 后 |
 
 ## 任务记录
@@ -67,6 +67,14 @@
     - 440/660Hz 两段拼接，ffprobe 时长在 600–2000ms
 - 说明：APK 16KB 对齐由 `scripts/verify-apk.sh`（`zipalign -P 16`）在 P0-08 CI 覆盖
 - 遗留：真实 TTS 音频后处理/长章节拼接归 P2-10；真机 A/B 归 P0-11
+
+### P0-11 真机/模拟器 smoke 清单 — in_progress
+- 开始：2026-11-08 12:50（Asia/Shanghai）
+- 分支：`feat/p0-11-smoke-checklist`
+- 目标：把 P0-05/06/07 的设备验证整理成可复跑清单，并补首页截图、设备/系统信息、logcat 证据
+- 依赖：P0-04–P0-07
+- 产出：`docs/phase0-smoke.md`；`smoke.yml` 增加 screencap/getprop/logcat artifact
+- 验收：清单项全过；失败有日志
 
 ## 已知实编坑（已处理）
 
