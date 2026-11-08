@@ -63,6 +63,11 @@
             android:foregroundServiceType="dataSync"
             tools:node="merge" />
 
+        <!-- P3-03 生成通知的「停止」action：显式广播，不导出 -->
+        <receiver
+            android:name=".domain.jobs.GenerationNotificationsReceiver"
+            android:exported="false" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
