@@ -29,33 +29,41 @@ class PlaybackInstrumentedTest {
 
     @Test
     fun exoPlayer_decodes_and_starts_silent_wav() {
-        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val context = instrumentation.targetContext
         val wav = writeSilentWav(File(context.cacheDir, "playback_silence.wav"))
-        val player = ExoPlayer.Builder(context).build()
-        try {
+        lateinit var player: ExoPlayer
+        instrumentation.runOnMainSync {
+            player = ExoPlayer.Builder(context).build()
             player.setMediaItem(MediaItem.fromUri(Uri.fromFile(wav)))
             player.prepare()
             player.play()
-
+        }
+        try {
             val deadlineMs = SystemClock.uptimeMillis() + TIMEOUT_MS
             var ready = false
             var started = false
+            var lastState = Player.STATE_IDLE
+            var lastPosition = 0L
             while (SystemClock.uptimeMillis() < deadlineMs) {
-                if (player.playbackState == Player.STATE_READY) {
-                    ready = true
+                instrumentation.runOnMainSync {
+                    lastState = player.playbackState
+                    lastPosition = player.currentPosition
+                    if (lastState == Player.STATE_READY) ready = true
+                    if (player.isPlaying || lastPosition > 0L) started = true
                 }
-                if (player.isPlaying || player.currentPosition > 0L) {
-                    started = true
-                    break
-                }
-                if (player.playbackState == Player.STATE_ENDED) break
+                if (started || lastState == Player.STATE_ENDED) break
                 Thread.sleep(POLL_INTERVAL_MS)
             }
 
-            val durationMs = player.duration
+            var durationMs = 0L
+            var errorMessage: String? = null
+            instrumentation.runOnMainSync {
+                durationMs = player.duration
+                errorMessage = player.playerError?.message
+            }
             assertTrue(
-                "ExoPlayer 未在 15s 内进入 READY（state=${player.playbackState}，" +
-                    "error=${player.playerError?.message}）",
+                "ExoPlayer 未在 15s 内进入 READY（state=$lastState，error=$errorMessage）",
                 ready,
             )
             assertTrue(
@@ -63,12 +71,11 @@ class PlaybackInstrumentedTest {
                 durationMs in 300..2_000,
             )
             assertTrue(
-                "15s 内未开始播放（isPlaying=${player.isPlaying}，" +
-                    "position=${player.currentPosition}，state=${player.playbackState}）",
+                "15s 内未开始播放（position=$lastPosition，state=$lastState）",
                 started,
             )
         } finally {
-            player.release()
+            instrumentation.runOnMainSync { player.release() }
             wav.delete()
         }
     }

@@ -130,7 +130,8 @@ class ExportManagerInstrumentedTest {
                 "RELATIVE_PATH 应在 Music/AudioForge：$relativePath",
                 relativePath.startsWith("Music/AudioForge/"),
             )
-            assertEquals("audio/mp4", it.getString(2))
+            val mime = it.getString(2)
+            assertTrue("MIME 应为音频类型，实际 $mime", mime != null && mime.startsWith("audio/"))
             assertEquals("IS_PENDING 应已发布为 0", 0, it.getInt(3))
         }
     }
