@@ -21,6 +21,26 @@
 | P0-11 真机/模拟器 smoke 清单 | ✅ done | Smoke 42447687152 绿；截图/设备信息/logcat 证据齐全 |
 | P0-12 Phase 0 门禁 | ✅ done | main CI 42448085423 + smoke 42448103444 全绿；tag 留待正式版本 |
 
+## Phase 1
+
+| 任务 | 状态 | 备注 |
+|---|---|---|
+| P1-01 模型与枚举 | ✅ done | CI 42448583320 绿；`EnumsTest` 8/8 |
+| P1-02 Assets：提示词 + 音色池 | ⏳ todo | |
+| P1-03 TextDecoder | ⏳ todo | |
+| P1-04 ChapterSplitter | ⏳ todo | |
+| P1-05 ScriptSanitizer | ⏳ todo | |
+| P1-06 CoverageChecker | ⏳ todo | |
+| P1-07 CharacterRegistry | ⏳ todo | |
+| P1-08 VoicePool 完整 | ⏳ todo | |
+| P1-09 设置模型与校验 | ⏳ todo | |
+| P1-10 TTS 缓存键 | ⏳ todo | |
+| P1-11 错误模型 | ⏳ todo | |
+| P1-12 Golden fixtures 与测试脚手架 | ⏳ todo | |
+| P1-13 性能基准 | ⏳ todo | |
+| P1-14 文档与进度 | ⏳ todo | |
+| P1-15 Phase 1 门禁 | ⏳ todo | |
+
 ## 任务记录
 
 ### P0-05 Room smoke — done
@@ -89,6 +109,14 @@
 - 可选 tag `v0.0.1-spike` 未打：等 Phase 1 有可演示功能后再发正式版本
 - 结论：Phase 0 完成，进入 Phase 1
 
+### P1-01 模型与枚举 — done
+- 完成：2026-11-08 13:00（Asia/Shanghai）
+- 分支：`feat/p1-01-model-enums`（PR #6）
+- 提交：`f591c5b`
+- 验证：CI [42448583320](https://github.com/EstimateFaster/android-audioforge/actions/runs/42448583320) 绿；
+  `EnumsTest` 8/8（wire 精确列表、11 情绪前缀、`applyTo`、`fromWire` 往返/兜底、RoleId 格式与非法入参）
+- 产出：`core/model/Enums.kt`、`core/model/RoleId.kt`
+
 ## 已知实编坑（已处理）
 
 - KSP + AGP 9 内置 Kotlin：`android.disallowKotlinSourceSets=false`。
@@ -108,9 +136,9 @@
 
 ## 下一步
 
-1. P1-01 模型与枚举（`core/model/*.kt`），依赖 P0-02 ✅。
-2. P1-02 Assets：提示词 + 音色池。
-3. P1-03 TextDecoder。
+1. P1-02 Assets：提示词 + 音色池（依赖 P1-01 ✅）。
+2. P1-03 TextDecoder。
+3. P1-04 ChapterSplitter。
 
 ## 日志
 
@@ -125,3 +153,4 @@
 - 2026-11-08：P0-07 完成；FFmpegKit `-version`、350ms 静音、两段拼接与 ffprobe 时长在 API 35 模拟器通过。
 - 2026-11-08：P0-11 完成；smoke 增加冷启动截图/设备信息/logcat；截图确认首页与 Room 卡片「通过（第 1 次，28 ms）」。
 - 2026-11-08：P0-12 门禁通过；Phase 0 完成（main CI + emulator smoke 全绿）。
+- 2026-11-08：P1-01 完成；枚举 wire/情绪前缀/RoleId 契约与 Python 对齐，`EnumsTest` 8/8。
