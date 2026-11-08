@@ -119,7 +119,7 @@ class LlmClient(
             model = config.model,
             messages = listOf(ChatMessage(role = ROLE_USER, content = prompt)),
             temperature = temperature,
-            responseFormat = if (includeResponseFormat) ResponseFormat() else null,
+            responseFormat = if (includeResponseFormat) ResponseFormat(ResponseFormat.JSON_OBJECT) else null,
         )
         val body = json
             .encodeToString(ChatCompletionRequest.serializer(), payload)

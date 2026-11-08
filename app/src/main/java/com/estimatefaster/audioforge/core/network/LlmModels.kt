@@ -43,7 +43,7 @@ internal data class ChatMessage(
 /** `{"type":"json_object"}`；DashScope 兼容模式与 OpenAI 同名。 */
 @Serializable
 internal data class ResponseFormat(
-    val type: String = JSON_OBJECT,
+    val type: String,
 ) {
     companion object {
         const val JSON_OBJECT: String = "json_object"
