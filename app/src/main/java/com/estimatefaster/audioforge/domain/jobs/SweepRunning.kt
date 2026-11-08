@@ -190,14 +190,16 @@ class SweepRunning(
         if (timeoutMs <= 0L) {
             return jobDao.get(jobId)?.takeIf { JobStatus.isTerminal(it.status) }
         }
-        return withTimeoutOrNull(timeoutMs) {
-            var current = jobDao.get(jobId) ?: return@withTimeoutOrNull null
-            while (!JobStatus.isTerminal(current.status)) {
-                delay(awaitPollMs)
-                current = jobDao.get(jobId) ?: return@withTimeoutOrNull null
-            }
-            current
+        // 用注入时钟做截止判断，避免 withTimeoutOrNull 与 runTest 虚拟时间、
+        // 真实 Room IO 混用时提前超时（测试/生产行为一致）。
+        val deadline = clock() + timeoutMs
+        var current = jobDao.get(jobId) ?: return null
+        while (!JobStatus.isTerminal(current.status)) {
+            if (clock() >= deadline) return null
+            delay(awaitPollMs)
+            current = jobDao.get(jobId) ?: return null
         }
+        return current
     }
 
     /**
