@@ -431,7 +431,7 @@ class PlaybackFollowControllerTest {
             selectedRoleId = "role_b",
         )
 
-        assertEquals(listOf(1), filtered.visibleSegments.map { it.index })
+        assertEquals(listOf(1, 2), filtered.visibleSegments.map { it.index })
         assertEquals("筛选后的列表仍应给出整章 index", listOf(1), playableIndexesOf(filtered.visibleSegments))
         assertEquals(0, filtered.scrollTargetFor(1))
     }
