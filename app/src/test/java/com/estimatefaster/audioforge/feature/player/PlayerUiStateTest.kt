@@ -294,6 +294,7 @@ class PlayerUiStateTest {
     fun view_model_play_opens_queue_at_first_playable_track() = runTest(dispatcher) {
         val gateway = FakeGateway()
         val viewModel = viewModel(gateway)
+        advanceUntilIdle()
 
         viewModel.play()
         advanceUntilIdle()
@@ -311,6 +312,7 @@ class PlayerUiStateTest {
     fun view_model_pauses_after_play() = runTest(dispatcher) {
         val gateway = FakeGateway()
         val viewModel = viewModel(gateway)
+        advanceUntilIdle()
 
         viewModel.play()
         advanceUntilIdle()
@@ -325,6 +327,7 @@ class PlayerUiStateTest {
     fun view_model_seek_forwards_clamped_target() = runTest(dispatcher) {
         val gateway = FakeGateway()
         val viewModel = viewModel(gateway)
+        advanceUntilIdle()
 
         viewModel.play()
         advanceUntilIdle()
@@ -340,6 +343,7 @@ class PlayerUiStateTest {
     fun view_model_ignores_seek_before_playback() = runTest(dispatcher) {
         val gateway = FakeGateway()
         val viewModel = viewModel(gateway)
+        advanceUntilIdle()
 
         viewModel.seekTo(0.5f)
         advanceUntilIdle()
@@ -355,6 +359,7 @@ class PlayerUiStateTest {
     fun view_model_changes_speed_and_passes_multiplier() = runTest(dispatcher) {
         val gateway = FakeGateway()
         val viewModel = viewModel(gateway)
+        advanceUntilIdle()
 
         viewModel.setSpeed(PlayerSpeed.X150)
         advanceUntilIdle()
@@ -409,6 +414,7 @@ class PlayerUiStateTest {
     fun view_model_next_chapter_opens_first_track_of_target_chapter() = runTest(dispatcher) {
         val gateway = FakeGateway()
         val viewModel = viewModel(gateway)
+        advanceUntilIdle()
 
         viewModel.play()
         advanceUntilIdle()
@@ -427,6 +433,7 @@ class PlayerUiStateTest {
     fun view_model_chapter_navigation_stops_at_book_edges() = runTest(dispatcher) {
         val gateway = FakeGateway()
         val viewModel = viewModel(gateway)
+        advanceUntilIdle()
 
         viewModel.play()
         advanceUntilIdle()
@@ -447,6 +454,7 @@ class PlayerUiStateTest {
     fun view_model_select_chapter_updates_highlight_and_queue_position() = runTest(dispatcher) {
         val gateway = FakeGateway()
         val viewModel = viewModel(gateway)
+        advanceUntilIdle()
 
         viewModel.selectChapter(13L)
         advanceUntilIdle()
@@ -463,6 +471,7 @@ class PlayerUiStateTest {
     fun view_model_next_segment_skips_no_audio_and_updates_highlight() = runTest(dispatcher) {
         val gateway = FakeGateway()
         val viewModel = viewModel(gateway)
+        advanceUntilIdle()
 
         viewModel.play()
         advanceUntilIdle()
@@ -478,6 +487,7 @@ class PlayerUiStateTest {
     fun view_model_previous_segment_stops_at_first_segment() = runTest(dispatcher) {
         val gateway = FakeGateway()
         val viewModel = viewModel(gateway)
+        advanceUntilIdle()
 
         viewModel.play()
         advanceUntilIdle()
@@ -492,6 +502,7 @@ class PlayerUiStateTest {
     fun view_model_next_segment_stops_at_chapter_end() = runTest(dispatcher) {
         val gateway = FakeGateway()
         val viewModel = viewModel(gateway)
+        advanceUntilIdle()
 
         viewModel.play()
         advanceUntilIdle()
@@ -510,6 +521,7 @@ class PlayerUiStateTest {
     fun view_model_next_segment_before_play_opens_target_track() = runTest(dispatcher) {
         val gateway = FakeGateway()
         val viewModel = viewModel(gateway)
+        advanceUntilIdle()
 
         viewModel.nextSegment()
         advanceUntilIdle()
@@ -583,6 +595,7 @@ class PlayerUiStateTest {
     fun view_model_syncs_from_gateway_playback() = runTest(dispatcher) {
         val gateway = FakeGateway()
         val viewModel = viewModel(gateway)
+        advanceUntilIdle()
 
         viewModel.play()
         advanceUntilIdle()
