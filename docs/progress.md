@@ -14,7 +14,7 @@
 | P0-04 Compose 空壳与 Expressive 主题 | ✅ done | `MaterialExpressiveTheme` + `MotionScheme.expressive()`；首页空壳 |
 | P0-05 Room smoke | ✅ done | CI 42444925547 绿；`RoomProbeTest` 3/3；schema `1.json` 已入库 |
 | P0-06 WorkManager 前台服务 smoke | ✅ done | Smoke 42446113920 绿；Worker SUCCEEDED + 通知可见 + 取消 CANCELLED |
-| P0-07 FFmpeg smoke | ⏳ todo | 真机/模拟器 `-version` + 静音/拼接 |
+| P0-07 FFmpeg smoke | 🟡 in_progress | FfmpegKitRunner/FfmpegProbe + 调试卡已提交；等 emulator smoke |
 | P0-08 CI debug 构建与 APK 校验 | ✅ done | CI run 42442128213 绿；debug APK artifact 已上传 |
 | P0-09 Release 签名 CI | ✅ done | v0.1.0 已发布；签名 release APK + checksums |
 | P0-10 进度/决策文档 | ✅ done | 本文件 + plan |
@@ -53,6 +53,15 @@
     - `probe_writes_and_reads_back_on_device`：设备 SQLite 读写通过
 - 新增：`.github/workflows/smoke.yml`（PR 改动 `app/src/main`/`androidTest` 时自动跑，也可手动 dispatch）
 - 遗留：通知「停止」action、锁屏 30 分钟、国产 ROM 归入 P0-11 / P3
+
+### P0-07 FFmpeg smoke — in_progress
+- 开始：2026-11-08 12:33（Asia/Shanghai）
+- 分支：`feat/p0-07-ffmpeg-smoke`
+- 目标：`FfmpegKitRunner`（Mutex 串行 + 取消 + 日志截断）+ `FfmpegProbe`：
+  `-version` → 350ms 静音 mp3 → 两段 0.5s 正弦 → concat 拼接 → ffprobe 时长
+- 依赖：P0-02
+- 验收：模拟器上 `-version` 成功、静音/拼接文件非空且可被 ffprobe 解析（≈1s）
+- 手段：`FfmpegInstrumentedTest`（emulator smoke）；首页 Debug 卡可手动触发
 
 ## 已知实编坑（已处理）
 

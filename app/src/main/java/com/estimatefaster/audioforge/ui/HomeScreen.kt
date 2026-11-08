@@ -43,6 +43,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import com.estimatefaster.audioforge.BuildConfig
 import com.estimatefaster.audioforge.R
+import com.estimatefaster.audioforge.core.audio.FfmpegProbeState
 import com.estimatefaster.audioforge.data.db.RoomProbeState
 import com.estimatefaster.audioforge.ui.theme.AudioForgeTheme
 import com.estimatefaster.audioforge.work.ProbeWorkSnapshot
@@ -53,6 +54,8 @@ import com.estimatefaster.audioforge.work.ProbeWorkStatus
 fun HomeScreen(
     roomProbeState: RoomProbeState = RoomProbeState.Idle,
     onRunRoomProbe: () -> Unit = {},
+    ffmpegProbeState: FfmpegProbeState = FfmpegProbeState.Idle,
+    onRunFfmpegProbe: () -> Unit = {},
     probeWork: ProbeWorkSnapshot = ProbeWorkSnapshot(),
     onStartProbeWorker: () -> Unit = {},
     onStopProbeWorker: () -> Unit = {},
@@ -95,6 +98,7 @@ fun HomeScreen(
             item { ChecklistCard() }
             if (BuildConfig.DEBUG) {
                 item { RoomProbeCard(roomProbeState, onRunRoomProbe) }
+                item { FfmpegProbeCard(ffmpegProbeState, onRunFfmpegProbe) }
                 item { ProbeWorkerCard(probeWork, onStartProbeWorker, onStopProbeWorker) }
             }
             item { NextCard(showDetails) { showDetails = !showDetails } }
@@ -245,6 +249,53 @@ private fun RoomProbeCard(state: RoomProbeState, onReRun: () -> Unit) {
 }
 
 @Composable
+private fun FfmpegProbeCard(state: FfmpegProbeState, onRun: () -> Unit) {
+    val failed = state is FfmpegProbeState.Failed
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+    ) {
+        Column(modifier = Modifier.padding(18.dp)) {
+            Text(
+                text = stringResource(R.string.diag_ffmpeg_title),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Spacer(Modifier.height(6.dp))
+            Text(
+                text = when (state) {
+                    FfmpegProbeState.Idle -> stringResource(R.string.diag_ffmpeg_idle)
+                    FfmpegProbeState.Running -> stringResource(R.string.diag_ffmpeg_running)
+                    is FfmpegProbeState.Passed -> stringResource(
+                        R.string.diag_ffmpeg_passed,
+                        state.version,
+                        state.silenceBytes,
+                        state.joinedDurationMs,
+                    )
+                    is FfmpegProbeState.Failed -> stringResource(
+                        R.string.diag_ffmpeg_failed,
+                        state.message,
+                    )
+                },
+                style = MaterialTheme.typography.bodyMedium,
+                color = if (failed) {
+                    MaterialTheme.colorScheme.error
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                },
+            )
+            Spacer(Modifier.height(12.dp))
+            FilledTonalButton(
+                onClick = onRun,
+                enabled = state !is FfmpegProbeState.Running,
+            ) {
+                Text(stringResource(R.string.diag_ffmpeg_action))
+            }
+        }
+    }
+}
+
+@Composable
 private fun ProbeWorkerCard(
     snapshot: ProbeWorkSnapshot,
     onStart: () -> Unit,
@@ -360,6 +411,21 @@ private fun RoomProbeCardPreview() {
         RoomProbeCard(
             state = RoomProbeState.Passed(counter = 3, elapsedMs = 12),
             onReRun = {},
+        )
+    }
+}
+
+@Preview(showBackground = true, backgroundColor = 0xFFF7F8FC)
+@Composable
+private fun FfmpegProbeCardPreview() {
+    AudioForgeTheme(dynamicColor = false) {
+        FfmpegProbeCard(
+            state = FfmpegProbeState.Passed(
+                version = "ffmpeg version 8.1.9",
+                silenceBytes = 3_264,
+                joinedDurationMs = 1_018,
+            ),
+            onRun = {},
         )
     }
 }

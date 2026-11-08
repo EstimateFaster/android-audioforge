@@ -23,6 +23,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             AudioForgeTheme {
                 val probeState by container.roomProbe.state.collectAsStateWithLifecycle()
+                val ffmpegState by container.ffmpegProbe.state.collectAsStateWithLifecycle()
                 val workInfos by ProbeWorker.observe(appContext, workManager)
                     .collectAsStateWithLifecycle(initialValue = emptyList())
                 val workSnapshot = remember(workInfos) {
@@ -31,6 +32,8 @@ class MainActivity : ComponentActivity() {
                 HomeScreen(
                     roomProbeState = probeState,
                     onRunRoomProbe = container::startRoomProbe,
+                    ffmpegProbeState = ffmpegState,
+                    onRunFfmpegProbe = container::startFfmpegProbe,
                     probeWork = workSnapshot,
                     onStartProbeWorker = { ProbeWorker.enqueue(appContext, workManager) },
                     onStopProbeWorker = { ProbeWorker.cancel(appContext, workManager) },
