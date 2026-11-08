@@ -379,11 +379,14 @@ class RoomDaoTest {
         // 最近开始的批次优先。
         assertEquals(runningId, db.jobDao().observeActive(novelId).first()?.id)
 
-        db.jobDao().updateStatus(
-            id = runningId,
-            status = "error",
-            finishedAt = 300L,
-            lastError = "网络失败",
+        assertEquals(
+            1,
+            db.jobDao().markError(
+                id = runningId,
+                now = 300L,
+                error = "网络失败",
+                statsJson = "{}",
+            ),
         )
 
         assertEquals(queuedId, db.jobDao().observeActive(novelId).first()?.id)
@@ -393,7 +396,7 @@ class RoomDaoTest {
         assertEquals(300L, finished?.finishedAt)
         assertEquals("网络失败", finished?.lastError)
 
-        db.jobDao().updateStatus(queuedId, "running", finishedAt = null, lastError = null)
+        assertEquals(1, db.jobDao().markRunning(queuedId))
         assertEquals(1, db.jobDao().sweepRunning(novelId))
         assertEquals("pending", db.jobDao().get(queuedId)?.status)
         assertNull(db.jobDao().observeActive(novelId).first())
