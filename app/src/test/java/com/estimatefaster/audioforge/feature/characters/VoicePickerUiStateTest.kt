@@ -329,13 +329,13 @@ class VoicePickerUiStateTest {
         advanceUntilIdle()
 
         assertTrue(viewModel.state.value.pendingLockedConfirm)
-        assertTrue(assigner.calls.isEmpty())
+        assertEquals(0, assigner.calls)
 
         viewModel.dismissLockedConfirm()
         advanceUntilIdle()
 
         assertFalse(viewModel.state.value.pendingLockedConfirm)
-        assertTrue(assigner.calls.isEmpty())
+        assertEquals(0, assigner.calls)
 
         viewModel.save()
         assertTrue(viewModel.state.value.pendingLockedConfirm)
@@ -356,7 +356,7 @@ class VoicePickerUiStateTest {
         advanceUntilIdle()
 
         assertFalse(viewModel.state.value.pendingLockedConfirm)
-        assertTrue(assigner.calls.isEmpty())
+        assertEquals(0, assigner.calls)
     }
 
     @Test
@@ -394,7 +394,7 @@ class VoicePickerUiStateTest {
         viewModel.cancel()
         advanceUntilIdle()
 
-        assertTrue(assigner.calls.isEmpty())
+        assertEquals(0, assigner.calls)
         assertEquals("male_lead_steady", viewModel.state.value.selectedCategory)
         assertEquals(VoicePickerEvent.Cancelled, viewModel.events.first())
     }
@@ -408,7 +408,7 @@ class VoicePickerUiStateTest {
         viewModel.save()
         advanceUntilIdle()
 
-        assertTrue(assigner.calls.isEmpty())
+        assertEquals(0, assigner.calls)
     }
 
     @Test
@@ -424,7 +424,7 @@ class VoicePickerUiStateTest {
         viewModel.save()
         advanceUntilIdle()
 
-        assertTrue(assigner.calls.isEmpty())
+        assertEquals(0, assigner.calls)
     }
 
     @Test
@@ -459,7 +459,7 @@ class VoicePickerUiStateTest {
         viewModel.save()
         viewModel.save()
         assertTrue(viewModel.state.value.pendingLockedConfirm)
-        assertTrue(assigner.calls.isEmpty())
+        assertEquals(0, assigner.calls)
 
         viewModel.confirmLockedSave()
         assertTrue(viewModel.state.value.saving)
