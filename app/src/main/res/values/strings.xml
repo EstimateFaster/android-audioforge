@@ -41,6 +41,8 @@
     <string name="notif_channel_generation_desc">长任务的进度与前台服务</string>
     <string name="notif_channel_done">任务完成</string>
     <string name="notif_channel_done_desc">任务完成或失败通知</string>
+    <string name="notif_channel_playback">播放控制</string>
+    <string name="notif_channel_playback_desc">后台播放与锁屏媒体控制</string>
     <string name="notif_probe_title">后台任务冒烟</string>
     <string name="notif_probe_progress">进度 %1$d%%</string>
     <string name="notif_done_success">冒烟任务完成</string>
