@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -337,7 +338,7 @@ class ExportViewModel(
         var finished = 0
 
         for (chapter in targets) {
-            if (!coroutineContext.isActive) break
+            if (!currentCoroutineContext().isActive) break
             _state.update {
                 it.copy(currentChapterTitle = chapter.title, completed = finished)
             }
