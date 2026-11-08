@@ -27,7 +27,7 @@
 |---|---|---|
 | P1-01 模型与枚举 | ✅ done | CI 42448583320 绿；`EnumsTest` 8/8 |
 | P1-02 Assets：提示词 + 音色池 | ✅ done | CI 42448901696 绿；Prompt/VoicePool 11 个用例 + 快照 |
-| P1-03 TextDecoder | ⏳ todo | |
+| P1-03 TextDecoder | ✅ done | CI 42449492657 绿；`TextDecoderTest` 14/14 |
 | P1-04 ChapterSplitter | ⏳ todo | |
 | P1-05 ScriptSanitizer | ⏳ todo | |
 | P1-06 CoverageChecker | ⏳ todo | |
@@ -136,6 +136,17 @@
   - 合计 23 个单测全绿
 - 产出：`core/voice/PromptAssets.kt`、`core/voice/VoicePool.kt`、`app/src/test/resources/voice-pool.json`
 
+### P1-03 TextDecoder — done
+- 完成：2026-11-08 13:34（Asia/Shanghai）
+- 分支：`feat/p1-03-text-decoder`（PR #8）
+- 提交：`a8df502`（初版）、`168281a`（去掉 ICU，改严格解码 + 评分）
+- 验证：CI [42449492657](https://github.com/EstimateFaster/android-audioforge/actions/runs/42449492657) 绿；`TextDecoderTest` 14/14
+  - UTF-8 / UTF-8 BOM / GBK / GB18030 / UTF-16LE+BE / Big5（自动+手动）
+  - 非法字节 → `ManualEncodingRequired`；纯 ASCII（CJK 不足）拒绝；空文件；超限；未知编码
+- 偏差：`android.icu.text.CharsetDetector` 不在公开 SDK（首次 CI `Unresolved reference`），
+  改为「严格解码 + CJK 占比 + 中文标点/异常字符评分」；已记录 `docs/decisions.md`
+- 产出：`core/ingest/TextDecoder.kt`、`TextDecoderTest.kt`
+
 ## 已知实编坑（已处理）
 
 - KSP + AGP 9 内置 Kotlin：`android.disallowKotlinSourceSets=false`。
@@ -145,6 +156,7 @@
 - Room 2.8.5 的 `onOpen` 里 `execSQL("PRAGMA busy_timeout=...")` 在真机必崩，必须用 `query(...)`。
 - `connectedDebugAndroidTest` 跑完会卸载 APK；要在模拟器截图需重新 `installDebug`。
 - `reactivecircus/android-emulator-runner` 按行执行 `script`，多行 `{}` / 跨行变量不生效。
+- `android.icu.text.CharsetDetector` 不在公开 SDK（android.jar 无此类），编码识别需自研或换依赖。
 
 ## 已发布
 
@@ -155,9 +167,9 @@
 
 ## 下一步
 
-1. P1-03 TextDecoder（编码探测：BOM/UTF-8/GB18030/Big5/UTF-16）。
-2. P1-04 ChapterSplitter。
-3. P1-05 ScriptSanitizer（最高风险移植点）。
+1. P1-04 ChapterSplitter（章节正则 + 短标题/假标题/无标题）。
+2. P1-05 ScriptSanitizer（最高风险移植点）。
+3. P1-06 CoverageChecker。
 
 ## 日志
 
@@ -174,3 +186,4 @@
 - 2026-11-08：P0-12 门禁通过；Phase 0 完成（main CI + emulator smoke 全绿）。
 - 2026-11-08：P1-01 完成；枚举 wire/情绪前缀/RoleId 契约与 Python 对齐，`EnumsTest` 8/8。
 - 2026-11-08：P1-02 完成；提示词 SHA-256、63 音色快照、旁白排除全部锁定，23 个单测全绿。
+- 2026-11-08：P1-03 完成；BOM/UTF-8/GBK/GB18030/UTF-16/Big5 全过；ICU 不可用改用启发式，已记 ADR。
