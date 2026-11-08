@@ -707,4 +707,8 @@
     <string name="player_chapters_collapse">收起</string>
     <string name="player_chapter_current">当前播放</string>
     <string name="player_chapter_no_audio">暂无音频</string>
+
+    <!-- P5-08 播放通知/后台 -->
+    <string name="player_notification_sleep_minutes">睡眠定时：%1$d 分钟</string>
+    <string name="player_notification_sleep_off">睡眠定时：关闭</string>
 </resources>
