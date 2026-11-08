@@ -46,6 +46,15 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:mimeType="text/plain" />
             </intent-filter>
+            <!-- P5-08：播放通知/锁屏的 setSessionActivity 深链回播放器 -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:host="player"
+                    android:scheme="audioforge" />
+            </intent-filter>
         </activity>
 
         <!-- Media3 后台播放：MediaSessionService + mediaPlayback 前台服务类型 -->

@@ -3,11 +3,10 @@ package com.estimatefaster.audioforge.playback
 import android.content.ComponentName
 import android.content.Context
 import android.net.Uri
+import android.os.Bundle
 import android.util.Log
 import androidx.annotation.OptIn
 import androidx.core.content.ContextCompat
-import androidx.media3.common.MediaItem
-import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.session.MediaController
@@ -40,16 +39,20 @@ data class PlayerUiState(
 )
 
 /**
- * 播放控制门面（执行计划 §10.4）。
+ * 播放控制门面（执行计划 §10.4、§15 P5-08）。
  *
  * 通过 `MediaController` 连接 [AudioForgeMediaSessionService] 里的 ExoPlayer：
- * - 构造时异步连接，连接完成前调用 [playChapter] 会暂存，连接后自动播放；
+ * - 构造时异步连接，连接完成前调用 [playChapter] / [playQueue] 会暂存，连接后自动起播；
  * - [state] 反射当前标题/副标题/位置/时长/播放态，UI 直接 collect；
  * - 提供 [play] / [pause] / [seekTo] / [setSpeed] / [sleepTimer] / [release]；
- * - 睡眠定时由 [SleepTimer] 协程实现，到点 `pause()`，取消不会误触发。
+ * - [playQueue] 把整本书章节交给服务侧队列：本章内由 ExoPlayer 逐段前进，章末由
+ *   服务按连续播放开关跨章；[nextChapter] / [previousChapter] 走 MediaSession
+ *   自定义命令，和通知/锁屏按钮是同一条链路；
+ * - 睡眠定时由本地 [SleepTimer] 负责 UI 剩余时间，同时把分钟数作为
+ *   [PlaybackCommands.ACTION_SLEEP_TIMER] 发给服务，服务到点暂停并刷新通知按钮。
  *
- * 播放位置**不**写 DataStore（P5 再实现续播）；本类不依赖 AppContainer，
- * 由后续 P2-02/UI 接线为单例。
+ * [playChapter] 保留为单段入口（P2-14/P5-07 兼容）：只装一个 MediaItem，不跨章；
+ * 需要自动续播时改用 [playQueue]。
  *
  * 线程约束：构造与所有方法都应在主线程调用（Media3 `MediaController` 绑定在
  * 应用主 Looper）；[scope] 使用 `Dispatchers.Main.immediate`。
@@ -71,7 +74,8 @@ class PlayerController(
     private val sleepTimer = SleepTimer(scope) { controller?.pause() }
 
     private var controller: MediaController? = null
-    private var pendingChapter: ChapterRequest? = null
+    private var pendingPlayback: PendingPlayback? = null
+    private var pendingSleepMinutes: Int? = null
     private var positionJob: Job? = null
 
     /** 是否已连上播放服务。 */
@@ -109,9 +113,13 @@ class PlayerController(
                     controller = connected
                     connected.addListener(playerListener)
                     publishState(connected)
-                    pendingChapter?.let { request ->
-                        pendingChapter = null
-                        playChapter(request.file, request.title, request.subtitle)
+                    pendingPlayback?.let { request ->
+                        pendingPlayback = null
+                        applyQueue(connected, request)
+                    }
+                    pendingSleepMinutes?.let { minutes ->
+                        pendingSleepMinutes = null
+                        sendSleepTimer(connected, minutes)
                     }
                 } catch (e: Exception) {
                     Log.w(TAG, "连接 MediaSessionService 失败", e)
@@ -122,19 +130,89 @@ class PlayerController(
     }
 
     /**
-     * 播放单个章节音频文件。[title] / [subtitle] 进入媒体元数据，用于通知与锁屏。
-     * 仅支持本地文件（章节音频由 AudioStorage 产出）。
+     * 播放单个音频文件。[title] / [subtitle] 进入媒体元数据，用于通知与锁屏。
+     *
+     * 这是 P2-14/P5-07 的单段入口：只装一条 MediaItem，不自动跨章。需要同章连播/
+     * 跨章续播时用 [playQueue]。
      */
     fun playChapter(file: File, title: String, subtitle: String?) {
-        val request = ChapterRequest(file, title, subtitle)
+        val item = PlaybackQueueItem(
+            mediaId = file.absolutePath,
+            uri = Uri.fromFile(file).toString(),
+            title = title,
+            subtitle = subtitle,
+            segmentIndex = 0,
+        )
+        val chapter = PlaybackQueueChapter(
+            chapterId = 0L,
+            title = title,
+            items = listOf(item),
+        )
+        playQueue(
+            chapters = listOf(chapter),
+            startChapterIndex = 0,
+            startSegmentIndex = 0,
+            continuous = false,
+        )
+    }
+
+    /**
+     * 装载整本书的章节队列并从 [startChapterIndex] / [startSegmentIndex] 起播。
+     *
+     * 只把**当前章**的 MediaItem 交给播放器，整本书的队列放在进程内
+     * [PlaybackQueueStore]；章末由服务决定是否跨章。这样：
+     * - 本章内逐段播放由 ExoPlayer 原生完成，不会每段重新 prepare；
+     * - 连续播放关闭时不会误播下一章；
+     * - 通知/锁屏的“上一章/下一章”命令能拿到完整队列。
+     *
+     * @param chapters 按书内顺序排列的章节；空章可以保留，队列导航会跳过
+     * @param startChapterIndex 起播章在 [chapters] 里的位置，越界时回落到第一个可播章
+     * @param startSegmentIndex 起播段 index；null 或找不到时从该章第一段开始
+     * @param continuous 章末是否自动进入下一章
+     */
+    fun playQueue(
+        chapters: List<PlaybackQueueChapter>,
+        startChapterIndex: Int = 0,
+        startSegmentIndex: Int? = null,
+        continuous: Boolean = true,
+    ) {
+        val queue = PlaybackQueue(chapters = chapters, continuous = continuous)
+        if (queue.isEmpty) return
+        PlaybackQueueStore.set(queue)
+        val chapterIndex = if (queue.chapterAt(startChapterIndex) != null) {
+            startChapterIndex
+        } else {
+            queue.firstPlayableChapterIndex() ?: return
+        }
+        val request = PendingPlayback(queue, chapterIndex, startSegmentIndex)
         val connected = controller
         if (connected == null) {
-            pendingChapter = request
+            pendingPlayback = request
             return
         }
-        connected.setMediaItem(request.toMediaItem())
-        connected.prepare()
-        connected.play()
+        applyQueue(connected, request)
+    }
+
+    /** 下一有音频章（通知/锁屏走同一个 MediaSession 命令）。 */
+    fun nextChapter() {
+        sendCommand(PlaybackCommands.ACTION_NEXT_CHAPTER)
+    }
+
+    /** 上一有音频章。 */
+    fun previousChapter() {
+        sendCommand(PlaybackCommands.ACTION_PREV_CHAPTER)
+    }
+
+    /**
+     * 同步连续播放开关；只影响章末，不影响本章内逐段前进。
+     * 服务在锁屏/后台也会读取最新的开关。
+     */
+    fun setContinuous(enabled: Boolean) {
+        PlaybackQueueStore.updateContinuous(enabled)
+        sendCommand(
+            PlaybackCommands.ACTION_SET_CONTINUOUS,
+            PlaybackSessionCommands.continuousExtras(enabled),
+        )
     }
 
     fun play() {
@@ -159,18 +237,28 @@ class PlayerController(
     /**
      * 设置睡眠定时器：[minutes] 分钟后自动暂停。
      * 传 0 或负数等价于取消定时器。
+     *
+     * 15/30/60 会同步给服务的媒体通知按钮；其它正整数仍只在本地生效（UI 目前只用
+     * 这三个档位），避免服务拒绝导致 UI 与播放器状态不一致。
      */
     fun sleepTimer(minutes: Int) {
         if (minutes <= 0) {
             sleepTimer.cancel()
+            sendSleepTimer(PlaybackCommands.SLEEP_OFF_MINUTES)
         } else {
             sleepTimer.start(minutes)
+            if (PlaybackCommands.isSupportedSleepMinutes(minutes)) {
+                sendSleepTimer(minutes)
+            } else {
+                Log.w(TAG, "睡眠分钟数不受媒体通知支持，仅本地生效：$minutes")
+            }
         }
     }
 
     /** 取消睡眠定时器。 */
     fun cancelSleepTimer() {
         sleepTimer.cancel()
+        sendSleepTimer(PlaybackCommands.SLEEP_OFF_MINUTES)
     }
 
     /** 睡眠定时器剩余毫秒；未启用时返回 `null`。 */
@@ -179,16 +267,20 @@ class PlayerController(
     /**
      * 断开连接并释放播放器资源；可重复调用。
      * 之后本实例不可复用（需要新实例重新连接）。
+     *
+     * 注意：服务侧的睡眠定时不会被 release 取消——用户退出界面后定时仍应生效，
+     * 由服务到点暂停并清理通知状态。
      */
     fun release() {
         if (!released.compareAndSet(false, true)) return
         positionJob?.cancel()
         positionJob = null
         sleepTimer.cancel()
+        pendingPlayback = null
+        pendingSleepMinutes = null
 
         val connected = controller
         controller = null
-        pendingChapter = null
         if (connected != null) {
             connected.removeListener(playerListener)
             connected.release()
@@ -197,6 +289,40 @@ class PlayerController(
         }
         _state.value = PlayerUiState()
         scope.cancel()
+    }
+
+    private fun sendCommand(action: String, args: Bundle = Bundle.EMPTY) {
+        val connected = controller ?: return
+        connected.sendCustomCommand(PlaybackSessionCommands.command(action), args)
+    }
+
+    private fun sendSleepTimer(minutes: Int) {
+        val connected = controller
+        if (connected == null) {
+            pendingSleepMinutes = minutes
+            return
+        }
+        sendSleepTimer(connected, minutes)
+    }
+
+    private fun sendSleepTimer(connected: MediaController, minutes: Int) {
+        connected.sendCustomCommand(
+            PlaybackSessionCommands.command(PlaybackCommands.ACTION_SLEEP_TIMER),
+            PlaybackSessionCommands.sleepTimerExtras(minutes),
+        )
+    }
+
+    private fun applyQueue(connected: MediaController, request: PendingPlayback) {
+        val chapter = request.queue.chapterAt(request.chapterIndex) ?: return
+        val items = PlaybackMediaItems.of(chapter, request.chapterIndex)
+        if (items.isEmpty()) return
+        val startIndex = request.segmentIndex
+            ?.let { segment -> chapter.items.indexOfFirst { it.segmentIndex == segment } }
+            ?.takeIf { it >= 0 }
+            ?: 0
+        connected.setMediaItems(items, startIndex, 0L)
+        connected.prepare()
+        connected.play()
     }
 
     private fun publishState(player: Player) {
@@ -237,22 +363,12 @@ class PlayerController(
         )
     }
 
-    private data class ChapterRequest(
-        val file: File,
-        val title: String,
-        val subtitle: String?,
-    ) {
-        fun toMediaItem(): MediaItem = MediaItem.Builder()
-            .setUri(Uri.fromFile(file))
-            .setMediaId(file.absolutePath)
-            .setMediaMetadata(
-                MediaMetadata.Builder()
-                    .setTitle(title)
-                    .setArtist(subtitle)
-                    .build(),
-            )
-            .build()
-    }
+    /** 待起播的队列与起始位置；连接完成前暂存。 */
+    private data class PendingPlayback(
+        val queue: PlaybackQueue,
+        val chapterIndex: Int,
+        val segmentIndex: Int?,
+    )
 
     private companion object {
         const val TAG = "AudioForgePlayer"
