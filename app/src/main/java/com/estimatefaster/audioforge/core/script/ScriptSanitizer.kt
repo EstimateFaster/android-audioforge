@@ -269,7 +269,9 @@ class ScriptSanitizer {
                 last.speaker == segment.speaker &&
                 last.text.length + segment.text.length < maxChars
             ) {
-                val separator = if (last.text.endsWith("。", "！", "？", "…")) "" else "。"
+                val lastChar = last.text.lastOrNull()
+                val separator =
+                    if (lastChar != null && lastChar in SENTENCE_END_CHARS) "" else "。"
                 merged[merged.size - 1] = last.copy(text = last.text + separator + segment.text)
             } else {
                 merged += segment
