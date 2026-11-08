@@ -16,7 +16,18 @@ data class LlmConfig(
     val connectTimeoutMs: Int = 10_000,
     val readTimeoutMs: Int = 120_000,
     val maxRetries: Int = 3,
-)
+) {
+    /** 防止日志/崩溃报告意外带出明文 Key（与 FishTtsConfig 一致）。 */
+    override fun toString(): String =
+        "LlmConfig(baseUrl=$baseUrl, model=$model, apiKey=${maskKey(apiKey)}, " +
+            "connectTimeoutMs=$connectTimeoutMs, readTimeoutMs=$readTimeoutMs, maxRetries=$maxRetries)"
+
+    private fun maskKey(key: String): String = when {
+        key.isBlank() -> "<empty>"
+        key.length <= 8 -> "***"
+        else -> key.take(3) + "***" + key.takeLast(4)
+    }
+}
 
 /**
  * P2-07：OpenAI 兼容 Chat Completions 的线上 DTO（执行计划 §9.2）。

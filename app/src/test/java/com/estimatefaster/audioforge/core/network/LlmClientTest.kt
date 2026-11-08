@@ -325,4 +325,12 @@ class LlmClientTest {
             {"choices":[{"message":{"role":"assistant","content":"   "},"finish_reason":"stop"}]}
         """.trimIndent()
     }
+
+    @Test
+    fun config_to_string_masks_api_key() {
+        val config = LlmConfig(baseUrl = "https://example.test", model = MODEL, apiKey = API_KEY)
+        val text = config.toString()
+        assertFalse("toString 不应包含明文 Key", text.contains(API_KEY))
+        assertTrue("应保留可识别的前后缀", text.contains("sk-***"))
+    }
 }
