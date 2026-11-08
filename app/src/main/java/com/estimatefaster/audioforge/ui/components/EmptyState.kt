@@ -100,8 +100,8 @@ private fun EmptyStateGlyph() {
 private fun EmptyStateLightPreview() {
     ComponentPreview(darkTheme = false) {
         EmptyState(
-            title = stringResource(R.string.empty_state_demo_title),
-            description = stringResource(R.string.empty_state_demo_description),
+            title = stringResource(R.string.project_library_empty_title),
+            description = stringResource(R.string.project_library_empty_description),
             actionText = stringResource(R.string.action_import_novel),
             onAction = {},
         )
@@ -118,8 +118,8 @@ private fun EmptyStateLightPreview() {
 private fun EmptyStateDarkPreview() {
     ComponentPreview(darkTheme = true) {
         EmptyState(
-            title = stringResource(R.string.empty_state_demo_title),
-            description = stringResource(R.string.empty_state_demo_description),
+            title = stringResource(R.string.project_library_empty_title),
+            description = stringResource(R.string.project_library_empty_description),
             actionText = stringResource(R.string.action_import_novel),
             onAction = {},
         )

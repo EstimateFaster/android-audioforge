@@ -208,7 +208,7 @@ fun SegmentEditSheetContent(
                     .weight(1f)
                     .heightIn(min = 48.dp),
             ) {
-                Text(stringResource(R.string.segment_edit_cancel))
+                Text(stringResource(R.string.action_cancel))
             }
         }
     }
@@ -521,7 +521,7 @@ private fun SaveErrorCard(
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             Text(
-                text = stringResource(R.string.segment_edit_save_error, message),
+                text = stringResource(R.string.action_save_error, message),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onErrorContainer,
             )
@@ -530,7 +530,7 @@ private fun SaveErrorCard(
                 enabled = enabled,
                 modifier = Modifier.heightIn(min = 48.dp),
             ) {
-                Text(stringResource(R.string.segment_edit_retry))
+                Text(stringResource(R.string.action_retry))
             }
         }
     }
@@ -555,9 +555,9 @@ private fun SaveButton(
                 strokeWidth = 2.dp,
             )
             Spacer(Modifier.width(8.dp))
-            Text(stringResource(R.string.segment_edit_saving))
+            Text(stringResource(R.string.action_saving))
         } else {
-            Text(stringResource(R.string.segment_edit_save))
+            Text(stringResource(R.string.action_save))
         }
     }
 }

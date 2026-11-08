@@ -158,6 +158,8 @@ fun VoicePickerSheetContent(
                 EmptyState(
                     title = stringResource(R.string.voice_picker_empty_title),
                     description = stringResource(R.string.voice_picker_empty_description),
+                    actionText = stringResource(R.string.action_dismiss),
+                    onAction = onCancel,
                 )
             }
         } else {
@@ -263,7 +265,7 @@ private fun VoicePickerHeader(
             enabled = !state.saving,
             modifier = Modifier.heightIn(min = 48.dp),
         ) {
-            Text(stringResource(R.string.voice_picker_cancel))
+            Text(stringResource(R.string.action_cancel))
         }
     }
 }
@@ -543,7 +545,7 @@ private fun VoiceSaveError(
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             Text(
-                text = stringResource(R.string.voice_picker_save_error, message),
+                text = stringResource(R.string.action_save_error, message),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onErrorContainer,
             )
@@ -552,7 +554,7 @@ private fun VoiceSaveError(
                 enabled = enabled,
                 modifier = Modifier.heightIn(min = 48.dp),
             ) {
-                Text(stringResource(R.string.voice_picker_retry))
+                Text(stringResource(R.string.action_retry))
             }
         }
     }
@@ -580,7 +582,7 @@ private fun VoiceActions(
                     .weight(1f)
                     .heightIn(min = 48.dp),
             ) {
-                Text(stringResource(R.string.voice_picker_cancel))
+                Text(stringResource(R.string.action_cancel))
             }
             Button(
                 onClick = onSave,
@@ -595,11 +597,11 @@ private fun VoiceActions(
                         strokeWidth = 2.dp,
                     )
                     Spacer(Modifier.width(8.dp))
-                    Text(stringResource(R.string.voice_picker_saving))
+                    Text(stringResource(R.string.action_saving))
                 } else {
                     Text(
                         text = if (state.saveError != null) {
-                            stringResource(R.string.voice_picker_retry)
+                            stringResource(R.string.action_retry)
                         } else {
                             stringResource(R.string.voice_picker_save)
                         },
@@ -633,7 +635,7 @@ private fun LockedVoiceConfirmDialog(
                 onClick = onDismiss,
                 enabled = !saving,
             ) {
-                Text(stringResource(R.string.voice_picker_cancel))
+                Text(stringResource(R.string.action_cancel))
             }
         },
     )

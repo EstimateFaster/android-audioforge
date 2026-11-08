@@ -401,7 +401,7 @@ private fun CharacterCard(
             .clip(shape)
             .combinedClickable(
                 onClickLabel = clickLabel,
-                onLongClickLabel = stringResource(R.string.characters_more),
+                onLongClickLabel = stringResource(R.string.action_more),
                 onLongClick = { menuExpanded = true },
                 onClick = onVoiceClick,
             ),
@@ -515,7 +515,7 @@ private fun CharacterCard(
                             .heightIn(min = 48.dp)
                             .semantics { contentDescription = moreDescription },
                     ) {
-                        Text(stringResource(R.string.characters_more))
+                        Text(stringResource(R.string.action_more))
                     }
                     CharacterMenu(
                         expanded = menuExpanded,
@@ -557,7 +557,7 @@ private fun CharacterMenu(
         onDismissRequest = onDismiss,
     ) {
         DropdownMenuItem(
-            text = { Text(stringResource(R.string.characters_action_rename)) },
+            text = { Text(stringResource(R.string.action_rename)) },
             onClick = onRename,
         )
         DropdownMenuItem(

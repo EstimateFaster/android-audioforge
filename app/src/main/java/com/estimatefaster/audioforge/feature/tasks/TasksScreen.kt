@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -18,7 +17,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -46,7 +44,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.estimatefaster.audioforge.R
 import com.estimatefaster.audioforge.data.db.JobEntity
 import com.estimatefaster.audioforge.ui.components.EmptyState
+import com.estimatefaster.audioforge.ui.components.ErrorBanner
 import com.estimatefaster.audioforge.ui.components.ErrorState
+import com.estimatefaster.audioforge.ui.components.LoadingState
 import com.estimatefaster.audioforge.ui.components.ProgressRing
 import com.estimatefaster.audioforge.ui.components.SectionHeader
 import com.estimatefaster.audioforge.ui.components.StatusKind
@@ -145,7 +145,10 @@ fun TasksScreen(
         },
     ) { padding ->
         when {
-            state.loading -> LoadingContent(modifier = Modifier.padding(padding))
+            state.loading -> LoadingState(
+                message = stringResource(R.string.tasks_loading),
+                modifier = Modifier.padding(padding),
+            )
 
             loadError != null -> Box(
                 modifier = Modifier
@@ -168,6 +171,8 @@ fun TasksScreen(
                 EmptyState(
                     title = stringResource(R.string.tasks_empty_title),
                     description = stringResource(R.string.tasks_empty_description),
+                    actionText = stringResource(R.string.action_refresh),
+                    onAction = onRetry,
                 )
             }
 
@@ -197,23 +202,6 @@ fun TasksScreen(
 }
 
 @Composable
-private fun LoadingContent(modifier: Modifier = Modifier) {
-    Column(
-        modifier = modifier.fillMaxSize(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        CircularProgressIndicator()
-        Spacer(Modifier.height(14.dp))
-        Text(
-            text = stringResource(R.string.tasks_loading),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
-}
-
-@Composable
 private fun TasksContent(
     state: TasksUiState,
     contentPadding: PaddingValues,
@@ -232,7 +220,10 @@ private fun TasksContent(
     ) {
         if (actionError != null) {
             item(key = "action-error") {
-                ActionErrorBanner(message = actionError, onDismiss = onDismissActionError)
+                ErrorBanner(
+                    message = stringResource(R.string.action_failed, actionError),
+                    onDismiss = onDismissActionError,
+                )
             }
         }
 
@@ -537,37 +528,6 @@ private fun HistoryRow(
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
-            }
-        }
-    }
-}
-
-@Composable
-private fun ActionErrorBanner(
-    message: String,
-    onDismiss: () -> Unit,
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.errorContainer,
-        ),
-    ) {
-        Row(
-            modifier = Modifier.padding(start = 16.dp, top = 10.dp, end = 8.dp, bottom = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = stringResource(R.string.tasks_action_error, message),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onErrorContainer,
-                modifier = Modifier.weight(1f),
-            )
-            TextButton(
-                onClick = onDismiss,
-                modifier = Modifier.heightIn(min = 48.dp),
-            ) {
-                Text(stringResource(R.string.tasks_action_dismiss))
             }
         }
     }
