@@ -129,4 +129,59 @@
     <string name="project_rename_hint">保存后立即生效，章节与音频不受影响。</string>
     <string name="project_delete_title">删除项目</string>
     <string name="project_delete_message">删除《%1$s》会同时移除章节、片段和音频，且无法恢复。</string>
+
+    <!-- P4-10 Onboarding -->
+    <string name="onboarding_title">首次设置</string>
+    <string name="onboarding_skip">跳过</string>
+    <string name="onboarding_step_indicator">第 %1$d / %2$d 步</string>
+
+    <string name="onboarding_welcome_title">欢迎使用 AudioForge</string>
+    <string name="onboarding_welcome_subtitle">把小说变成多人演播的有声书。</string>
+    <string name="onboarding_welcome_intro">开始前先说明三件事：Key 由你提供、应用只侧载、数据留在本机。</string>
+    <string name="onboarding_feature_byok_title">自带 Key（BYOK）</string>
+    <string name="onboarding_feature_byok_body">LLM 与 Fish Audio Key 加密保存在本机，不经过我们的服务器。</string>
+    <string name="onboarding_feature_sideload_title">只从 GitHub 侧载</string>
+    <string name="onboarding_feature_sideload_body">不上架 Google Play；Release APK 只由 GitHub Actions 构建。</string>
+    <string name="onboarding_feature_local_title">数据留在本机</string>
+    <string name="onboarding_feature_local_body">小说、剧本和音频只写入本机存储，可随时导出或删除。</string>
+
+    <string name="onboarding_action_start">开始</string>
+    <string name="onboarding_action_back">上一步</string>
+    <string name="onboarding_action_later">稍后设置</string>
+    <string name="onboarding_action_save_and_continue">保存并继续</string>
+    <string name="onboarding_action_saving">正在保存…</string>
+    <string name="onboarding_action_finishing">正在完成…</string>
+    <string name="onboarding_action_finish">完成</string>
+
+    <string name="onboarding_keys_title">配置 API Key</string>
+    <string name="onboarding_keys_subtitle">Key 会加密保存在本机；留空表示稍后设置，不影响浏览。</string>
+    <string name="onboarding_llm_title">LLM（OpenAI 兼容）</string>
+    <string name="onboarding_llm_subtitle">用于解析小说、拆分角色与生成剧本。</string>
+    <string name="onboarding_fish_title">Fish Audio（TTS）</string>
+    <string name="onboarding_fish_subtitle">用于把剧本合成为语音。</string>
+    <string name="onboarding_api_key">API Key</string>
+    <string name="onboarding_api_key_placeholder">粘贴 Key，只保存在本机</string>
+    <string name="onboarding_base_url">Base URL</string>
+    <string name="onboarding_model">模型</string>
+    <string name="onboarding_test_connection">测试连接</string>
+    <string name="onboarding_testing">正在测试…</string>
+    <string name="onboarding_test_passed">测试通过</string>
+    <string name="onboarding_test_failed">测试失败，请检查 Key 与地址后重试</string>
+    <string name="onboarding_test_note">测试只做本地 Key 格式校验，不会发起真实计费请求。</string>
+    <string name="onboarding_test_key_blank">请先填写 API Key 再测试</string>
+    <string name="onboarding_no_key_notice">没有 Key 也可以先进入应用浏览；开始生成时会提示补充。</string>
+
+    <string name="onboarding_error_url_blank">Base URL 不能为空</string>
+    <string name="onboarding_error_url_invalid">Base URL 必须是合法的 http/https 地址</string>
+    <string name="onboarding_error_model_blank">模型不能为空</string>
+    <string name="onboarding_error_fix_fields">请先修正地址或模型，再保存。</string>
+    <string name="onboarding_save_failed">保存失败，请重试。</string>
+
+    <string name="onboarding_permissions_title">通知与电池</string>
+    <string name="onboarding_permissions_subtitle">这两项都只做说明，不会强制申请；跳过也不影响浏览和配置。</string>
+    <string name="onboarding_notifications_title">通知权限</string>
+    <string name="onboarding_notifications_body">生成长任务在后台运行时，需要通知显示进度和停止入口。你可以稍后在系统设置里开启。</string>
+    <string name="onboarding_battery_title">电池优化</string>
+    <string name="onboarding_battery_body">部分厂商会限制后台任务。若长章节经常中断，可把 AudioForge 加入电池优化白名单。</string>
+    <string name="onboarding_permissions_note">开始生成时如果缺少通知权限或后台受限，应用会再次提示。</string>
 </resources>
