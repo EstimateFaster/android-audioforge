@@ -64,7 +64,7 @@ import kotlinx.coroutines.withContext
  * 「只重置目标角色片段」由调用方用 `SegmentRepository.resetByRole(novelId, roleId)`
  * 决定（§8.9）。`resetByRole` 同时把这些章节的 `audio_status` 置回 pending。
  *
- * 已知缺口（本任务不改 `core/**`、`data/**`）：
+ * 已知缺口（本任务不改 `core/`、`data/`）：
  * - `SegmentRepository` 没有「写回片段音频字段」的方法，这里用 [db] 的
  *   `segmentDao.update` 写 `audioRelPath/ttsKey/durationMs/errorMsg`，**再**调用
  *   [SegmentRepository.setStatus] 让仓库在同一事务里同步 `segDone` 计数；
