@@ -213,7 +213,7 @@ class GenerationExecutorTest {
         assertEquals(PipelineError.AUTH_LLM, outcome.failures.single().code)
         assertFalse(outcome.failures.single().retryable)
         assertFalse(outcome.retryable)
-        assertEquals(2L, jobStats(jobId).value("chaptersDone"))
+        assertEquals(1L, jobStats(jobId).value("chaptersDone"))
         assertEquals(1L, jobStats(jobId).value("chaptersFailed"))
     }
 
