@@ -129,4 +129,102 @@
     <string name="project_rename_hint">保存后立即生效，章节与音频不受影响。</string>
     <string name="project_delete_title">删除项目</string>
     <string name="project_delete_message">删除《%1$s》会同时移除章节、片段和音频，且无法恢复。</string>
+
+    <!-- P4-09 全局设置 -->
+    <string name="settings_title">设置</string>
+    <string name="settings_loading">正在加载设置…</string>
+    <string name="settings_saved">已保存</string>
+    <string name="settings_saving">正在保存…</string>
+    <string name="settings_load_error">加载设置失败：%1$s</string>
+    <string name="settings_save_error">保存失败：%1$s</string>
+    <string name="settings_key_error">Key 操作失败：%1$s</string>
+    <string name="settings_error_summary">有 %1$d 个字段需要修正后才能保存</string>
+    <string name="settings_error_required">请输入</string>
+    <string name="settings_error_integer">请输入整数</string>
+    <string name="settings_error_number">请输入数字</string>
+    <string name="settings_error_option">选项不合法</string>
+
+    <string name="settings_section_api">API</string>
+    <string name="settings_section_api_desc">Base URL、模型与 API Key；Key 只显示末 4 位。</string>
+    <string name="settings_section_generation">生成</string>
+    <string name="settings_section_generation_desc">这些设置会应用到新批次，已生成的音频不受影响。</string>
+    <string name="settings_section_network">网络</string>
+    <string name="settings_section_network_desc">控制合成与下载的网络条件。</string>
+    <string name="settings_section_device">设备</string>
+    <string name="settings_section_device_desc">低电量、温度与通知策略。</string>
+    <string name="settings_section_appearance">外观</string>
+    <string name="settings_section_appearance_desc">主题与动态取色。</string>
+    <string name="settings_section_storage">存储</string>
+    <string name="settings_section_storage_desc">片段缓存按保留天数自动清理。</string>
+    <string name="settings_section_about">关于</string>
+    <string name="settings_section_about_desc">版本与开源许可。</string>
+
+    <string name="settings_api_llm">LLM（文本解析）</string>
+    <string name="settings_api_fish">Fish Audio（语音合成）</string>
+    <string name="settings_field_llm_base_url">LLM Base URL</string>
+    <string name="settings_field_llm_model">LLM 模型</string>
+    <string name="settings_field_fish_base_url">Fish Base URL</string>
+    <string name="settings_field_fish_tts_model">TTS 模型</string>
+
+    <string name="settings_field_llm_concurrency">LLM 并发</string>
+    <string name="settings_field_llm_concurrency_hint">1–4</string>
+    <string name="settings_field_tts_concurrency">TTS 并发</string>
+    <string name="settings_field_tts_concurrency_hint">1–8</string>
+    <string name="settings_field_segment_max_chars">分段字数上限</string>
+    <string name="settings_field_segment_max_chars_hint">20–300</string>
+    <string name="settings_field_batch_size">每批章节数</string>
+    <string name="settings_field_batch_size_hint">1–20</string>
+    <string name="settings_field_min_coverage">最低覆盖率</string>
+    <string name="settings_field_min_coverage_hint">0.5–1.0</string>
+    <string name="settings_field_narrator_silence">旁白停顿（毫秒）</string>
+    <string name="settings_field_narrator_silence_hint">0–3000</string>
+    <string name="settings_field_paragraph_silence">段落停顿（毫秒）</string>
+    <string name="settings_field_paragraph_silence_hint">0–5000</string>
+    <string name="settings_field_default_voice">默认音色类别</string>
+    <string name="settings_field_default_voice_hint">填写内置音色池的类别 ID</string>
+    <string name="settings_field_default_speed">默认语速</string>
+    <string name="settings_field_default_speed_hint">0.5–2.0</string>
+    <string name="settings_field_default_volume">默认音量</string>
+    <string name="settings_field_default_volume_hint">0.5–2.0</string>
+    <string name="settings_field_default_pitch">默认音调</string>
+    <string name="settings_field_default_pitch_hint">-12–12</string>
+
+    <string name="settings_switch_wifi_only">仅 Wi-Fi</string>
+    <string name="settings_switch_wifi_only_desc">非 Wi-Fi 时暂停合成与下载</string>
+    <string name="settings_switch_charging_only">仅充电</string>
+    <string name="settings_switch_charging_only_desc">未充电时暂停生成</string>
+    <string name="settings_field_battery_threshold">低电量阈值（百分比）</string>
+    <string name="settings_field_battery_threshold_hint">0–50，低于阈值时暂停</string>
+    <string name="settings_switch_thermal">过热降级</string>
+    <string name="settings_switch_thermal_desc">设备过热时降低并发或暂停</string>
+    <string name="settings_switch_notifications">通知</string>
+    <string name="settings_switch_notifications_desc">显示任务进度与完成通知</string>
+
+    <string name="settings_theme_title">主题</string>
+    <string name="settings_theme_system">跟随系统</string>
+    <string name="settings_theme_light">浅色</string>
+    <string name="settings_theme_dark">深色</string>
+    <string name="settings_switch_dynamic_color">动态取色</string>
+    <string name="settings_switch_dynamic_color_desc">Android 12+ 使用系统壁纸配色</string>
+
+    <string name="settings_field_keep_days">片段缓存保留天数</string>
+    <string name="settings_field_keep_days_hint">0 表示不自动删除</string>
+
+    <string name="settings_key_llm_title">LLM API Key</string>
+    <string name="settings_key_fish_title">Fish Audio API Key</string>
+    <string name="settings_key_unset">未设置</string>
+    <string name="settings_key_mask">••••%1$s</string>
+    <string name="settings_key_masked_short">••••（长度过短，已完全隐藏）</string>
+    <string name="settings_key_set">设置</string>
+    <string name="settings_key_change">更换</string>
+    <string name="settings_key_clear">清除</string>
+    <string name="settings_key_clear_title">清除 API Key</string>
+    <string name="settings_key_clear_message">清除 %1$s 后，相关请求会失败，直到重新设置。</string>
+    <string name="settings_key_dialog_title">设置 %1$s</string>
+    <string name="settings_key_dialog_label">API Key</string>
+    <string name="settings_key_dialog_hint">仅保存在本机 Keystore 加密存储，不会明文展示或写入日志。</string>
+
+    <string name="settings_about_version">版本 %1$s</string>
+    <string name="settings_about_licenses">开源许可</string>
+    <string name="settings_about_licenses_desc">查看第三方组件与许可</string>
 </resources>
