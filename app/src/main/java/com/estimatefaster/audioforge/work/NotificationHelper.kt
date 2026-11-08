@@ -69,10 +69,11 @@ object NotificationHelper {
     }
 
     /**
-     * P3-02 生成批次的前台通知：复用 `generation` 渠道与现有图标，只显示标题与百分比。
+     * P3-02 生成批次的前台通知（兼容保留）：复用 `generation` 渠道与现有图标，只显示标题与百分比。
      *
-     * P3-03 会补「停止」action、完成/失败通知和 POST_NOTIFICATIONS 引导；本方法保持最小实现，
-     * 避免在 P3-02 里提前定死通知交互。
+     * P3-03 起实际生成任务改用 [com.estimatefaster.audioforge.domain.jobs.GenerationNotifications]
+     * （书名标题、确定进度、停止 action、完成/失败通知与 POST_NOTIFICATIONS 检查，见执行计划
+     * §11.2）。本方法仅为不破坏既有调用/历史行为而保留，新代码不要再使用。
      */
     fun generationForegroundInfo(context: Context, progress: Int): ForegroundInfo {
         val percent = progress.coerceIn(0, 100)

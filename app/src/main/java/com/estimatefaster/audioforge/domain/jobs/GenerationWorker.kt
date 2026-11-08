@@ -8,10 +8,10 @@ import androidx.work.ListenableWorker.Result
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import com.estimatefaster.audioforge.AudioForgeApp
+import com.estimatefaster.audioforge.R
 import com.estimatefaster.audioforge.data.db.JobEntity
 import com.estimatefaster.audioforge.data.db.JobStatus
 import com.estimatefaster.audioforge.data.repository.JobRepository
-import com.estimatefaster.audioforge.work.NotificationHelper
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.withContext
@@ -76,8 +76,11 @@ object GenerationGraph {
  * 停止语义：`isStopped`（WorkManager 取消）与 `jobs.stopRequested` 都会传给
  * `GenerationExecutor`；停止时已完成章节的 DB 结果保留，job 记为 cancelled。
  *
- * 通知：本任务只用 [NotificationHelper.generationForegroundInfo] 的“生成中 + 进度”；
- * 停止 action、完成通知与 POST_NOTIFICATIONS 提示由 P3-03 完善。
+ * 通知（P3-03）：前台通知由 [GenerationNotifications.foregroundInfo] 构建——标题带书名、
+ * 确定进度（max=章节总数）、仅提醒一次、「停止」action（显式广播 → `cancelUniqueWork`，
+ * 名字来自 [GenerationNotifications.workName]，必须与 BatchRunner 入队名一致）、点击打开项目。
+ * 收尾时按结局发完成/部分完成/失败/取消通知；`POST_NOTIFICATIONS` 未授权时
+ * [GenerationNotifications.notifyFinished] 直接跳过，任务照常收尾。
  */
 class GenerationWorker(
     appContext: Context,
@@ -98,7 +101,7 @@ class GenerationWorker(
         }
 
         // 与 ProbeWorker 一样：Worker 自己保证渠道存在，不依赖 App 启动路径。
-        NotificationHelper.ensureChannels(applicationContext)
+        GenerationNotifications.ensureChannels(applicationContext)
 
         val jobRepository = jobRepository()
         if (jobRepository == null) {
@@ -125,8 +128,11 @@ class GenerationWorker(
         }
 
         var keepRunningForRetry = false
+        // 通知需要书名与章节总数；取不到书名时回退到「当前项目」，不影响任务。
+        val novelTitle = resolveNovelTitle(input.novelId)
+        var lastProgress = progressState(input, novelTitle, done = 0)
         return try {
-            announceProgress(0)
+            announceProgress(lastProgress)
             val outcome = factory(applicationContext).run(
                 input = input.copy(jobId = running.id),
                 onProgress = { progress ->
@@ -137,28 +143,41 @@ class GenerationWorker(
                     } catch (_: Exception) {
                         // 进度只用于展示；WorkManager 已收尾时写失败不应中断批次。
                     }
-                    announceProgress(progress.percent)
+                    lastProgress = progressState(
+                        input = input,
+                        novelTitle = novelTitle,
+                        done = progress.stats.chaptersProcessed,
+                        total = progress.stats.chaptersTotal,
+                    )
+                    announceProgress(lastProgress)
                 },
                 shouldStop = { isStopped },
             )
-            val completion = finish(jobRepository, running.id, outcome)
+            val completion = finish(jobRepository, running.id, outcome, input.novelId, novelTitle)
             keepRunningForRetry = completion.keepRunningForRetry
             completion.result
         } catch (cancellation: CancellationException) {
             // WorkManager cancelUniqueWork / 用户停止：尽量把 job 收尾成 cancelled。
             withContext(NonCancellable) {
                 runCatching { jobRepository.markCancelled(running.id) }
+                postFinished(
+                    lastProgress,
+                    GenerationFinishStatus.Cancelled,
+                    errorSummary = "",
+                )
             }
             throw cancellation
         } catch (e: Exception) {
             Log.e(TAG, "generation crashed; job=${running.id}", e)
+            val message = e.message?.takeIf { it.isNotBlank() } ?: "生成失败"
             withContext(NonCancellable) {
                 runCatching {
                     jobRepository.markError(
                         id = running.id,
-                        error = e.message?.takeIf { it.isNotBlank() } ?: "生成失败",
+                        error = message,
                     )
                 }
+                postFinished(lastProgress, GenerationFinishStatus.Failed, errorSummary = message)
             }
             Result.failure()
         } finally {
@@ -180,11 +199,20 @@ class GenerationWorker(
         jobs: JobRepository,
         jobId: Long,
         outcome: BatchOutcome,
+        novelId: Long,
+        novelTitle: String,
     ): WorkerCompletion {
         val stats = outcome.stats.toJobStats()
+        val progress = GenerationNotificationState(
+            novelId = novelId,
+            novelTitle = novelTitle,
+            chaptersDone = outcome.stats.chaptersDone,
+            chaptersTotal = outcome.stats.chaptersTotal,
+        )
         return when (outcome) {
             is BatchOutcome.Success -> {
                 jobs.markDone(jobId, stats)
+                postFinished(progress, GenerationFinishStatus.Done, errorSummary = "")
                 WorkerCompletion(Result.success(), keepRunningForRetry = false)
             }
 
@@ -195,12 +223,22 @@ class GenerationWorker(
                     error = outcome.errorSummary.ifBlank { "部分章节失败" },
                     stats = stats,
                 )
+                postFinished(
+                    progress,
+                    GenerationFinishStatus.Partial,
+                    errorSummary = outcome.errorSummary,
+                )
                 WorkerCompletion(Result.success(), keepRunningForRetry = false)
             }
 
             is BatchOutcome.Stopped -> {
                 jobs.markCancelled(jobId)
                 Log.i(TAG, "generation stopped at job=$jobId (${outcome.stats.chaptersDone} 章完成)")
+                postFinished(
+                    progress,
+                    GenerationFinishStatus.Cancelled,
+                    errorSummary = "",
+                )
                 WorkerCompletion(Result.success(), keepRunningForRetry = false)
             }
 
@@ -220,12 +258,18 @@ class GenerationWorker(
                         TAG,
                         "generation failed (retryable), attempt=$runAttemptCount job=$jobId",
                     )
+                    // 会重试：不发失败通知，避免用户收到“失败后又自动重跑”的噪音。
                     WorkerCompletion(Result.retry(), keepRunningForRetry = true)
                 } else {
                     jobs.markError(
                         id = jobId,
                         error = outcome.errorSummary.ifBlank { "生成失败" },
                         stats = stats,
+                    )
+                    postFinished(
+                        progress,
+                        GenerationFinishStatus.Failed,
+                        errorSummary = outcome.errorSummary,
                     )
                     WorkerCompletion(Result.failure(), keepRunningForRetry = false)
                 }
@@ -272,20 +316,63 @@ class GenerationWorker(
     private fun jobRepository(): JobRepository? =
         (applicationContext as? AudioForgeApp)?.container?.jobRepository
 
+    /** 通知标题要书名；查不到（项目被删/DB 异常）时回退到「当前项目」，不阻断任务。 */
+    private suspend fun resolveNovelTitle(novelId: Long): String {
+        val projects = (applicationContext as? AudioForgeApp)?.container?.projectRepository
+        val title = runCatching { projects?.getProject(novelId)?.title }.getOrNull()
+        return title?.takeIf { it.isNotBlank() }
+            ?: applicationContext.getString(R.string.notif_generation_unknown_novel)
+    }
+
     // ------------------------------------------------------------ 通知
 
-    private suspend fun announceProgress(progress: Int) {
+    private suspend fun announceProgress(state: GenerationNotificationState) {
         try {
-            setForeground(
-                NotificationHelper.generationForegroundInfo(applicationContext, progress),
-            )
+            setForeground(GenerationNotifications.foregroundInfo(applicationContext, state))
         } catch (cancellation: CancellationException) {
             throw cancellation
         } catch (e: Exception) {
-            // 前台服务启动被系统拒绝时任务仍继续；P3-03 会补完整通知/权限提示。
+            // 前台服务被系统拒绝（如后台启动限制）时任务仍继续；通知不可见不影响任务结果。
             Log.w(TAG, "setForeground failed: ${e.message}")
         }
     }
+
+    /**
+     * 收尾通知。`POST_NOTIFICATIONS` 未授权时 [GenerationNotifications.notifyFinished] 返回
+     * false（只是看不见），因此这里把它当作纯展示副作用：任何异常都不得改变任务结果。
+     */
+    private fun postFinished(
+        state: GenerationNotificationState,
+        status: GenerationFinishStatus,
+        errorSummary: String,
+    ) {
+        runCatching {
+            GenerationNotifications.notifyFinished(
+                applicationContext,
+                GenerationNotificationResult(
+                    novelId = state.novelId,
+                    novelTitle = state.novelTitle,
+                    chaptersDone = state.chaptersDone,
+                    chaptersTotal = state.chaptersTotal,
+                    status = status,
+                    errorSummary = errorSummary,
+                ),
+            )
+        }.onFailure { Log.w(TAG, "finish notification failed: ${it.message}") }
+    }
+
+    /** 进度快照：章节总数优先用执行器统计，缺失时回退到本次输入的章节数。 */
+    private fun progressState(
+        input: GenerationInput,
+        novelTitle: String,
+        done: Int,
+        total: Int = 0,
+    ): GenerationNotificationState = GenerationNotificationState(
+        novelId = input.novelId,
+        novelTitle = novelTitle,
+        chaptersDone = done,
+        chaptersTotal = total.takeIf { it > 0 } ?: input.chapterIds.size,
+    )
 
     private data class WorkerCompletion(
         val result: Result,
@@ -302,7 +389,12 @@ class GenerationWorker(
         const val KEY_JOB_ID = "jobId"
         const val KEY_PROGRESS = "progress"
 
-        /** 唯一任务名前缀：`generation-<novelId>`（P3-04 BatchRunner 使用）。 */
+        /**
+         * 唯一任务名前缀：`generation-<novelId>`。
+         *
+         * P3-04 BatchRunner 入队必须用 [GenerationNotifications.workName]（= 本前缀 + novelId），
+         * 否则通知里的「停止」action 会取消错任务或静默无效。
+         */
         const val UNIQUE_WORK_PREFIX = "generation-"
 
         /** 首次执行 + 最多 3 次 `Result.retry()`（`runAttemptCount` 从 0 开始）。 */
