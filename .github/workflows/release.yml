@@ -7,24 +7,125 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Version name, e.g. 0.1.0"
+        description: "Version name without leading v, e.g. 1.0.0 or 1.0.0-rc.1"
         required: true
         default: "0.1.0"
+        type: string
 
+# 默认只读；只有 release job 需要写 Release/资产。
 permissions:
-  contents: write
+  contents: read
+
+# 同一 ref（含同一 tag）的发布串行执行，避免并发写同一个 Release。
+concurrency:
+  group: android-release-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   release:
+    name: Build & publish signed APK
     runs-on: ubuntu-latest
     timeout-minutes: 40
+    permissions:
+      contents: write
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Validate version
+        id: version
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+          INPUT_VERSION: ${{ github.event.inputs.version }}
+          RUN_NUMBER: ${{ github.run_number }}
+        run: |
+          set -euo pipefail
+          version_re='^v?[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z]+([.-][0-9A-Za-z]+)*)?$'
+
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            raw="$INPUT_VERSION"
+            source="workflow_dispatch input"
+          else
+            if [ "$REF_TYPE" != "tag" ]; then
+              echo "::error::release 只能由 tag 或 workflow_dispatch 触发（当前 ref_type=$REF_TYPE）"
+              exit 1
+            fi
+            raw="$REF_NAME"
+            source="tag $REF_NAME"
+          fi
+
+          if [ -z "$raw" ]; then
+            echo "::error::版本号为空（来源: $source）"
+            exit 1
+          fi
+          if ! printf '%s\n' "$raw" | grep -Eq "$version_re"; then
+            echo "::error::版本号 '$raw'（来源: $source）非法；只允许 v?X.Y.Z 或 v?X.Y.Z-<suffix>，例如 v1.0.0 / 1.0.0 / 1.0.0-rc.1"
+            exit 1
+          fi
+          if ! printf '%s\n' "$RUN_NUMBER" | grep -Eq '^[1-9][0-9]*$'; then
+            echo "::error::github.run_number 不是正整数: '$RUN_NUMBER'"
+            exit 1
+          fi
+
+          version="${raw#v}"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=v$version" >> "$GITHUB_OUTPUT"
+          echo "version_code=$RUN_NUMBER" >> "$GITHUB_OUTPUT"
+          echo "validated: versionName=$version tag=v$version versionCode=$RUN_NUMBER (source: $source)"
+
+          {
+            echo "### Release v$version"
+            echo ""
+            echo "- source: $source"
+            echo "- versionName: \`$version\`"
+            echo "- versionCode: \`$RUN_NUMBER\`"
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "17"
+
+      - name: Validate signing secrets and decode keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          missing=""
+          [ -n "$KEYSTORE_BASE64" ] || missing="$missing ANDROID_KEYSTORE_BASE64"
+          [ -n "$KEYSTORE_PASSWORD" ] || missing="$missing ANDROID_KEYSTORE_PASSWORD"
+          [ -n "$KEY_ALIAS" ] || missing="$missing ANDROID_KEY_ALIAS"
+          [ -n "$KEY_PASSWORD" ] || missing="$missing ANDROID_KEY_PASSWORD"
+          if [ -n "$missing" ]; then
+            echo "::error::缺少签名 secrets:$missing（在 Settings → Secrets and variables → Actions 配置）"
+            exit 1
+          fi
+
+          umask 077
+          if ! printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/release.jks"; then
+            echo "::error::ANDROID_KEYSTORE_BASE64 不是有效 base64；请用 base64 -w0 重新生成"
+            exit 1
+          fi
+          [ -s "$RUNNER_TEMP/release.jks" ] || {
+            echo "::error::ANDROID_KEYSTORE_BASE64 解码后为空；请确认是 base64 -w0 的 keystore 内容"
+            exit 1
+          }
+          chmod 600 "$RUNNER_TEMP/release.jks"
+          echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
+
+          if ! keytool -list -keystore "$RUNNER_TEMP/release.jks" \
+              -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" >/dev/null 2>&1; then
+            echo "::error::keystore 无法用 ANDROID_KEYSTORE_PASSWORD / ANDROID_KEY_ALIAS 打开（密码或别名错误）"
+            exit 1
+          fi
+          echo "keystore decoded and validated (path not printed)"
 
       - name: Install SDK 37.0 / Build Tools 37
         run: |
@@ -39,45 +140,79 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
-      - name: Decode keystore
+      - name: Build signed release APK
         env:
-          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-        run: |
-          if [ -z "$KEYSTORE_BASE64" ]; then
-            echo "::error::ANDROID_KEYSTORE_BASE64 未配置；release 必须签名"
-            exit 1
-          fi
-          echo "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/release.jks"
-          chmod 600 "$RUNNER_TEMP/release.jks"
-          echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
-
-      - name: Build signed release
-        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          VERSION_CODE: ${{ steps.version.outputs.version_code }}
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
+          set -euo pipefail
           chmod +x ./gradlew
-          VERSION="${{ github.event.inputs.version || github.ref_name }}"
-          VERSION="${VERSION#v}"
-          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
-          echo "TAG=v$VERSION" >> "$GITHUB_ENV"
           ./gradlew --no-daemon --stacktrace \
             -PversionName="$VERSION" \
-            -PversionCode="${{ github.run_number }}" \
+            -PversionCode="$VERSION_CODE" \
             assembleRelease
+          APK="app/build/outputs/apk/release/app-release.apk"
+          [ -f "$APK" ] || {
+            echo "::error::未找到 $APK；assembleRelease 是否成功？（检查签名 secrets 与 Gradle 日志）"
+            exit 1
+          }
+          echo "built: $APK"
 
-      - name: Verify signed APK
-        run: bash scripts/verify-apk.sh app/build/outputs/apk/release/app-release.apk
-
-      - name: Rename + checksum
+      - name: Verify signed APK (signature / package / version / ABI)
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          VERSION_CODE: ${{ steps.version.outputs.version_code }}
         run: |
+          set -euo pipefail
+          bash scripts/verify-apk.sh app/build/outputs/apk/release/app-release.apk \
+            --package com.estimatefaster.audioforge \
+            --version-code "$VERSION_CODE" \
+            --version-name "$VERSION" \
+            --abi arm64-v8a \
+            --abi x86_64
+
+      - name: Collect artifacts and sha256 checksums
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          SRC="app/build/outputs/apk/release/app-release.apk"
+          [ -f "$SRC" ] || {
+            echo "::error::release APK 不存在: $SRC"
+            exit 1
+          }
+
+          rm -rf release
           mkdir -p release
-          cp app/build/outputs/apk/release/app-release.apk "release/audioforge-${VERSION}.apk"
-          (cd release && sha256sum *.apk > checksums.txt)
+          cp "$SRC" "release/audioforge-${VERSION}.apk"
+          assets=("audioforge-${VERSION}.apk")
+
+          MAPPING="app/build/outputs/mapping/release/mapping.txt"
+          if [ -f "$MAPPING" ]; then
+            cp "$MAPPING" "release/mapping-${VERSION}.txt"
+            assets+=("mapping-${VERSION}.txt")
+          else
+            echo "::notice::未生成 mapping.txt（当前未启用 R8/minify；P6-01 落地后再归档）"
+          fi
+
+          META="app/build/outputs/apk/release/output-metadata.json"
+          if [ -f "$META" ]; then
+            cp "$META" "release/output-metadata-${VERSION}.json"
+            assets+=("output-metadata-${VERSION}.json")
+          else
+            echo "::notice::未找到 output-metadata.json；跳过"
+          fi
+
+          ( cd release && sha256sum "${assets[@]}" > checksums.txt )
+          echo "== release/ =="
+          ls -l release
+          echo "== checksums.txt =="
           cat release/checksums.txt
 
-      - name: Upload artifact
+      - name: Upload release artifact
         uses: actions/upload-artifact@v4
         with:
           name: audioforge-release-apk
@@ -85,11 +220,13 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-      - name: GitHub Release
+      - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ env.TAG }}
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: AudioForge ${{ steps.version.outputs.tag }}
           target_commitish: ${{ github.sha }}
           files: release/*
           generate_release_notes: true
           fail_on_unmatched_files: true
+          prerelease: ${{ contains(steps.version.outputs.version, '-') }}
