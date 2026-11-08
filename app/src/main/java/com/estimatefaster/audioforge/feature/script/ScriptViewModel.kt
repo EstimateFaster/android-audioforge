@@ -40,7 +40,7 @@ interface ScriptDataSource {
  *
  * 播放跟随/连播（P5-03）交给纯逻辑 [PlaybackFollowController]：
  * - [playFrom]/[playNext]/[playPrevious] 只更新跟随状态并返回应播放的整章 index，
- *   真正的音频起播由宿主接线到 `PlayerController`（本类不依赖 playback/**）；
+ *   真正的音频起播由宿主接线到 `PlayerController`（本类不依赖 playback/）；
  * - [onPlaybackState] 接收播放器回报的位置/时长/播放态，驱动高亮、暂停恢复与
  *   “播到结尾自动前进”；
  * - 自动前进或跨章请求通过 [onPlaybackAdvanced]/[onNextChapter] 回调通知宿主，
