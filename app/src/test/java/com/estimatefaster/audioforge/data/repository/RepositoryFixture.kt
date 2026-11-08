@@ -66,11 +66,11 @@ internal class RepositoryFixture {
         )
 
     /** 建一本两章的项目，返回 (novelId, chapterIds[0], chapterIds[1])。 */
-    suspend fun createTwoChapterNovel(): Triple<Long, Long, Long> {
+    suspend fun createTwoChapterNovel(title: String = "两章项目"): Triple<Long, Long, Long> {
         val novelId = projects.createProject(
-            title = "两章项目",
-            sourceName = "两章项目.txt",
-            sourceRelPath = "imports/two.txt",
+            title = title,
+            sourceName = "$title.txt",
+            sourceRelPath = "imports/two-$title.txt",
             chapters = listOf(
                 ChapterInput(title = "第一章", rawText = "第一章正文"),
                 ChapterInput(title = "第二章", rawText = "第二章正文"),
