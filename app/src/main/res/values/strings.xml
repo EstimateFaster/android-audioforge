@@ -20,6 +20,12 @@
     <string name="diag_room_passed">通过：probe 写入并回读成功（第 %1$d 次，%2$d ms）</string>
     <string name="diag_room_failed">失败：%1$s</string>
     <string name="diag_room_action">重新检测</string>
+    <string name="diag_ffmpeg_title">P0-07 · FFmpeg 冒烟</string>
+    <string name="diag_ffmpeg_idle">未运行（-version / 350ms 静音 / 两段拼接）</string>
+    <string name="diag_ffmpeg_running">正在执行 -version、静音与拼接…</string>
+    <string name="diag_ffmpeg_passed">通过：%1$s；静音 %2$d B，拼接 %3$d ms</string>
+    <string name="diag_ffmpeg_failed">失败：%1$s</string>
+    <string name="diag_ffmpeg_action">运行检测</string>
     <string name="diag_work_title">P0-06 · 后台任务冒烟</string>
     <string name="diag_work_status">状态：%1$s · 进度 %2$d%%</string>
     <string name="diag_work_start">启动任务</string>

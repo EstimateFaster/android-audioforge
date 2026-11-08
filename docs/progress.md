@@ -14,7 +14,7 @@
 | P0-04 Compose 空壳与 Expressive 主题 | ✅ done | `MaterialExpressiveTheme` + `MotionScheme.expressive()`；首页空壳 |
 | P0-05 Room smoke | ✅ done | CI 42444925547 绿；`RoomProbeTest` 3/3；schema `1.json` 已入库 |
 | P0-06 WorkManager 前台服务 smoke | ✅ done | Smoke 42446113920 绿；Worker SUCCEEDED + 通知可见 + 取消 CANCELLED |
-| P0-07 FFmpeg smoke | ⏳ todo | 真机/模拟器 `-version` + 静音/拼接 |
+| P0-07 FFmpeg smoke | ✅ done | Smoke 42446646033 绿；`-version`/静音/拼接/ffprobe 全过 |
 | P0-08 CI debug 构建与 APK 校验 | ✅ done | CI run 42442128213 绿；debug APK artifact 已上传 |
 | P0-09 Release 签名 CI | ✅ done | v0.1.0 已发布；签名 release APK + checksums |
 | P0-10 进度/决策文档 | ✅ done | 本文件 + plan |
@@ -54,6 +54,20 @@
 - 新增：`.github/workflows/smoke.yml`（PR 改动 `app/src/main`/`androidTest` 时自动跑，也可手动 dispatch）
 - 遗留：通知「停止」action、锁屏 30 分钟、国产 ROM 归入 P0-11 / P3
 
+### P0-07 FFmpeg smoke — done
+- 完成：2026-11-08 12:40（Asia/Shanghai）
+- 分支：`feat/p0-07-ffmpeg-smoke`（PR #3）
+- 提交：`12e3e69`（实现，含测试与调试卡）
+- 验证：
+  - 普通 CI [42446646024](https://github.com/EstimateFaster/android-audioforge/actions/runs/42446646024) 绿（`assembleDebug` 打包 FFmpeg AAR 成功）
+  - Smoke [42446646033](https://github.com/EstimateFaster/android-audioforge/actions/runs/42446646033) 绿，API 35 x86_64：
+    `FfmpegInstrumentedTest.version_silence_and_concat` 通过（4/4，0.989s）
+    - `-version` 成功
+    - 350ms 静音 mp3 非空
+    - 440/660Hz 两段拼接，ffprobe 时长在 600–2000ms
+- 说明：APK 16KB 对齐由 `scripts/verify-apk.sh`（`zipalign -P 16`）在 P0-08 CI 覆盖
+- 遗留：真实 TTS 音频后处理/长章节拼接归 P2-10；真机 A/B 归 P0-11
+
 ## 已知实编坑（已处理）
 
 - KSP + AGP 9 内置 Kotlin：`android.disallowKotlinSourceSets=false`。
@@ -70,8 +84,8 @@
 
 ## 下一步
 
-1. P0-07 FFmpeg smoke（`-version` + 350ms 静音 + 两段拼接），用 emulator smoke 验证。
-2. P0-11 真机/模拟器清单；P0-12 门禁。
+1. P0-11 真机/模拟器 smoke 清单（Room / Worker / FFmpeg / 启动均已由 emulator smoke 覆盖，补截图与设备记录）。
+2. P0-12 Phase 0 门禁（CI + smoke 全绿、文档、可选 tag `v0.0.1-spike`）。
 3. 进入 P1-01（模型/枚举）与 P1-02（提示词/音色池）。
 
 ## 日志
@@ -83,3 +97,5 @@
 - 2026-11-08：P0-05 完成；Room Probe + Robolectric 读写测试 + KSP schema 入库。
 - 2026-11-08：设备 smoke 暴露真问题——`AppDatabase.create()` 的 `onOpen` 用 `execSQL("PRAGMA busy_timeout=5000")`
   在真实 SQLite 上抛 `SQLiteException`（Robolectric 未覆盖到该回调）；改用 `query(...).close()`，并补 `create()` 单测。
+- 2026-11-08：P0-06 完成；新增 emulator smoke workflow，设备上验证前台 Worker、通知可见与取消。
+- 2026-11-08：P0-07 完成；FFmpegKit `-version`、350ms 静音、两段拼接与 ffprobe 时长在 API 35 模拟器通过。
