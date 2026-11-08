@@ -207,7 +207,9 @@ data class ExportUiState(
         }
 
     val canStart: Boolean
-        get() = phase == ExportPhase.Selection &&
+        get() = !loading &&
+            loadError == null &&
+            phase == ExportPhase.Selection &&
             selectionError == null &&
             selectedCount > 0
 
