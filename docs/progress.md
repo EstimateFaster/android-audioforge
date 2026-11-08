@@ -28,7 +28,7 @@
 | P1-01 模型与枚举 | ✅ done | CI 42448583320 绿；`EnumsTest` 8/8 |
 | P1-02 Assets：提示词 + 音色池 | ✅ done | CI 42448901696 绿；Prompt/VoicePool 11 个用例 + 快照 |
 | P1-03 TextDecoder | ✅ done | CI 42449492657 绿；`TextDecoderTest` 14/14 |
-| P1-04 ChapterSplitter | ⏳ todo | |
+| P1-04 ChapterSplitter | 🟡 in_progress | 正则/假标题/无标题 + fixture 对照；等 CI |
 | P1-05 ScriptSanitizer | ⏳ todo | |
 | P1-06 CoverageChecker | ⏳ todo | |
 | P1-07 CharacterRegistry | ⏳ todo | |
@@ -146,6 +146,14 @@
 - 偏差：`android.icu.text.CharsetDetector` 不在公开 SDK（首次 CI `Unresolved reference`），
   改为「严格解码 + CJK 占比 + 中文标点/异常字符评分」；已记录 `docs/decisions.md`
 - 产出：`core/ingest/TextDecoder.kt`、`TextDecoderTest.kt`
+
+### P1-04 ChapterSplitter — in_progress
+- 开始：2026-11-08 13:42（Asia/Shanghai）
+- 分支：`feat/p1-04-chapter-splitter`
+- 目标：逐行移植 Python `core/ingest.py::load_novel`；正则 `第X章/卷/节/回/部` 或 `Chapter N`
+- 依赖：P1-01 ✅、P1-03 ✅
+- 验收：上游 `sample_novel.txt` 切出 2 章（145/664 字、idx 0/1）；无标题/假标题/长标题/CRLF/中文数字/序言丢弃
+- 测试样例来自上游 `test/sample_novel.txt`（commit f1d262b），放入 `app/src/test/resources/`
 
 ## 已知实编坑（已处理）
 
