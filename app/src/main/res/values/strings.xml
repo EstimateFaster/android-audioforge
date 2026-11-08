@@ -49,4 +49,38 @@
     <string name="notif_done_failure">冒烟任务失败</string>
     <string name="notif_done_probe_success">已写入并回读 Room（第 %1$d 次）</string>
     <string name="footer">MIT · 上游 StoryForge · FFmpegKit LGPL</string>
+
+    <!-- P4-02 设计系统：通用动作与状态 -->
+    <string name="action_retry">重试</string>
+    <string name="action_view_all">查看全部</string>
+    <string name="action_import_novel">导入小说</string>
+    <string name="status_unknown">未知</string>
+    <string name="status_parse_pending">待解析</string>
+    <string name="status_parse_running">解析中</string>
+    <string name="status_parse_done">已解析</string>
+    <string name="status_parse_error">解析失败</string>
+    <string name="status_audio_pending">待生成</string>
+    <string name="status_audio_running">生成中</string>
+    <string name="status_audio_done">已生成</string>
+    <string name="status_audio_error">生成失败</string>
+    <string name="status_task_pending">待处理</string>
+    <string name="status_task_idle">未开始</string>
+    <string name="status_task_queued">已排队</string>
+    <string name="status_task_running">运行中</string>
+    <string name="status_task_done">完成</string>
+    <string name="status_task_error">失败</string>
+    <string name="status_task_cancelled">已取消</string>
+    <string name="status_task_blocked">等待条件</string>
+    <string name="progress_percent">%1$d%%</string>
+    <string name="progress_default_description">进度</string>
+    <string name="role_avatar_content_description">角色头像：%1$s</string>
+    <string name="role_avatar_unknown">未命名角色</string>
+
+    <!-- P4-02 预览示例文案 -->
+    <string name="empty_state_demo_title">还没有项目</string>
+    <string name="empty_state_demo_description">导入一本 txt 小说，开始生成多人演播有声书。</string>
+    <string name="error_state_demo_message">导入失败：文件编码无法识别，请换用 UTF-8 编码的文件。</string>
+    <string name="section_demo_title">生成设置</string>
+    <string name="section_demo_subtitle">这些设置会应用到新批次。</string>
+    <string name="progress_demo_label">项目进度</string>
 </resources>
