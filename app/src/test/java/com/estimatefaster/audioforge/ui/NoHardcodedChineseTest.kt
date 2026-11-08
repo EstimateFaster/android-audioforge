@@ -6,7 +6,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * P5-12：检查 `feature/**` 与 `ui/components/**` 的正式界面代码里没有硬编码中文。
+ * P5-12：检查 `feature/` 与 `ui/components/` 的正式界面代码里没有硬编码中文。
  *
  * 扫描规则（与 `docs/strings-audit.md` 一致）：
  * - 只看 `.kt` 源码；注释、KDoc、字符串插值外的代码不影响结果。
