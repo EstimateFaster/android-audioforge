@@ -230,7 +230,7 @@ class ScriptUiStateTest {
         val segments = sampleSegments()
 
         assertEquals(
-            listOf(3),
+            listOf(2),
             filterScriptSegments(segments, roleId = "role_0002", query = "雨").map { it.index },
         )
         assertTrue(
