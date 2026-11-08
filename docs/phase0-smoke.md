@@ -7,27 +7,29 @@
 
 | 项 | 值 |
 |---|---|
-| 设备 | Android Emulator（`pixel_6` profile） |
-| 系统 | Android 15 / API 35（`google_apis`，x86_64） |
+| 设备 | Android Emulator（`pixel_6` profile）；`model=sdk_gphone64_x86_64` |
+| 系统 | Android 15 / API 35（`google_apis`，`x86_64`） |
 | 运行器 | `ubuntu-latest`，JDK 17，KVM 加速 |
 | 被测 APK | `debug`（`com.estimatefaster.audioforge.debug`） |
 | 执行 | `connectedDebugAndroidTest` + `adb screencap` / `getprop` / `logcat` |
 | 日期 | 2026-11-08 |
+| 最近一次全绿 | run [42447687152](https://github.com/EstimateFaster/android-audioforge/actions/runs/42447687152) |
 
 ## 2. 检查项与结果
 
 | # | 检查项 | 方式 | 结果 | 证据 |
 |---|---|---|---|---|
-| 1 | APK 安装并启动不崩 | `ActivityScenario.launch(MainActivity)`（Worker 用例内） | ✅ | run 42446113920 |
-| 2 | Room 建库 + 写入 + 回读 | `RoomInstrumentedTest.probe_writes_and_reads_back_on_device` | ✅ | run 42446113920 |
-| 3 | WorkManager 前台任务完成 + 通知可见 | `ProbeWorkerInstrumentedTest.foreground_worker_runs_and_posts_notification` | ✅ | run 42446113920 |
-| 4 | 取消任务不崩 | `ProbeWorkerInstrumentedTest.cancelling_worker_ends_with_cancelled_state` | ✅ | run 42446113920 |
-| 5 | FFmpeg `-version` + 350ms 静音 + 两段拼接 | `FfmpegInstrumentedTest.version_silence_and_concat` | ✅ | run 42446646033 |
-| 6 | 首页截图 | `adb exec-out screencap` | ✅ | artifact `smoke-reports/smoke-home.png` |
-| 7 | 设备/系统信息 | `adb shell getprop` | ✅ | artifact `smoke-reports/device-info.txt` |
-| 8 | logcat | `adb logcat -d` | ✅ | artifact `smoke-reports/logcat-smoke.txt` |
+| 1 | APK 安装并启动不崩 | `ActivityScenario.launch(MainActivity)` + 冷启动截图 | ✅ | run 42447687152 |
+| 2 | Room 建库 + 写入 + 回读 | `RoomInstrumentedTest.probe_writes_and_reads_back_on_device`；截图卡片显示「通过（第 1 次，28 ms）」 | ✅ | run 42447687152 |
+| 3 | WorkManager 前台任务完成 + 通知可见 | `ProbeWorkerInstrumentedTest.foreground_worker_runs_and_posts_notification` | ✅ | run 42447687152 |
+| 4 | 取消任务不崩 | `ProbeWorkerInstrumentedTest.cancelling_worker_ends_with_cancelled_state` | ✅ | run 42447687152 |
+| 5 | FFmpeg `-version` + 350ms 静音 + 两段拼接 | `FfmpegInstrumentedTest.version_silence_and_concat` | ✅ | run 42447687152 |
+| 6 | 首页截图 | `adb exec-out screencap` → `smoke-home.png`（213 KB，1080×2400） | ✅ | artifact `smoke-reports/` |
+| 7 | 设备/系统信息 | `adb shell getprop` → `device-info.txt` | ✅ | artifact `smoke-reports/` |
+| 8 | logcat | `adb logcat -d` → `logcat-smoke.txt`（约 6 MB） | ✅ | artifact `smoke-reports/` |
 
 四项核心 smoke（启动 / Room / Worker / FFmpeg）全过；失败时工作流会把 logcat 与测试报告作为 artifact 上传。
+`connectedDebugAndroidTest` 结束后 APK 会被卸载，因此工作流在测试后重新 `installDebug` 再截图。
 
 ## 3. 如何复跑
 
