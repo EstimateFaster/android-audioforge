@@ -1,13 +1,13 @@
 package com.estimatefaster.audioforge.core.tts
 
 import com.estimatefaster.audioforge.core.model.PipelineError
+import com.estimatefaster.audioforge.core.network.HttpClients
 import java.io.IOException
 import java.time.Duration
 import java.time.Instant
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
-import java.util.concurrent.TimeUnit
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.random.Random
@@ -85,20 +85,21 @@ data class FishTtsConfig(
  * 取消：协程取消时通过 `call.cancel()` 中断在途请求；[delay]/[sleeper]
  * 退避期间取消直接抛 `CancellationException`。
  *
+ * @param httpClient 传输层客户端；默认取 [HttpClients.defaultTts]，与 LLM 共用
+ *   连接池 / Dispatcher，配置改过超时时自动派生；测试可注入 MockWebServer 客户端。
  * @param sleeper 退避等待函数，默认 [delay]；测试注入 no-op 以避免真实等待。
  */
 class FishTtsClient(
     private val config: FishTtsConfig,
+    private val httpClient: OkHttpClient = HttpClients.defaultTts(
+        connectTimeoutMs = config.connectTimeoutMs.toLong(),
+        readTimeoutMs = config.readTimeoutMs.toLong(),
+        callTimeoutMs = config.callTimeoutMs.toLong(),
+    ),
     private val sleeper: suspend (Long) -> Unit = { delay(it) },
 ) {
 
     private val endpoint: String = config.baseUrl.trimEnd('/') + ENDPOINT_PATH
-
-    private val httpClient: OkHttpClient = OkHttpClient.Builder()
-        .connectTimeout(config.connectTimeoutMs.toLong(), TimeUnit.MILLISECONDS)
-        .readTimeout(config.readTimeoutMs.toLong(), TimeUnit.MILLISECONDS)
-        .callTimeout(config.callTimeoutMs.toLong(), TimeUnit.MILLISECONDS)
-        .build()
 
     /**
      * 合成一段语音，返回 mp3 原始字节。
