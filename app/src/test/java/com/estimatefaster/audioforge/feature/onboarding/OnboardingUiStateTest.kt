@@ -2,11 +2,16 @@ package com.estimatefaster.audioforge.feature.onboarding
 
 import com.estimatefaster.audioforge.core.settings.AppSettings
 import com.estimatefaster.audioforge.core.settings.SecureKeyStore
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -17,8 +22,9 @@ import org.junit.Test
  * P4-10：Onboarding 的纯 JVM 测试。
  *
  * 不依赖 Android / Robolectric：ViewModel 通过依赖注入接收记录型 fake 的
- * SecureKeyStore / SettingsRepository 适配层，并用 `runTest` 的 `backgroundScope`
- * 执行异步保存；状态与校验逻辑本身是纯函数。
+ * SecureKeyStore / SettingsRepository 适配层，测试把 `TestScope` 与本测试共享
+ * `TestCoroutineScheduler` 的 Main dispatcher 注入进去，`advanceUntilIdle()`
+ * 可以推进保存/测试协程；状态与校验逻辑本身是纯函数。
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class OnboardingUiStateTest {
@@ -44,7 +50,7 @@ class OnboardingUiStateTest {
     }
 
     @Test
-    fun steps_advance_and_go_back_in_order() = runTest {
+    fun steps_advance_and_go_back_in_order() = onboardingTest {
         val vm = newViewModel()
 
         vm.goNext()
@@ -67,7 +73,7 @@ class OnboardingUiStateTest {
     }
 
     @Test
-    fun next_on_last_step_finishes_and_marks_completed() = runTest {
+    fun next_on_last_step_finishes_and_marks_completed() = onboardingTest {
         val settings = FakeSettingsStore()
         val vm = newViewModel(
             settingsStore = settings,
@@ -83,7 +89,7 @@ class OnboardingUiStateTest {
     }
 
     @Test
-    fun skip_completes_without_saving_typed_credentials() = runTest {
+    fun skip_completes_without_saving_typed_credentials() = onboardingTest {
         val keyStore = RecordingKeyStore()
         val settings = FakeSettingsStore()
         val vm = newViewModel(keyStore = keyStore, settingsStore = settings)
@@ -129,7 +135,7 @@ class OnboardingUiStateTest {
     }
 
     @Test
-    fun blank_key_is_allowed_for_navigation_but_not_for_testing() = runTest {
+    fun blank_key_is_allowed_for_navigation_but_not_for_testing() = onboardingTest {
         val tester = RecordingTester()
         val vm = newViewModel(llmTester = tester)
 
@@ -151,7 +157,7 @@ class OnboardingUiStateTest {
     }
 
     @Test
-    fun invalid_fields_block_next_and_save() = runTest {
+    fun invalid_fields_block_next_and_save() = onboardingTest {
         val keyStore = RecordingKeyStore()
         val settings = FakeSettingsStore()
         val vm = newViewModel(
@@ -176,7 +182,7 @@ class OnboardingUiStateTest {
     // ------------------------------------------------------------------
 
     @Test
-    fun testing_with_blank_key_reports_field_error_without_calling_tester() = runTest {
+    fun testing_with_blank_key_reports_field_error_without_calling_tester() = onboardingTest {
         val tester = RecordingTester()
         val vm = newViewModel(llmTester = tester)
 
@@ -190,7 +196,7 @@ class OnboardingUiStateTest {
     }
 
     @Test
-    fun test_connection_ok_uses_trimmed_fields() = runTest {
+    fun test_connection_ok_uses_trimmed_fields() = onboardingTest {
         val tester = RecordingTester()
         val vm = newViewModel(llmTester = tester)
 
@@ -212,7 +218,7 @@ class OnboardingUiStateTest {
     }
 
     @Test
-    fun fish_test_uses_the_fish_tester() = runTest {
+    fun fish_test_uses_the_fish_tester() = onboardingTest {
         val llmTester = RecordingTester()
         val fishTester = RecordingTester()
         val vm = newViewModel(llmTester = llmTester, fishTester = fishTester)
@@ -227,7 +233,7 @@ class OnboardingUiStateTest {
     }
 
     @Test
-    fun starting_another_test_resets_the_in_flight_card() = runTest {
+    fun starting_another_test_resets_the_in_flight_card() = onboardingTest {
         val vm = newViewModel(llmTester = BlockingTester(), fishTester = RecordingTester())
 
         vm.updateKey(OnboardingKeyKind.Llm, "sk-llm-123456")
@@ -243,7 +249,7 @@ class OnboardingUiStateTest {
     }
 
     @Test
-    fun failed_connection_can_be_retried() = runTest {
+    fun failed_connection_can_be_retried() = onboardingTest {
         val tester = RecordingTester()
         tester.enqueue(Result.failure<Unit>(IllegalStateException("network down")))
         tester.enqueue(Result.success(Unit))
@@ -262,7 +268,7 @@ class OnboardingUiStateTest {
     }
 
     @Test
-    fun editing_a_field_resets_test_state_and_cancels_stale_result() = runTest {
+    fun editing_a_field_resets_test_state_and_cancels_stale_result() = onboardingTest {
         val tester = RecordingTester()
         val vm = newViewModel(llmTester = tester)
 
@@ -280,7 +286,7 @@ class OnboardingUiStateTest {
     // ------------------------------------------------------------------
 
     @Test
-    fun save_writes_keys_and_settings_but_does_not_complete() = runTest {
+    fun save_writes_keys_and_settings_but_does_not_complete() = onboardingTest {
         val keyStore = RecordingKeyStore()
         val settings = FakeSettingsStore()
         val vm = newViewModel(keyStore = keyStore, settingsStore = settings)
@@ -307,7 +313,7 @@ class OnboardingUiStateTest {
     }
 
     @Test
-    fun save_and_continue_advances_to_permissions() = runTest {
+    fun save_and_continue_advances_to_permissions() = onboardingTest {
         val keyStore = RecordingKeyStore()
         val settings = FakeSettingsStore()
         val vm = newViewModel(
@@ -326,7 +332,7 @@ class OnboardingUiStateTest {
     }
 
     @Test
-    fun blank_keys_are_not_written_and_finish_still_completes() = runTest {
+    fun blank_keys_are_not_written_and_finish_still_completes() = onboardingTest {
         val keyStore = RecordingKeyStore()
         val settings = FakeSettingsStore()
         val vm = newViewModel(keyStore = keyStore, settingsStore = settings)
@@ -342,7 +348,7 @@ class OnboardingUiStateTest {
     }
 
     @Test
-    fun finish_persists_entered_keys_and_marks_completed() = runTest {
+    fun finish_persists_entered_keys_and_marks_completed() = onboardingTest {
         val keyStore = RecordingKeyStore()
         val settings = FakeSettingsStore()
         val vm = newViewModel(keyStore = keyStore, settingsStore = settings)
@@ -359,7 +365,7 @@ class OnboardingUiStateTest {
     }
 
     @Test
-    fun settings_failure_surfaces_error_and_keeps_onboarding_open() = runTest {
+    fun settings_failure_surfaces_error_and_keeps_onboarding_open() = onboardingTest {
         val vm = newViewModel(settingsStore = FailingSettingsStore())
 
         vm.finish()
@@ -374,20 +380,42 @@ class OnboardingUiStateTest {
     // 测试替身
     // ------------------------------------------------------------------
 
+    /**
+     * 在 `runTest` 的调度器上同时安装 Main dispatcher。
+     *
+     * 即使 ViewModel 因配置问题回退到 `viewModelScope`，Main 也指向同一个
+     * `TestCoroutineScheduler`，`advanceUntilIdle()` 才能推进保存/测试协程。
+     */
+    private fun onboardingTest(block: suspend TestScope.() -> Unit) = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            block()
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
     private fun TestScope.newViewModel(
         keyStore: OnboardingKeyStore = RecordingKeyStore(),
         settingsStore: OnboardingSettingsStore = FakeSettingsStore(),
         llmTester: OnboardingConnectionTester = RecordingTester(),
         fishTester: OnboardingConnectionTester = llmTester,
         initialState: OnboardingUiState = OnboardingUiState(),
-    ): OnboardingViewModel = OnboardingViewModel(
-        keyStore = keyStore,
-        settingsStore = settingsStore,
-        llmTester = llmTester,
-        fishTester = fishTester,
-        initialState = initialState,
-        externalScope = backgroundScope,
-    )
+    ): OnboardingViewModel {
+        // 直接使用 runTest 的 TestScope，并显式注入共享 scheduler 的 dispatcher：
+        // 即使 ViewModel 回退到 viewModelScope，launch 也会落在 advanceUntilIdle() 能推进的队列上。
+        val testScope: CoroutineScope = this
+        val testDispatcher = StandardTestDispatcher(testScheduler)
+        return OnboardingViewModel(
+            keyStore = keyStore,
+            settingsStore = settingsStore,
+            llmTester = llmTester,
+            fishTester = fishTester,
+            initialState = initialState,
+            externalScope = testScope,
+            dispatcher = testDispatcher,
+        )
+    }
 
     private class RecordingKeyStore : OnboardingKeyStore {
         val saved: MutableMap<String, String> = linkedMapOf()

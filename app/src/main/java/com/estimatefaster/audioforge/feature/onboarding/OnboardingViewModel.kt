@@ -6,7 +6,9 @@ import com.estimatefaster.audioforge.core.settings.AppSettings
 import com.estimatefaster.audioforge.core.settings.SecureKeyStore
 import com.estimatefaster.audioforge.core.settings.SettingsRepository
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -90,6 +92,8 @@ object LocalKeyFormatTester : OnboardingConnectionTester {
  * @param fishTester Fish Key 测试探针
  * @param initialState 初始状态（测试/预览用）
  * @param externalScope 测试注入的协程作用域；为空时使用 [viewModelScope]
+ * @param dispatcher 协程调度器；测试注入 `StandardTestDispatcher(testScheduler)`，
+ *   保证 `advanceUntilIdle()` 能推进保存/测试协程
  */
 class OnboardingViewModel(
     private val keyStore: OnboardingKeyStore,
@@ -98,6 +102,7 @@ class OnboardingViewModel(
     private val fishTester: OnboardingConnectionTester = llmTester,
     initialState: OnboardingUiState = OnboardingUiState(),
     private val externalScope: CoroutineScope? = null,
+    private val dispatcher: CoroutineDispatcher = Dispatchers.Main.immediate,
 ) : ViewModel() {
 
     /**
@@ -110,6 +115,7 @@ class OnboardingViewModel(
         settingsRepository: SettingsRepository,
         llmTester: OnboardingConnectionTester = LocalKeyFormatTester,
         fishTester: OnboardingConnectionTester = LocalKeyFormatTester,
+        dispatcher: CoroutineDispatcher = Dispatchers.Main.immediate,
     ) : this(
         keyStore = object : OnboardingKeyStore {
             override suspend fun saveKey(name: String, value: String) {
@@ -123,6 +129,7 @@ class OnboardingViewModel(
         },
         llmTester = llmTester,
         fishTester = fishTester,
+        dispatcher = dispatcher,
     )
 
     private val _state = MutableStateFlow(initialState)
@@ -228,7 +235,7 @@ class OnboardingViewModel(
         val baseUrl = current.baseUrlFor(kind).trim()
         val model = current.modelFor(kind).trim()
 
-        testJob = scope.launch {
+        testJob = scope.launch(dispatcher) {
             val result = try {
                 tester.test(key, baseUrl, model)
             } catch (e: CancellationException) {
@@ -291,7 +298,7 @@ class OnboardingViewModel(
 
         cancelTest()
         _state.update { it.copy(saving = true, saveError = null) }
-        scope.launch {
+        scope.launch(dispatcher) {
             try {
                 settingsStore.update { it.copy(onboardingCompleted = true) }
                 _state.update {
@@ -340,7 +347,7 @@ class OnboardingViewModel(
         onSuccess: () -> Unit,
     ) {
         _state.update { it.copy(saving = true, saveError = null) }
-        scope.launch {
+        scope.launch(dispatcher) {
             try {
                 val llmKey = snapshot.llmKey.trim()
                 if (llmKey.isNotEmpty()) {
