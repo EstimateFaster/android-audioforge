@@ -152,7 +152,7 @@ class PlayerCommandsTest {
     @Test
     fun next_chapter_from_unstarted_returns_first_playable_chapter() {
         assertEquals(0, queue().nextChapterIndex(null))
-        assertEquals(0, PlaybackQueue().nextChapterIndex(null))
+        assertNull("空队列应从零章开始且无下一章", PlaybackQueue().nextChapterIndex(null))
         assertNull("空队列没有下一章", emptyQueue().nextChapterIndex(null))
     }
 
