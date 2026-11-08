@@ -118,6 +118,23 @@
 | P5-14 UI 测试 | ✅ done | instrumented smoke |
 | P5-15 门禁 | ✅ done | docs/phase5-gate.md |
 
+## Phase 6（发布/加固）
+
+| 任务 | 状态 | 备注 |
+|---|---|---|
+| P6-01 R8 评估 | ✅ done | minify 未开 |
+| P6-02 ABI split 评估 | ✅ done | splits 未开 |
+| P6-03 依赖审计 | ✅ done | verification metadata 待落地 |
+| P6-04 网络调优 | ✅ done | 共享 OkHttp/Retry-After |
+| P6-05 设备矩阵 | 🚫 BLOCKED | 无真机 |
+| P6-06 音频 A/B | ✅ done | pitch 修复；ABX BLOCKED |
+| P6-07 性能/内存 | ✅ done | 基线 BLOCKED |
+| P6-08 安全复查 | ✅ done | SEC-01 待办 |
+| P6-09 Release workflow | ✅ done | 签名/verify/checksums |
+| P6-10 发布文档 | ✅ done | README/release-notes |
+| P6-11 v1.0.0 发布 | ✅ done | APK 62,020,552 bytes |
+| P6-12 发布后清单 | ✅ done | docs/post-release-checklist.md |
+
 ## 任务记录
 
 ### P0-05 Room smoke — done
@@ -387,3 +404,4 @@
 - 2026-11-08/09：Phase 2 主体、P3-01/02、P4-01/02/03/05/07/09 合并；并行 agent（worktree）+ 统一 CI。
 - 2026-11-09：Phase 2/3 门禁记录（P2-18、P3-10 真机依赖 BLOCKED）；P5-01 剧本页合并。
 - 2026-11-09：Phase 4/5 门禁记录；导航接线完成（PR #88）；P5-13 无障碍合并。
+- 2026-11-09：Phase 6 v1.0.0 签名 APK 由 GitHub Actions 发布；Phase 6 门禁记录完成。
