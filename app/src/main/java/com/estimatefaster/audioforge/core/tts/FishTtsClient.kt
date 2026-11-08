@@ -257,7 +257,7 @@ class FishTtsClient(
     /** `min(2^retry * 2, 30)` 秒 + jitter；retry 从 0 开始（第一次重试 2s）。 */
     private fun backoffMs(retry: Int): Long {
         val exponent = retry.coerceIn(0, MAX_BACKOFF_EXPONENT)
-        val base = minOf((1L shl exponent) * 2L, MAX_BACKOFF_MS)
+        val base = minOf((1L shl exponent) * 2_000L, MAX_BACKOFF_MS)
         return base + Random.nextLong(0L, JITTER_MAX_MS + 1L)
     }
 
