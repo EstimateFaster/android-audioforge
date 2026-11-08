@@ -30,7 +30,7 @@
 | P1-03 TextDecoder | ✅ done | CI 42449492657 绿；`TextDecoderTest` 14/14 |
 | P1-04 ChapterSplitter | ✅ done | CI 42449986934 绿；`ChapterSplitterTest` 9/9（含上游样例 145/664 字） |
 | P1-05 ScriptSanitizer | ✅ done | CI 42454921455 绿；`ScriptSanitizerTest` 17/17（fixture+Python 用例） |
-| P1-06 CoverageChecker | 🟡 in_progress | difflib 移植 + fixture 3 条；等 CI |
+| P1-06 CoverageChecker | ✅ done | CI 42455322583 绿；`CoverageCheckerTest` 11/11（含 `句。第二`） |
 | P1-07 CharacterRegistry | ⏳ todo | |
 | P1-08 VoicePool 完整 | ⏳ todo | |
 | P1-09 设置模型与校验 | ⏳ todo | |
@@ -166,14 +166,15 @@
   - 写断言前用上游 Python 实跑校准，修正了两处「想当然」期望（`阿甲` 残渣保留、相邻动作旁白合并）
 - 产出：`core/script/ScriptSanitizer.kt`、`core/model/ScriptSegment.kt`、`ScriptSanitizerTest.kt`
 
-### P1-06 CoverageChecker — in_progress
-- 开始：2026-11-08 14:40（Asia/Shanghai）
-- 分支：`feat/p1-06-coverage-checker`
-- 目标：`core/script/CoverageChecker.kt`：归一化（去空白/引号）、设计内丢失过滤、
-  覆盖率 = 1 - 有效缺失/原文长度、`missingForRepair(≤6)`
-- 依赖：P1-05 ✅
-- 验收：fixture `coverage` 3 条（含 `句。第二` 缺失片段）逐条一致；上游覆盖率用例
-- 关键：移植 `difflib.SequenceMatcher`（autojunk=False）的 longest-match/opcodes，保证缺失片段与 Python 一致
+### P1-06 CoverageChecker — done
+- 完成：2026-11-08 14:45（Asia/Shanghai）
+- 分支：`feat/p1-06-coverage-checker`（PR #11）
+- 提交：`9b7768c`
+- 验证：CI [42455322583](https://github.com/EstimateFaster/android-audioforge/actions/runs/42455322583) 绿；`CoverageCheckerTest` 11/11
+  - fixture 3 条覆盖率与 missing 精确匹配（含第 3 条 `句。第二`）
+  - 全文/引号空白/纯引导语/丢动作/修复片段过滤/上限/归一化/空原文
+- 关键：移植 `difflib.SequenceMatcher(autojunk=False)` 的 longest-match/opcodes，未用 Myers，保证缺失片段与 Python 一致
+- 产出：`core/script/CoverageChecker.kt`、`CoverageCheckerTest.kt`
 
 ## 已知实编坑（已处理）
 
@@ -195,9 +196,9 @@
 
 ## 下一步
 
-1. P1-06 CoverageChecker（归一化 + diff + 设计内丢失过滤 + 阈值 0.97）。
-2. P1-07 CharacterRegistry。
-3. P1-08 VoicePool 完整 / P1-09 设置模型。
+1. P1-07 CharacterRegistry（角色复用/别名/alias_of/兜底音色/事务）。
+2. P1-08 VoicePool 完整 / P1-09 设置模型。
+3. P1-10 TTS 缓存键 / P1-11 错误模型。
 
 ## 日志
 
@@ -217,3 +218,4 @@
 - 2026-11-08：P1-03 完成；BOM/UTF-8/GBK/GB18030/UTF-16/Big5 全过；ICU 不可用改用启发式，已记 ADR。
 - 2026-11-08：P1-04 完成；上游样例 2 章 145/664 字对齐 Python；切章边界 9 个用例全绿。
 - 2026-11-08：P1-05 完成；最高风险清洗逻辑逐函数移植，fixture + Python 用例 17/17 全绿。
+- 2026-11-08：P1-06 完成；覆盖率校验与 Python difflib 片段级一致，11/11 全绿。
