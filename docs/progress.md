@@ -2,7 +2,7 @@
 
 > 规则：每个任务完成即更新；格式见 `docs/android-execution-plan.md` §17。
 > 验证方式（2026-11-08 起）：**本机不再跑 Gradle/CI**，所有构建与测试由 GitHub Actions 执行。
-> 当前阶段：**Phase 1 — 纯 Kotlin 核心**（Phase 0 门禁已通过，见 `docs/phase0-smoke.md` §5）
+> 当前阶段：**Phase 2 — 数据/网络/音频**（Phase 1 门禁已通过，见 `docs/phase1-gate.md`）
 
 ## Phase 0
 
@@ -39,7 +39,7 @@
 | P1-12 Golden fixtures | ✅ done（50 真实语料 BLOCKED） | CI 42459571592 绿；`GoldenFixturesTest` 5/5 |
 | P1-13 性能基准 | ✅ done | CI 42459961060 绿；清洗 10.2ms / 覆盖率 300ms（153 tests 全绿） |
 | P1-14 文档与进度 | ⏳ todo | |
-| P1-15 Phase 1 门禁 | ⏳ todo | |
+| P1-15 Phase 1 门禁 | ✅ done | `docs/phase1-gate.md`；153/153 单测 + main CI 绿 |
 
 ## 任务记录
 
@@ -247,6 +247,13 @@
   - `coverage` best 300ms（阈值 500ms）；覆盖率 0.9989，缺失 3 条
 - 产出：`SanitizerBenchmarkTest.kt`
 
+### P1-15 Phase 1 门禁 — done
+- 完成：2026-11-08 15:58（Asia/Shanghai）
+- 分支：`docs/p1-15-gate`
+- 门禁：`docs/phase1-gate.md`（153/153 单测、main CI 42460233513、无 TODO/硬编码 Key、版本矩阵未改）
+- 残留：P1-12 的 50 条真实语料 BLOCKED（外部数据，不阻塞 Phase 2）
+- 结论：Phase 1 完成，进入 Phase 2（P2-01 Room 实体/DAO/DB）
+
 ### P1-14 文档与进度 — done
 - 完成：2026-11-08 15:55（Asia/Shanghai）
 - 分支：`docs/p1-14-finalize`
@@ -273,9 +280,9 @@
 
 ## 下一步
 
-1. P1-15 Phase 1 门禁（CI 全绿、核心域测试全绿、无 TODO/硬编码 Key）。
-2. Phase 2 起点：P2-01 Room 实体/DAO/DB。
-3. 补 P1-12 的 50 条真实章节语料（BLOCKED，待人工提供）。
+1. P2-01 Room 实体/DAO/DB（§7.1–7.3；schema、外键、聚合、brief 投影）。
+2. P2-02 仓库层 + AppContainer。
+3. P2-03 DataStore 设置（接 P1-09 的 AppSettings/SettingsValidator）。
 
 ## 日志
 
@@ -299,3 +306,4 @@
 - 2026-11-08：P1-07 完成；角色注册/复用/别名/音色锁定 10/10 全绿。
 - 2026-11-08：P1-08/09/10/11/12 完成；6 个 agent 并行（独立 worktree），统一 CI 验证后逐个合并。
 - 2026-11-08：P1-13/14 完成；性能基准 10.2ms/300ms，进度与决策文档补齐。
+- 2026-11-08：P1-15 门禁通过；Phase 1 完成（153 单测、main CI 绿、无 TODO/硬编码 Key）。
