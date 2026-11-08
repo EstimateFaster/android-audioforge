@@ -24,7 +24,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /**
- * P2-11：解析用例的 8 个核心场景（执行计划 §8.7 / §8.10）。
+ * P2-11 的解析用例核心场景 + P2-19 长章节守卫（执行计划 §8.7 / §8.10）。
  *
  * 用 Robolectric + in-memory Room + 真实 sanitizer/coverage/角色适配器；
  * 只有 LLM 被替换成可注入的 `suspend (String) -> String`，因此测到的是
@@ -150,6 +150,7 @@ class AnalyzeChapterUseCaseTest {
         assertEquals(AnalyzeStatus.Failed, result.status)
         assertEquals(PipelineError.TRUNCATED, result.errorCode)
         assertTrue(requireNotNull(result.error).contains("截断"))
+        assertTrue(requireNotNull(result.error).contains("过长"))
 
         val chapter = requireNotNull(fixture.chapters.getChapter(ref.chapterId))
         assertEquals("error", chapter.parseStatus)
@@ -308,6 +309,106 @@ class AnalyzeChapterUseCaseTest {
         )
     }
 
+    // -------------------------------------------------------- 长章节守卫（P2-19）
+
+    @Test
+    fun long_chapter_over_limit_is_guarded_without_llm_call() = runTest {
+        val rawText = longText(AnalyzeChapterUseCase.MAX_SINGLE_PASS_CHARS + 1)
+        val ref = createChapter(rawText)
+        val fake = FakeLlm(emptyList())
+
+        val result = newUseCase(ref, fake).analyze(ref.novelId, ref.chapterId)
+
+        assertEquals(AnalyzeStatus.TooLong, result.status)
+        assertEquals(AnalyzeChapterUseCase.ERROR_CHAPTER_TOO_LONG, result.errorCode)
+        assertNull("TooLong 是待确认的守卫，不是失败", result.error)
+        assertNull(result.coverage)
+        assertFalse(result.succeeded)
+        assertTrue("守卫阶段不允许调用 LLM", fake.prompts.isEmpty())
+
+        val warn = requireNotNull(result.warning)
+        assertTrue("告警要带字数：$warn", warn.contains("12001 字"))
+        assertTrue("告警要带上限：$warn", warn.contains("上限 12000 字"))
+        assertTrue("告警要给出后续动作：$warn", warn.contains("建议手动分段或等待分块解析"))
+
+        val chapter = requireNotNull(fixture.chapters.getChapter(ref.chapterId))
+        assertEquals("pending", chapter.parseStatus)
+        assertNull(chapter.parseError)
+        assertEquals(warn, chapter.parseWarn)
+        assertEquals(0, chapter.segCount)
+        assertTrue("守卫阶段不写片段", fixture.segments.list(ref.chapterId).isEmpty())
+    }
+
+    @Test
+    fun long_chapter_with_allow_flag_calls_llm_and_warns_about_truncation() = runTest {
+        val rawText = longText(AnalyzeChapterUseCase.MAX_SINGLE_PASS_CHARS + 1)
+        val ref = createChapter(rawText)
+        val fake = FakeLlm(listOf({ narrationResponse(rawText) }))
+
+        val result = newUseCase(ref, fake).analyze(
+            ref.novelId,
+            ref.chapterId,
+            allowLongChapter = true,
+        )
+
+        assertEquals(AnalyzeStatus.Done, result.status)
+        assertEquals(1, fake.prompts.size)
+
+        val warn = requireNotNull(result.warning)
+        assertTrue("放行后仍要提示可能截断：$warn", warn.contains("较长"))
+        assertTrue("放行后仍要提示可能截断：$warn", warn.contains("截断"))
+        assertEquals(warn, requireNotNull(fixture.chapters.getChapter(ref.chapterId)).parseWarn)
+
+        val chapter = requireNotNull(fixture.chapters.getChapter(ref.chapterId))
+        assertEquals("done", chapter.parseStatus)
+        assertEquals(
+            rawText,
+            fixture.segments.list(ref.chapterId).joinToString("") { it.text },
+        )
+    }
+
+    @Test
+    fun chapter_exactly_at_limit_is_analyzed_normally() = runTest {
+        val rawText = longText(AnalyzeChapterUseCase.MAX_SINGLE_PASS_CHARS)
+        val ref = createChapter(rawText)
+        val fake = FakeLlm(listOf({ narrationResponse(rawText) }))
+
+        val result = newUseCase(ref, fake).analyze(ref.novelId, ref.chapterId)
+
+        assertEquals(AnalyzeStatus.Done, result.status)
+        assertEquals(1, fake.prompts.size)
+        assertNull("正好 12000 字不应触发长章节告警", result.warning)
+        assertEquals(
+            rawText,
+            fixture.segments.list(ref.chapterId).joinToString("") { it.text },
+        )
+    }
+
+    @Test
+    fun truncated_long_chapter_still_fails_with_truncation_message() = runTest {
+        val rawText = longText(AnalyzeChapterUseCase.MAX_SINGLE_PASS_CHARS + 1)
+        val ref = createChapter(rawText)
+        val fake = FakeLlm(listOf({ throw PipelineError.Truncated() }))
+
+        val result = newUseCase(ref, fake).analyze(
+            ref.novelId,
+            ref.chapterId,
+            allowLongChapter = true,
+        )
+
+        assertEquals(AnalyzeStatus.Failed, result.status)
+        assertEquals(PipelineError.TRUNCATED, result.errorCode)
+        val message = requireNotNull(result.error)
+        assertTrue("截断文案要说明过长：$message", message.contains("过长"))
+        assertTrue("截断文案要说明截断：$message", message.contains("截断"))
+        assertTrue("截断文案要给出后续动作：$message", message.contains("手动分段"))
+
+        val chapter = requireNotNull(fixture.chapters.getChapter(ref.chapterId))
+        assertEquals("error", chapter.parseStatus)
+        assertEquals(message, chapter.parseError)
+        assertTrue(fixture.segments.list(ref.chapterId).isEmpty())
+    }
+
     // -------------------------------------------------------------- helpers
 
     private fun newUseCase(ref: ChapterRef, fake: FakeLlm): AnalyzeChapterUseCase =
@@ -380,6 +481,28 @@ private val VALID_RESPONSE = """
       "segments": [
         {"type": "narration", "speaker": "narrator", "emotion": "neutral", "text": "韩立说道："},
         {"type": "dialogue", "speaker": "韩立", "emotion": "happy", "text": "你好。"}
+      ]
+    }
+""".trimIndent()
+
+/**
+ * 生成正好 [chars] 个字符的正文（无标点/空白，便于断言清洗前后逐字一致）。
+ * 用 24 个不同汉字轮转，避免覆盖率 diff 在重复字符上退化。
+ */
+private fun longText(chars: Int): String {
+    require(chars > 0) { "chars 必须为正数：$chars" }
+    val unit = "天地玄黄宇宙洪荒日月盈昃辰宿列张寒来暑往秋收冬藏"
+    return buildString(chars + unit.length) {
+        while (length < chars) append(unit)
+    }.take(chars)
+}
+
+/** 一段 narration 覆盖全部原文的合法响应，用于断言「无修复重试」的路径。 */
+private fun narrationResponse(text: String): String = """
+    {
+      "new_characters": [],
+      "segments": [
+        {"type": "narration", "speaker": "narrator", "emotion": "neutral", "text": "$text"}
       ]
     }
 """.trimIndent()
