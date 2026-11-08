@@ -529,4 +529,34 @@
     <string name="script_filtered_empty_action">清除筛选</string>
     <string name="script_loading">正在加载剧本…</string>
     <string name="script_load_error">加载剧本失败：%1$s</string>
+
+    <!-- P5-02 片段编辑 Sheet -->
+    <string name="segment_edit_title">编辑片段</string>
+    <string name="segment_edit_subtitle">第 %1$d 段 · %2$s</string>
+    <string name="segment_edit_hint">保存后仅该片段标记待重生成</string>
+    <string name="segment_edit_reset">重置</string>
+    <string name="segment_edit_type_label">类型</string>
+    <string name="segment_edit_role_label">角色</string>
+    <string name="segment_edit_role_search_placeholder">搜索角色</string>
+    <string name="segment_edit_role_no_match">没有匹配的角色</string>
+    <string name="segment_edit_role_locked">旁白片段的角色固定为旁白</string>
+    <string name="segment_edit_dropdown_indicator">▾</string>
+    <string name="segment_edit_selected_indicator">✓</string>
+    <string name="segment_edit_emotion_label">情绪</string>
+    <string name="segment_edit_emotion_option">%1$s · %2$s</string>
+    <string name="segment_edit_text_label">文本</string>
+    <string name="segment_edit_text_placeholder">输入这一句的台词或旁白</string>
+    <string name="segment_edit_text_counter">%1$d / %2$d 字</string>
+    <string name="segment_edit_save">保存</string>
+    <string name="segment_edit_saving">保存中…</string>
+    <string name="segment_edit_cancel">取消</string>
+    <string name="segment_edit_regenerate">重新生成此句</string>
+    <string name="segment_edit_validation_title">请先修正以下问题</string>
+    <string name="segment_edit_error_empty_text">文本不能为空</string>
+    <string name="segment_edit_error_too_long">文本最多 %1$d 字</string>
+    <string name="segment_edit_error_narration_role">旁白片段必须使用旁白角色</string>
+    <string name="segment_edit_error_dialogue_role">对白片段必须选择角色</string>
+    <string name="segment_edit_error_unknown_role">所选角色不存在，请重新选择</string>
+    <string name="segment_edit_save_error">保存失败：%1$s</string>
+    <string name="segment_edit_retry">重试</string>
 </resources>
