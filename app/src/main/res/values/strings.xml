@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">AudioForge</string>
+    <string name="home_title">AudioForge</string>
+    <string name="home_subtitle">把小说变成多人演播的有声书</string>
+    <string name="phase0_badge">Phase 0 · 基础配置</string>
+    <string name="home_intro">原生 Android 重构，不是套壳。Compose + Material 3 Expressive + FFmpegKit + WorkManager。</string>
+    <string name="checklist_title">已完成</string>
+    <string name="checklist_1">原生 Compose 工程与版本矩阵</string>
+    <string name="checklist_2">Material 3 Expressive 主题</string>
+    <string name="checklist_3">Room / WorkManager / FFmpegKit 依赖</string>
+    <string name="checklist_4">GitHub Actions 构建与 APK 校验</string>
+    <string name="next_title">下一步</string>
+    <string name="next_body">执行计划在 docs/android-execution-plan.md。从 P0-01 开始；先跑真机 smoke，再进入 P1/P2。</string>
+    <string name="next_action">查看 Phase 0 入口</string>
+    <string name="phase0_details">1. 导入一本 txt；2. 解析一章；3. 合成并播放；4. 锁屏后台测试；5. 生成签名 release。</string>
+    <string name="footer">MIT · 上游 StoryForge · FFmpegKit LGPL</string>
+</resources>

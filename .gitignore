@@ -1,0 +1,22 @@
+# Gradle / Android
+.gradle/
+build/
+local.properties
+*.iml
+.idea/
+captures/
+.externalNativeBuild/
+.cxx/
+app/build/
+app/schemas/*.json.tmp
+
+# 签名/密钥
+*.jks
+*.keystore
+keystore.properties
+keystore/
+.env
+.secrets
+
+# 系统
+.DS_Store
