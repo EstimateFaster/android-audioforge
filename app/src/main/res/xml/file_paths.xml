@@ -3,4 +3,6 @@
     <files-path name="audio" path="audio/" />
     <cache-path name="cache" path="." />
     <external-files-path name="exports" path="exports/" />
+    <!-- P2-15：API 26–28 导出目录 getExternalFilesDir(DIRECTORY_MUSIC)/AudioForge -->
+    <external-files-path name="export_music" path="Music/AudioForge/" />
 </paths>
