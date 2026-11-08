@@ -31,7 +31,7 @@
 | P1-04 ChapterSplitter | ✅ done | CI 42449986934 绿；`ChapterSplitterTest` 9/9（含上游样例 145/664 字） |
 | P1-05 ScriptSanitizer | ✅ done | CI 42454921455 绿；`ScriptSanitizerTest` 17/17（fixture+Python 用例） |
 | P1-06 CoverageChecker | ✅ done | CI 42455322583 绿；`CoverageCheckerTest` 11/11（含 `句。第二`） |
-| P1-07 CharacterRegistry | ⏳ todo | |
+| P1-07 CharacterRegistry | ✅ done | CI 42455746448 绿；`CharacterRegistryTest` 10/10 |
 | P1-08 VoicePool 完整 | ⏳ todo | |
 | P1-09 设置模型与校验 | ⏳ todo | |
 | P1-10 TTS 缓存键 | ⏳ todo | |
@@ -176,6 +176,17 @@
 - 关键：移植 `difflib.SequenceMatcher(autojunk=False)` 的 longest-match/opcodes，未用 Myers，保证缺失片段与 Python 一致
 - 产出：`core/script/CoverageChecker.kt`、`CoverageCheckerTest.kt`
 
+### P1-07 CharacterRegistry — done
+- 完成：2026-11-08 14:45（Asia/Shanghai）
+- 分支：`feat/p1-07-character-registry`（PR #12）
+- 提交：`9dc0ac3`
+- 验证：CI [42455746448](https://github.com/EstimateFaster/android-audioforge/actions/runs/42455746448) 绿；`CharacterRegistryTest` 10/10
+  - 新角色 role_0001 递增、非法音色兜底、重名复用不改音色、别名复用、alias_of 合并、excluded 跳过
+  - 批量注册/`male_brother=1.15`/`roleIdFor`/`resolveSpeaker`/`promptBlock` 格式
+- 接口：`CharacterStore`（事务由 P2 的 Room 实现注入），附 `InMemoryCharacterStore`
+- 产出：`core/script/CharacterRegistry.kt`、`core/model/CharacterInfo.kt`、`CharacterRegistryTest.kt`
+
+## 已知实编坑（已处理）
 ## 已知实编坑（已处理）
 
 - KSP + AGP 9 内置 Kotlin：`android.disallowKotlinSourceSets=false`。
@@ -196,8 +207,8 @@
 
 ## 下一步
 
-1. P1-07 CharacterRegistry（角色复用/别名/alias_of/兜底音色/事务）。
-2. P1-08 VoicePool 完整 / P1-09 设置模型。
+1. P1-08 VoicePool 完整（缓存 + fixture 全量锁定）。
+2. P1-09 设置模型与校验（§7.4 全部 key/default/range）。
 3. P1-10 TTS 缓存键 / P1-11 错误模型。
 
 ## 日志
@@ -219,3 +230,4 @@
 - 2026-11-08：P1-04 完成；上游样例 2 章 145/664 字对齐 Python；切章边界 9 个用例全绿。
 - 2026-11-08：P1-05 完成；最高风险清洗逻辑逐函数移植，fixture + Python 用例 17/17 全绿。
 - 2026-11-08：P1-06 完成；覆盖率校验与 Python difflib 片段级一致，11/11 全绿。
+- 2026-11-08：P1-07 完成；角色注册/复用/别名/音色锁定 10/10 全绿。
