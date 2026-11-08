@@ -2,7 +2,7 @@
 
 > 规则：每个任务完成即更新；格式见 `docs/android-execution-plan.md` §17。
 > 验证方式（2026-11-08 起）：**本机不再跑 Gradle/CI**，所有构建与测试由 GitHub Actions 执行。
-> 当前阶段：**Phase 0 — 基础与 smoke**
+> 当前阶段：**Phase 1 — 纯 Kotlin 核心**（Phase 0 门禁已通过，见 `docs/phase0-smoke.md` §5）
 
 ## Phase 0
 
@@ -19,7 +19,7 @@
 | P0-09 Release 签名 CI | ✅ done | v0.1.0 已发布；签名 release APK + checksums |
 | P0-10 进度/决策文档 | ✅ done | 本文件 + plan |
 | P0-11 真机/模拟器 smoke 清单 | ✅ done | Smoke 42447687152 绿；截图/设备信息/logcat 证据齐全 |
-| P0-12 Phase 0 门禁 | ⏳ todo | 全部 smoke 后 |
+| P0-12 Phase 0 门禁 | ✅ done | main CI 42448085423 + smoke 42448103444 全绿；tag 留待正式版本 |
 
 ## 任务记录
 
@@ -79,6 +79,16 @@
   - `logcat-smoke.txt` + 测试报告 artifact
 - 说明：`connectedDebugAndroidTest` 结束后会卸载 APK，工作流已改为测试后 `installDebug` 再截图
 
+### P0-12 Phase 0 门禁 — done
+- 完成：2026-11-08 12:57（Asia/Shanghai）
+- 分支：`feat/p0-12-phase0-gate`
+- 验证（main）：
+  - CI [42448085423](https://github.com/EstimateFaster/android-audioforge/actions/runs/42448085423) 绿（lint / unit / assembleDebug / APK 校验）
+  - Smoke [42448103444](https://github.com/EstimateFaster/android-audioforge/actions/runs/42448103444) 绿（4/4）
+- 门禁表见 `docs/phase0-smoke.md` §5；四项 smoke（启动/Room/Worker/FFmpeg）全过
+- 可选 tag `v0.0.1-spike` 未打：等 Phase 1 有可演示功能后再发正式版本
+- 结论：Phase 0 完成，进入 Phase 1
+
 ## 已知实编坑（已处理）
 
 - KSP + AGP 9 内置 Kotlin：`android.disallowKotlinSourceSets=false`。
@@ -98,8 +108,9 @@
 
 ## 下一步
 
-1. P0-12 Phase 0 门禁（CI + smoke 全绿、文档、可选 tag `v0.0.1-spike`）。
-2. 进入 P1-01（模型/枚举）与 P1-02（提示词/音色池）。
+1. P1-01 模型与枚举（`core/model/*.kt`），依赖 P0-02 ✅。
+2. P1-02 Assets：提示词 + 音色池。
+3. P1-03 TextDecoder。
 
 ## 日志
 
@@ -113,3 +124,4 @@
 - 2026-11-08：P0-06 完成；新增 emulator smoke workflow，设备上验证前台 Worker、通知可见与取消。
 - 2026-11-08：P0-07 完成；FFmpegKit `-version`、350ms 静音、两段拼接与 ffprobe 时长在 API 35 模拟器通过。
 - 2026-11-08：P0-11 完成；smoke 增加冷启动截图/设备信息/logcat；截图确认首页与 Room 卡片「通过（第 1 次，28 ms）」。
+- 2026-11-08：P0-12 门禁通过；Phase 0 完成（main CI + emulator smoke 全绿）。

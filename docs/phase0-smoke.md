@@ -52,3 +52,21 @@ gh workflow run smoke.yml --ref <branch>
 - 通知「停止」action、Media3 播放与耳机事件
 
 这些属于 P3 与发布前真机验收，不阻塞 Phase 0 门禁（执行计划 §15 P0-11）。
+
+## 5. Phase 0 门禁（P0-12）
+
+执行计划 §15 P0-12 的验收项：
+
+| 门禁项 | 结果 | 证据 |
+|---|---|---|
+| main CI 绿（lint / unit / assembleDebug / APK 校验） | ✅ | run [42448085423](https://github.com/EstimateFaster/android-audioforge/actions/runs/42448085423) |
+| debug APK 可安装并启动 | ✅ | emulator smoke |
+| Room 建库/写入/回读 | ✅ | `RoomInstrumentedTest` |
+| WorkManager `dataSync` 前台任务 + 通知 | ✅ | `ProbeWorkerInstrumentedTest`（2 用例） |
+| FFmpeg `-version` + 静音 + 拼接 | ✅ | `FfmpegInstrumentedTest` |
+| 文档更新 | ✅ | `docs/progress.md`、`docs/decisions.md`、本文件 |
+| 可选 tag `v0.0.1-spike` | 未打 | 等 Phase 1 完成后的正式版本再打 tag，避免发布无功能价值的 release |
+
+设备 smoke：run [42448103444](https://github.com/EstimateFaster/android-audioforge/actions/runs/42448103444)（main，API 35 emulator，4/4 通过）。
+
+**结论：Phase 0 门禁通过，可进入 Phase 1（纯 Kotlin 核心）。**
