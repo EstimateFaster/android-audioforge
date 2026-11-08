@@ -76,6 +76,7 @@ fun CharactersScreen(
     onRenameCharacter: (String) -> Unit = {},
     onEditAliases: (String) -> Unit = {},
     onExcludeCharacter: (String) -> Unit = {},
+    onTuneCharacter: (String) -> Unit = {},
     onParseNovel: (() -> Unit)? = null,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -92,6 +93,7 @@ fun CharactersScreen(
         onRenameCharacter = onRenameCharacter,
         onEditAliases = onEditAliases,
         onExcludeCharacter = onExcludeCharacter,
+        onTuneCharacter = onTuneCharacter,
         onParseNovel = onParseNovel,
     )
 }
@@ -120,6 +122,7 @@ fun CharactersScreen(
     onRenameCharacter: (String) -> Unit = {},
     onEditAliases: (String) -> Unit = {},
     onExcludeCharacter: (String) -> Unit = {},
+    onTuneCharacter: (String) -> Unit = {},
     onParseNovel: (() -> Unit)? = null,
 ) {
     val loadError = state.loadError
@@ -293,6 +296,7 @@ fun CharactersScreen(
                                 onRename = { onRenameCharacter(character.roleId) },
                                 onEditAliases = { onEditAliases(character.roleId) },
                                 onExclude = { onExcludeCharacter(character.roleId) },
+                                onTune = { onTuneCharacter(character.roleId) },
                             )
                         }
                     }
@@ -375,6 +379,7 @@ private fun CharacterCard(
     onRename: () -> Unit,
     onEditAliases: () -> Unit,
     onExclude: () -> Unit,
+    onTune: () -> Unit,
 ) {
     var menuExpanded by rememberSaveable(character.key) { mutableStateOf(false) }
     val shape = MaterialTheme.shapes.medium
@@ -523,6 +528,10 @@ private fun CharacterCard(
                             menuExpanded = false
                             onEditAliases()
                         },
+                        onTune = {
+                            menuExpanded = false
+                            onTune()
+                        },
                         onExclude = {
                             menuExpanded = false
                             onExclude()
@@ -540,6 +549,7 @@ private fun CharacterMenu(
     onDismiss: () -> Unit,
     onRename: () -> Unit,
     onEditAliases: () -> Unit,
+    onTune: () -> Unit,
     onExclude: () -> Unit,
 ) {
     DropdownMenu(
@@ -553,6 +563,10 @@ private fun CharacterMenu(
         DropdownMenuItem(
             text = { Text(stringResource(R.string.characters_action_edit_alias)) },
             onClick = onEditAliases,
+        )
+        DropdownMenuItem(
+            text = { Text(stringResource(R.string.characters_action_tune)) },
+            onClick = onTune,
         )
         DropdownMenuItem(
             text = {

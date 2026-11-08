@@ -12,6 +12,7 @@ import androidx.navigation.createGraph
 import androidx.navigation.navDeepLink
 import androidx.test.core.app.ApplicationProvider
 import com.estimatefaster.audioforge.R
+import com.estimatefaster.audioforge.app.AppContainer
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
@@ -54,12 +55,21 @@ class AppRouteTableTest {
         assertEquals("audioforge://project", AppDeepLink.PROJECT_BASE_PATH)
         assertEquals("audioforge://project/{novelId}", AppDeepLink.PROJECT_PATTERN)
         assertEquals("audioforge://project/7", AppDeepLink.projectDetailUri(7L))
+        assertEquals("audioforge://player", AppDeepLink.PLAYER_URI)
+        assertEquals("audioforge://player", AppDeepLink.PLAYER_PATTERN)
+        assertEquals("audioforge://player", AppDeepLink.playerUri())
     }
 
     @Test
     fun deep_link_parser_resolves_project_detail() {
         assertEquals(Route.ProjectDetail(42L), AppDeepLink.parse("audioforge://project/42"))
         assertEquals(Route.ProjectDetail(1L), AppDeepLink.parse("audioforge://PROJECT/1"))
+    }
+
+    @Test
+    fun deep_link_parser_resolves_player_without_novel_id() {
+        assertEquals(Route.Player(), AppDeepLink.parse("audioforge://player"))
+        assertEquals(Route.Player(), AppDeepLink.parse("audioforge://PLAYER"))
     }
 
     @Test
@@ -75,6 +85,10 @@ class AppRouteTableTest {
             "audioforge://project/42/extra",
             "audioforge://project/42?x=1",
             "audioforge://project/42#frag",
+            "audioforge://player/",
+            "audioforge://player/42",
+            "audioforge://player?x=1",
+            "audioforge://player#frag",
             "https://project/42",
             "audioforge://novel/42",
         )
@@ -87,7 +101,8 @@ class AppRouteTableTest {
 /**
  * P4-01 真实 NavGraph/NavController 行为测试（Robolectric，不依赖 ui-test-junit4）。
  *
- * 覆盖：默认到 Projects、切换 Tasks/Settings、pop 回 Projects、深链落到 ProjectDetail 且带 novelId。
+ * 覆盖：默认到 Projects、切换 Tasks/Settings、pop 回 Projects、深链落到
+ * ProjectDetail（带 novelId）或 Player（无参数）。
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
@@ -95,14 +110,16 @@ class AppNavigationTest {
 
     private lateinit var navController: NavHostController
     private lateinit var graph: NavGraph
+    private lateinit var container: AppContainer
 
     @Before
     fun setUp() {
         val context = ApplicationProvider.getApplicationContext<Context>()
+        container = AppContainer(context)
         navController = NavHostController(context)
         navController.navigatorProvider.addNavigator(ComposeNavigator())
         graph = navController.createGraph(startDestination = Route.Projects) {
-            appNavGraph(navController)
+            appNavGraph(navController, container)
         }
         navController.setGraph(graph, null)
     }
@@ -115,6 +132,12 @@ class AppNavigationTest {
         assertNotNull(graph.findNode<Route.Settings>())
         assertNotNull(graph.findNode<Route.ProjectDetail>())
         assertNotNull(graph.findNode<Route.ChapterList>())
+        assertNotNull(graph.findNode<Route.Script>())
+        assertNotNull(graph.findNode<Route.Characters>())
+        assertNotNull(graph.findNode<Route.Player>())
+        assertNotNull(graph.findNode<Route.Storage>())
+        assertNotNull(graph.findNode<Route.About>())
+        assertNotNull(graph.findNode<Route.Onboarding>())
     }
 
     @Test
@@ -158,6 +181,16 @@ class AppNavigationTest {
         val arguments = navController.currentBackStackEntry?.arguments
         assertNotNull(arguments)
         assertEquals(42L, arguments!!.getLong("novelId"))
+    }
+
+    @Test
+    fun deep_link_resolves_player_destination() {
+        val request = NavDeepLinkRequest.Builder
+            .fromUri(Uri.parse(AppDeepLink.PLAYER_URI))
+            .build()
+
+        assertTrue(navController.handleDeepLink(request))
+        assertTrue(navController.currentDestination!!.hasRoute<Route.Player>())
     }
 
     @Test
