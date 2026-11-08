@@ -37,7 +37,7 @@
 | P1-10 TTS 缓存键 | ✅ done | CI 42459149838 绿；`TtsCacheKeyTest` 17/17 |
 | P1-11 错误模型 | ✅ done | CI 42459176062 绿；`PipelineErrorTest` 17/17 |
 | P1-12 Golden fixtures | ✅ done（50 真实语料 BLOCKED） | CI 42459571592 绿；`GoldenFixturesTest` 5/5 |
-| P1-13 性能基准 | ⏳ todo | |
+| P1-13 性能基准 | ✅ done | CI 42459961060 绿；清洗 10.2ms / 覆盖率 300ms（153 tests 全绿） |
 | P1-14 文档与进度 | ⏳ todo | |
 | P1-15 Phase 1 门禁 | ⏳ todo | |
 
@@ -237,6 +237,22 @@
 - 怀疑：需要内容侧提供可脱敏的真实章节 txt。
 - 需要：人工提供 50 条脱敏章节；不阻塞 Phase 1 代码门禁，补语料后直接扩 `golden/`。
 
+### P1-13 性能基准 — done
+- 完成：2026-11-08 15:48（Asia/Shanghai）
+- 分支：`feat/p1-13-sanitizer-benchmark`（PR #19）
+- 提交：`2dce1c8`
+- 验证：CI [42459961060](https://github.com/EstimateFaster/android-audioforge/actions/runs/42459961060) 绿；`SanitizerBenchmarkTest` 3/3
+  - 语料 100 段 / 20,078 字符（旁白 70 / 台词 30 / 4 段引导语混合 / 2 段超长无标点）
+  - `sanitize` best 10.2ms（阈值 200ms）
+  - `coverage` best 300ms（阈值 500ms）；覆盖率 0.9989，缺失 3 条
+- 产出：`SanitizerBenchmarkTest.kt`
+
+### P1-14 文档与进度 — done
+- 完成：2026-11-08 15:55（Asia/Shanghai）
+- 分支：`docs/p1-14-finalize`
+- 内容：补齐 P1-08..P1-13 记录与测试数；`docs/decisions.md` 记录 v2 缓存键/错误码/50 语料 BLOCKED 等有意差异
+- 验收：后来者可从 progress 直接看到每任务分支/提交/CI run/遗留
+
 ## 已知实编坑（已处理）
 
 - KSP + AGP 9 内置 Kotlin：`android.disallowKotlinSourceSets=false`。
@@ -257,9 +273,9 @@
 
 ## 下一步
 
-1. P1-13 性能基准（20k 字符 / 100 段；清洗 <200ms、覆盖率 <500ms）。
-2. P1-14 文档与进度（与 Python 差异：v2 缓存键、错误码、ICU 替代）。
-3. P1-15 Phase 1 门禁（CI 全绿、无 TODO、无硬编码 Key）。
+1. P1-15 Phase 1 门禁（CI 全绿、核心域测试全绿、无 TODO/硬编码 Key）。
+2. Phase 2 起点：P2-01 Room 实体/DAO/DB。
+3. 补 P1-12 的 50 条真实章节语料（BLOCKED，待人工提供）。
 
 ## 日志
 
@@ -282,3 +298,4 @@
 - 2026-11-08：P1-06 完成；覆盖率校验与 Python difflib 片段级一致，11/11 全绿。
 - 2026-11-08：P1-07 完成；角色注册/复用/别名/音色锁定 10/10 全绿。
 - 2026-11-08：P1-08/09/10/11/12 完成；6 个 agent 并行（独立 worktree），统一 CI 验证后逐个合并。
+- 2026-11-08：P1-13/14 完成；性能基准 10.2ms/300ms，进度与决策文档补齐。
