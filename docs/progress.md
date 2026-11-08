@@ -31,7 +31,7 @@
 | P1-04 ChapterSplitter | ✅ done | CI 42449986934 绿；`ChapterSplitterTest` 9/9（含上游样例 145/664 字） |
 | P1-05 ScriptSanitizer | ✅ done | CI 42454921455 绿；`ScriptSanitizerTest` 17/17（fixture+Python 用例） |
 | P1-06 CoverageChecker | ✅ done | CI 42455322583 绿；`CoverageCheckerTest` 11/11（含 `句。第二`） |
-| P1-07 CharacterRegistry | ⏳ todo | |
+| P1-07 CharacterRegistry | 🟡 in_progress | 5 场景 + 音色锁定；等 CI |
 | P1-08 VoicePool 完整 | ⏳ todo | |
 | P1-09 设置模型与校验 | ⏳ todo | |
 | P1-10 TTS 缓存键 | ⏳ todo | |
@@ -176,6 +176,16 @@
 - 关键：移植 `difflib.SequenceMatcher(autojunk=False)` 的 longest-match/opcodes，未用 Myers，保证缺失片段与 Python 一致
 - 产出：`core/script/CoverageChecker.kt`、`CoverageCheckerTest.kt`
 
+### P1-07 CharacterRegistry — in_progress
+- 开始：2026-11-08 14:55（Asia/Shanghai）
+- 分支：`feat/p1-07-character-registry`
+- 目标：`core/script/CharacterRegistry.kt`：新角色 `role_0001` 递增、name/alias 复用、`alias_of` 合并、
+  `excluded` 跳过、音色锁定不覆盖、合法音色优先否则性别/重要度兜底
+- 依赖：P1-01 ✅、P1-02 ✅
+- 接口：`CharacterStore`（事务由 P2 的 Room 实现注入），附 `InMemoryCharacterStore` 供测试
+- 验收：5 个场景 + `registerAll`/`promptBlock`/`roleIdFor`/speed 传递
+
+## 已知实编坑（已处理）
 ## 已知实编坑（已处理）
 
 - KSP + AGP 9 内置 Kotlin：`android.disallowKotlinSourceSets=false`。
