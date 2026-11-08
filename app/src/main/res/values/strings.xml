@@ -902,4 +902,16 @@
     <string name="export_result_failure_title">导出失败的章节</string>
     <string name="export_result_failure_line">%1$s：%2$s</string>
     <string name="export_result_share_hint">分享会把这些音频一起发送给其他应用。</string>
+
+    <!-- 接线 2/2：导航入口 -->
+    <string name="project_more_chapters">章节</string>
+    <string name="project_more_characters">人物</string>
+    <string name="project_more_player">播放</string>
+    <string name="project_more_export">导出</string>
+    <string name="project_more_storage">存储</string>
+    <string name="project_more_about">关于</string>
+    <string name="settings_action_open_storage">管理存储</string>
+    <string name="settings_action_open_about">关于本应用</string>
+    <string name="settings_action_restart_onboarding">重新引导</string>
+    <string name="characters_action_tune">调参</string>
 </resources>

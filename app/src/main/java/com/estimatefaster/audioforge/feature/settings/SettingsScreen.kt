@@ -70,6 +70,9 @@ fun SettingsScreen(
     modifier: Modifier = Modifier,
     onBack: () -> Unit = {},
     onOpenLicenses: () -> Unit = {},
+    onOpenStorage: () -> Unit = {},
+    onOpenAbout: () -> Unit = {},
+    onRestartOnboarding: () -> Unit = {},
     versionName: String = BuildConfig.VERSION_NAME,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -84,6 +87,9 @@ fun SettingsScreen(
         onSetKey = viewModel::setKey,
         onClearKey = viewModel::clearKey,
         onOpenLicenses = onOpenLicenses,
+        onOpenStorage = onOpenStorage,
+        onOpenAbout = onOpenAbout,
+        onRestartOnboarding = onRestartOnboarding,
         versionName = versionName,
     )
 }
@@ -109,6 +115,9 @@ fun SettingsScreen(
     onSetKey: (SettingsKeyTarget, String) -> Unit = { _, _ -> },
     onClearKey: (SettingsKeyTarget) -> Unit = {},
     onOpenLicenses: () -> Unit = {},
+    onOpenStorage: () -> Unit = {},
+    onOpenAbout: () -> Unit = {},
+    onRestartOnboarding: () -> Unit = {},
     versionName: String = BuildConfig.VERSION_NAME,
 ) {
     // 用空串而不是可空枚举，避免 rememberSaveable 保存 null 的平台差异。
@@ -198,6 +207,9 @@ fun SettingsScreen(
                     clearTargetName = target.name
                 },
                 onOpenLicenses = onOpenLicenses,
+                onOpenStorage = onOpenStorage,
+                onOpenAbout = onOpenAbout,
+                onRestartOnboarding = onRestartOnboarding,
             )
         }
     }
@@ -258,6 +270,9 @@ private fun SettingsContent(
     onRequestSetKey: (SettingsKeyTarget) -> Unit,
     onRequestClearKey: (SettingsKeyTarget) -> Unit,
     onOpenLicenses: () -> Unit,
+    onOpenStorage: () -> Unit,
+    onOpenAbout: () -> Unit,
+    onRestartOnboarding: () -> Unit,
 ) {
     val enabled = !state.saving
 
@@ -329,12 +344,15 @@ private fun SettingsContent(
                 state = state,
                 enabled = enabled,
                 onFieldChange = onFieldChange,
+                onOpenStorage = onOpenStorage,
             )
         }
         item(key = "about") {
             AboutSection(
                 versionName = versionName,
                 onOpenLicenses = onOpenLicenses,
+                onOpenAbout = onOpenAbout,
+                onRestartOnboarding = onRestartOnboarding,
             )
         }
     }
@@ -704,6 +722,7 @@ private fun StorageSection(
     state: SettingsUiState,
     enabled: Boolean,
     onFieldChange: (SettingsField, String) -> Unit,
+    onOpenStorage: () -> Unit,
 ) {
     SettingsSection(
         title = stringResource(R.string.settings_section_storage),
@@ -718,6 +737,12 @@ private fun StorageSection(
             enabled = enabled,
             onFieldChange = onFieldChange,
         )
+        TextButton(
+            onClick = onOpenStorage,
+            modifier = Modifier.heightIn(min = 48.dp),
+        ) {
+            Text(stringResource(R.string.settings_action_open_storage))
+        }
     }
 }
 
@@ -725,6 +750,8 @@ private fun StorageSection(
 private fun AboutSection(
     versionName: String,
     onOpenLicenses: () -> Unit,
+    onOpenAbout: () -> Unit,
+    onRestartOnboarding: () -> Unit,
 ) {
     SettingsSection(
         title = stringResource(R.string.settings_section_about),
@@ -736,6 +763,12 @@ private fun AboutSection(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         TextButton(
+            onClick = onOpenAbout,
+            modifier = Modifier.heightIn(min = 48.dp),
+        ) {
+            Text(stringResource(R.string.settings_action_open_about))
+        }
+        TextButton(
             onClick = onOpenLicenses,
             modifier = Modifier.heightIn(min = 48.dp),
         ) {
@@ -746,6 +779,12 @@ private fun AboutSection(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        TextButton(
+            onClick = onRestartOnboarding,
+            modifier = Modifier.heightIn(min = 48.dp),
+        ) {
+            Text(stringResource(R.string.settings_action_restart_onboarding))
+        }
     }
 }
 

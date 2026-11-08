@@ -83,6 +83,12 @@ fun ProjectScreen(
     onRename: (String) -> Unit = {},
     onDelete: () -> Unit = {},
     batchRunnerAvailable: Boolean = false,
+    onOpenChapters: () -> Unit = {},
+    onOpenCharacters: () -> Unit = {},
+    onOpenPlayer: () -> Unit = {},
+    onOpenExport: () -> Unit = {},
+    onOpenStorage: () -> Unit = {},
+    onOpenAbout: () -> Unit = {},
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     ProjectScreen(
@@ -95,6 +101,12 @@ fun ProjectScreen(
         onRename = onRename,
         onDelete = onDelete,
         batchRunnerAvailable = batchRunnerAvailable,
+        onOpenChapters = onOpenChapters,
+        onOpenCharacters = onOpenCharacters,
+        onOpenPlayer = onOpenPlayer,
+        onOpenExport = onOpenExport,
+        onOpenStorage = onOpenStorage,
+        onOpenAbout = onOpenAbout,
     )
 }
 
@@ -120,6 +132,12 @@ fun ProjectScreen(
     onRename: (String) -> Unit = {},
     onDelete: () -> Unit = {},
     batchRunnerAvailable: Boolean = false,
+    onOpenChapters: () -> Unit = {},
+    onOpenCharacters: () -> Unit = {},
+    onOpenPlayer: () -> Unit = {},
+    onOpenExport: () -> Unit = {},
+    onOpenStorage: () -> Unit = {},
+    onOpenAbout: () -> Unit = {},
 ) {
     var menuExpanded by rememberSaveable { mutableStateOf(false) }
     var showRenameDialog by rememberSaveable { mutableStateOf(false) }
@@ -180,6 +198,50 @@ fun ProjectScreen(
                                 expanded = menuExpanded,
                                 onDismissRequest = { menuExpanded = false },
                             ) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.project_more_chapters)) },
+                                    onClick = {
+                                        menuExpanded = false
+                                        onOpenChapters()
+                                    },
+                                )
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(stringResource(R.string.project_more_characters))
+                                    },
+                                    onClick = {
+                                        menuExpanded = false
+                                        onOpenCharacters()
+                                    },
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.project_more_player)) },
+                                    onClick = {
+                                        menuExpanded = false
+                                        onOpenPlayer()
+                                    },
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.project_more_export)) },
+                                    onClick = {
+                                        menuExpanded = false
+                                        onOpenExport()
+                                    },
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.project_more_storage)) },
+                                    onClick = {
+                                        menuExpanded = false
+                                        onOpenStorage()
+                                    },
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.project_more_about)) },
+                                    onClick = {
+                                        menuExpanded = false
+                                        onOpenAbout()
+                                    },
+                                )
                                 DropdownMenuItem(
                                     text = { Text(stringResource(R.string.project_more_rename)) },
                                     onClick = {

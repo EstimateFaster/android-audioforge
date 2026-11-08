@@ -74,13 +74,14 @@ fun TasksScreen(
     modifier: Modifier = Modifier,
     onOpenProject: (Long) -> Unit = {},
     taskRunnerAvailable: Boolean = false,
+    onStop: (Long) -> Unit = viewModel::stop,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     TasksScreen(
         state = state,
         modifier = modifier,
         onRetry = viewModel::retry,
-        onStop = viewModel::stop,
+        onStop = onStop,
         onDismissActionError = viewModel::dismissActionError,
         onOpenProject = onOpenProject,
         taskRunnerAvailable = taskRunnerAvailable,
