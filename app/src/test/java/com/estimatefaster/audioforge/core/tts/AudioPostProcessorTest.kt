@@ -56,7 +56,7 @@ class AudioPostProcessorTest {
         val processor = processor(RecordingRunner())
 
         assertEquals(
-            "asetrate=44100*2^(2/12),aresample=44100,atempo=2^(-2/12),volume=0.8",
+            "aresample=44100,asetrate=44100*2^(2/12),aresample=44100,atempo=2^(-2/12),volume=0.8",
             processor.buildFilter(2.0, 0.8),
         )
     }
@@ -66,7 +66,7 @@ class AudioPostProcessorTest {
         val processor = processor(RecordingRunner())
 
         assertEquals(
-            "asetrate=44100*2^(-3.5/12),aresample=44100,atempo=2^(3.5/12),volume=1.25",
+            "aresample=44100,asetrate=44100*2^(-3.5/12),aresample=44100,atempo=2^(3.5/12),volume=1.25,alimiter=limit=0.95",
             processor.buildFilter(-3.5, 1.25),
         )
     }
@@ -77,11 +77,11 @@ class AudioPostProcessorTest {
 
         // 0.0001 不能变成 1.0E-4；整数倍不能变成 1.0。
         assertEquals(
-            "asetrate=44100*2^(0/12),aresample=44100,atempo=2^(0/12),volume=0.0001",
+            "aresample=44100,asetrate=44100*2^(0/12),aresample=44100,atempo=2^(0/12),volume=0.0001",
             processor.buildFilter(0.0, 0.0001),
         )
         assertEquals(
-            "asetrate=44100*2^(12/12),aresample=44100,atempo=2^(-12/12),volume=1",
+            "aresample=44100,asetrate=44100*2^(12/12),aresample=44100,atempo=2^(-12/12),volume=1",
             processor.buildFilter(12.0, 1.0),
         )
     }
@@ -127,7 +127,7 @@ class AudioPostProcessorTest {
         assertTrue(command.startsWith("-y -i \"${input.absolutePath}\""))
         assertTrue(
             command.contains(
-                "-af \"asetrate=44100*2^(2/12),aresample=44100," +
+                "-af \"aresample=44100,asetrate=44100*2^(2/12),aresample=44100," +
                     "atempo=2^(-2/12),volume=0.5\"",
             ),
         )
@@ -151,13 +151,13 @@ class AudioPostProcessorTest {
         assertTrue(
             "第一次是完整滤镜",
             runner.commands[0].contains(
-                "asetrate=44100*2^(2/12),aresample=44100,atempo=2^(-2/12),volume=0.8",
+                "aresample=44100,asetrate=44100*2^(2/12),aresample=44100,atempo=2^(-2/12),volume=0.8",
             ),
         )
         assertTrue(
             "兜底只用 volume（pitch=0）",
             runner.commands[1].contains(
-                "asetrate=44100*2^(0/12),aresample=44100,atempo=2^(0/12),volume=0.8",
+                "aresample=44100,asetrate=44100*2^(0/12),aresample=44100,atempo=2^(0/12),volume=0.8",
             ),
         )
         assertArrayEquals(FAKE_MP3, output.readBytes())
