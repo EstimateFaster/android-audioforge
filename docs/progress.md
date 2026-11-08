@@ -30,7 +30,7 @@
 | P1-03 TextDecoder | ✅ done | CI 42449492657 绿；`TextDecoderTest` 14/14 |
 | P1-04 ChapterSplitter | ✅ done | CI 42449986934 绿；`ChapterSplitterTest` 9/9（含上游样例 145/664 字） |
 | P1-05 ScriptSanitizer | ✅ done | CI 42454921455 绿；`ScriptSanitizerTest` 17/17（fixture+Python 用例） |
-| P1-06 CoverageChecker | ⏳ todo | |
+| P1-06 CoverageChecker | 🟡 in_progress | difflib 移植 + fixture 3 条；等 CI |
 | P1-07 CharacterRegistry | ⏳ todo | |
 | P1-08 VoicePool 完整 | ⏳ todo | |
 | P1-09 设置模型与校验 | ⏳ todo | |
@@ -165,6 +165,15 @@
   - 上游 `tests/test_analyzer.py` 清洗用例：剥离/保留动作、残渣、单边引号、混合段拆分、台词去重、旁白合并、超长拆分
   - 写断言前用上游 Python 实跑校准，修正了两处「想当然」期望（`阿甲` 残渣保留、相邻动作旁白合并）
 - 产出：`core/script/ScriptSanitizer.kt`、`core/model/ScriptSegment.kt`、`ScriptSanitizerTest.kt`
+
+### P1-06 CoverageChecker — in_progress
+- 开始：2026-11-08 14:40（Asia/Shanghai）
+- 分支：`feat/p1-06-coverage-checker`
+- 目标：`core/script/CoverageChecker.kt`：归一化（去空白/引号）、设计内丢失过滤、
+  覆盖率 = 1 - 有效缺失/原文长度、`missingForRepair(≤6)`
+- 依赖：P1-05 ✅
+- 验收：fixture `coverage` 3 条（含 `句。第二` 缺失片段）逐条一致；上游覆盖率用例
+- 关键：移植 `difflib.SequenceMatcher`（autojunk=False）的 longest-match/opcodes，保证缺失片段与 Python 一致
 
 ## 已知实编坑（已处理）
 
