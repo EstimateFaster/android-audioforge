@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- UX 重做：存储页 / 关于页新增文案。复用 strings.xml 中的既有 key。 -->
+    <string name="storage_segment_bar_description">存储分区占比：音频 %1$d%%，导入 %2$d%%，导出 %3$d%%</string>
+    <string name="storage_share_percent">%1$d%%</string>
+    <string name="storage_scan_failures_pill">统计不完整</string>
+    <string name="about_storage_status_ok">可读取</string>
+</resources>
