@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Forge Framework v1 导航壳 + 首页（书架）文案。
+  只放本轮新增 key；旧 key 一律保留在 strings.xml，避免影响既有页面与测试。
+-->
+<resources>
+    <!-- 主导航：设计稿 3 tabs = 书架 / 任务 / 设置 -->
+    <string name="ux_nav_tab_library">书架</string>
+    <string name="ux_nav_tab_tasks">任务</string>
+    <string name="ux_nav_tab_settings">设置</string>
+
+    <!-- 迷你播放器 -->
+    <string name="ux_mini_player_hint">播放会话接入后显示当前章节</string>
+    <string name="ux_mini_player_play">播放</string>
+
+    <!-- 首页诊断区 -->
+    <string name="ux_home_diagnostics_title">诊断</string>
+    <string name="ux_home_diagnostics_subtitle">本机能力自检 · 仅 Debug 构建显示</string>
+    <string name="ux_home_status_idle">待运行</string>
+    <string name="ux_home_status_running">运行中</string>
+    <string name="ux_home_status_passed">通过</string>
+    <string name="ux_home_status_failed">失败</string>
+    <string name="ux_home_action_details_collapse">收起</string>
+</resources>
