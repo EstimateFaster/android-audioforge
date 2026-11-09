@@ -1,61 +1,69 @@
 package com.estimatefaster.audioforge.feature.storage
 
 import android.content.res.Configuration
+import androidx.annotation.DrawableRes
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.LinearWavyProgressIndicator
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.estimatefaster.audioforge.R
-import com.estimatefaster.audioforge.ui.components.EmptyState
-import com.estimatefaster.audioforge.ui.components.ErrorBanner
-import com.estimatefaster.audioforge.ui.components.ErrorState
-import com.estimatefaster.audioforge.ui.components.LoadingState
-import com.estimatefaster.audioforge.ui.components.SectionHeader
+import com.estimatefaster.audioforge.ui.forge.ForgeCard
+import com.estimatefaster.audioforge.ui.forge.ForgeEmpty
+import com.estimatefaster.audioforge.ui.forge.ForgeError
+import com.estimatefaster.audioforge.ui.forge.ForgeIcon
+import com.estimatefaster.audioforge.ui.forge.ForgeIconAction
+import com.estimatefaster.audioforge.ui.forge.ForgeIcons
+import com.estimatefaster.audioforge.ui.forge.ForgeListRow
+import com.estimatefaster.audioforge.ui.forge.ForgeLoading
+import com.estimatefaster.audioforge.ui.forge.ForgePrimaryAction
+import com.estimatefaster.audioforge.ui.forge.ForgeSecondaryAction
+import com.estimatefaster.audioforge.ui.forge.ForgeSectionHeader
+import com.estimatefaster.audioforge.ui.forge.ForgeSegmented
+import com.estimatefaster.audioforge.ui.forge.ForgeTopBar
+import com.estimatefaster.audioforge.ui.forge.ForgeWavyProgress
 import com.estimatefaster.audioforge.ui.theme.AudioForgeTheme
+import com.estimatefaster.audioforge.ui.theme.spacing
 import kotlin.math.roundToInt
 
 /**
- * 存储页（P5-09 / 执行计划 §12.4 S14、§15 P5-09）。
+ * 存储页（P5-09 / 执行计划 §12.4 S14、§15 P5-09），Forge Framework v1 重做。
  *
  * 有状态入口：收集 [StorageViewModel.state] 后委托给无状态版本；页面不直接访问
  * 文件系统、DB 或 `StorageMaintenance`，所有扫描/清理都通过 ViewModel。
@@ -84,17 +92,19 @@ fun StorageScreen(
 }
 
 /**
- * 无状态存储页。
+ * 无状态存储页（Forge Framework v1）。
  *
- * 布局：
- * - 顶部：返回、标题、刷新；
- * - 空间概览卡：总占用、可用空间、音频/导入/导出分区、文件数；
- * - 按项目卡：项目名、占用、章节数；已删除项目的残留以「未关联项目」展示；
- * - 保留期卡：7..365 天滑块 + 数字输入，非法输入就地提示；
- * - 清理卡：清理孤儿 / 清理过期，确认后显示进度与释放字节/删除数/失败数；
- * - 空态、加载、错误复用 P4-02 组件。
+ * 布局严格对齐 `docs/prototype/forge-framework.html` 的 Storage 页：
+ * - ForgeTopBar：返回图标、标题、占用副标题、刷新图标操作；
+ * - Hero 卡：总占用 / 容量、Wavy 进度、三色分区条与图例、文件数、扫描失败提示；
+ * - 项目占用：ForgeListRow（图标 + 标题 + 章节数 + 占用），按状态层顺序展示；
+ * - 保留期：7/30/90 快捷 chip、滑块、数字输入、应用按钮；
+ * - 清理：孤儿 / 过期两条「图标 + 文案」次操作，确认弹窗后才执行；
+ *   清理中显示进度行，结果卡展示释放量/删除数/失败数并可重试或关闭。
+ *
+ * 所有数字与文案来自 [StorageUiState] 与 `strings.xml` / `strings_ux_v2_storage_about.xml`，
+ * 本文件不做统计、不做清理，也不直接读写文件。
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StorageScreen(
     state: StorageUiState,
@@ -110,71 +120,76 @@ fun StorageScreen(
     onRetryCleanup: () -> Unit = {},
     onDismissResult: () -> Unit = {},
 ) {
+    val overview = state.overview
+
     Scaffold(
         modifier = modifier,
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
-            TopAppBar(
-                navigationIcon = {
-                    TextButton(
-                        onClick = onBack,
-                        modifier = Modifier.heightIn(min = 48.dp),
-                    ) {
-                        Text(stringResource(R.string.action_back))
-                    }
-                },
-                title = {
-                    Text(
-                        text = stringResource(R.string.storage_title),
-                        modifier = Modifier.semantics { heading() },
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.SemiBold,
+            ForgeTopBar(
+                title = stringResource(R.string.storage_title),
+                subtitle = if (overview == null) {
+                    stringResource(R.string.storage_overview_subtitle)
+                } else {
+                    stringResource(
+                        R.string.storage_v2_topbar_subtitle,
+                        formatByteSize(overview.totalBytes),
+                        formatByteSize(overview.totalBytes + overview.usableBytes),
                     )
                 },
+                navigationIcon = ForgeIcons.Back,
+                navigationDescription = stringResource(R.string.action_back),
+                onNavigation = onBack,
                 actions = {
-                    TextButton(
+                    ForgeIconAction(
+                        icon = ForgeIcons.Refresh,
+                        contentDescription = stringResource(R.string.storage_v2_refresh_action),
                         onClick = onRefresh,
-                        enabled = !state.isBusy,
-                        modifier = Modifier.heightIn(min = 48.dp),
-                    ) {
-                        Text(stringResource(R.string.action_refresh))
-                    }
+                    )
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
-                ),
             )
         },
     ) { padding ->
-        when {
-            state.loading && state.overview == null -> LoadingState(
-                message = stringResource(R.string.storage_loading),
-                modifier = Modifier.padding(padding),
-            )
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding),
+        ) {
+            when {
+                overview == null && state.loading -> ForgeLoading(
+                    label = stringResource(R.string.storage_loading),
+                )
 
-            state.loadError != null && state.overview == null -> Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-                contentAlignment = Alignment.Center,
-            ) {
-                ErrorState(
-                    message = stringResource(R.string.storage_load_error, state.loadError.orEmpty()),
+                overview == null && state.loadError != null -> ForgeError(
+                    message = stringResource(
+                        R.string.storage_load_error,
+                        state.loadError.orEmpty(),
+                    ),
                     onRetry = onRefresh,
+                    retryLabel = stringResource(R.string.action_retry),
+                )
+
+                overview == null || state.isEmpty -> ForgeEmpty(
+                    icon = ForgeIcons.Storage,
+                    title = stringResource(R.string.storage_empty_title),
+                    description = stringResource(R.string.storage_v2_empty_description),
+                    actionIcon = ForgeIcons.Refresh,
+                    actionLabel = stringResource(R.string.storage_empty_action),
+                    onAction = onRefresh,
+                )
+
+                else -> StorageContent(
+                    state = state,
+                    overview = overview,
+                    onRefresh = onRefresh,
+                    onRetentionInputChange = onRetentionInputChange,
+                    onRetentionSliderChange = onRetentionSliderChange,
+                    onRetentionCommit = onRetentionCommit,
+                    onRequestCleanup = onRequestCleanup,
+                    onRetryCleanup = onRetryCleanup,
+                    onDismissResult = onDismissResult,
                 )
             }
-
-            else -> StorageContent(
-                state = state,
-                contentPadding = padding,
-                onRefresh = onRefresh,
-                onRetentionInputChange = onRetentionInputChange,
-                onRetentionSliderChange = onRetentionSliderChange,
-                onRetentionCommit = onRetentionCommit,
-                onRequestCleanup = onRequestCleanup,
-                onRetryCleanup = onRetryCleanup,
-                onDismissResult = onDismissResult,
-            )
         }
     }
 
@@ -192,7 +207,7 @@ fun StorageScreen(
 @Composable
 private fun StorageContent(
     state: StorageUiState,
-    contentPadding: PaddingValues,
+    overview: StorageOverview,
     onRefresh: () -> Unit,
     onRetentionInputChange: (String) -> Unit,
     onRetentionSliderChange: (Int) -> Unit,
@@ -201,23 +216,26 @@ private fun StorageContent(
     onRetryCleanup: () -> Unit,
     onDismissResult: () -> Unit,
 ) {
-    val overview = state.overview
+    val spacing = MaterialTheme.spacing
+    val refreshingDescription = stringResource(R.string.storage_loading)
 
     LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(contentPadding),
-        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(horizontal = spacing.lg, vertical = spacing.md),
+        verticalArrangement = Arrangement.spacedBy(spacing.md),
     ) {
         if (state.isLoading) {
             item(key = "refreshing") {
-                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                LinearWavyProgressIndicator(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .semantics { contentDescription = refreshingDescription },
+                )
             }
         }
         if (state.loadError != null) {
             item(key = "load-error") {
-                ErrorBanner(
+                LoadErrorCard(
                     message = stringResource(
                         R.string.storage_load_error,
                         state.loadError.orEmpty(),
@@ -226,25 +244,39 @@ private fun StorageContent(
                 )
             }
         }
-        if (overview != null) {
-            if (state.isEmpty) {
-                item(key = "empty") {
-                    EmptyState(
-                        title = stringResource(R.string.storage_empty_title),
-                        description = stringResource(R.string.storage_empty_description),
-                        actionText = stringResource(R.string.storage_empty_action),
-                        onAction = onRefresh,
-                    )
-                }
-            } else {
-                item(key = "overview") {
-                    OverviewCard(overview = overview)
-                }
-                item(key = "projects") {
-                    ProjectsCard(projects = overview.projects)
-                }
+
+        item(key = "hero") {
+            StorageHeroCard(overview = overview)
+        }
+
+        item(key = "projects-header") {
+            ForgeSectionHeader(
+                title = stringResource(R.string.storage_projects_title),
+                subtitle = stringResource(
+                    R.string.storage_projects_subtitle,
+                    overview.projects.size,
+                ),
+                actionIcon = ForgeIcons.Refresh,
+                actionDescription = stringResource(R.string.storage_v2_projects_refresh),
+                onAction = onRefresh,
+            )
+        }
+        if (overview.projects.isEmpty()) {
+            item(key = "projects-empty") {
+                NoteRow(
+                    icon = ForgeIcons.Info,
+                    text = stringResource(R.string.storage_projects_empty),
+                )
+            }
+        } else {
+            items(
+                items = overview.projects,
+                key = { project -> "project-${project.novelId}" },
+            ) { project ->
+                ProjectUsageRow(project = project)
             }
         }
+
         item(key = "retention") {
             RetentionCard(
                 state = state,
@@ -253,78 +285,110 @@ private fun StorageContent(
                 onCommit = onRetentionCommit,
             )
         }
-        if (overview != null && (!state.isEmpty || state.hasResult)) {
-            item(key = "cleanup") {
-                CleanupCard(
-                    state = state,
-                    onRequestCleanup = onRequestCleanup,
-                    onRetryCleanup = onRetryCleanup,
-                    onDismissResult = onDismissResult,
-                )
-            }
+
+        item(key = "cleanup") {
+            CleanupCard(
+                state = state,
+                onRequestCleanup = onRequestCleanup,
+                onRetryCleanup = onRetryCleanup,
+                onDismissResult = onDismissResult,
+            )
         }
     }
 }
 
+// ---------------------------------------------------------------------------
+// Hero：总占用、Wavy 进度、三色分区条与图例
+// ---------------------------------------------------------------------------
+
 @Composable
-private fun OverviewCard(overview: StorageOverview) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+private fun StorageHeroCard(overview: StorageOverview) {
+    val spacing = MaterialTheme.spacing
+    val capacity = overview.totalBytes + overview.usableBytes
+    val usedRatio = if (capacity <= 0L) {
+        0f
+    } else {
+        (overview.totalBytes.toDouble() / capacity.toDouble()).toFloat().coerceIn(0f, 1f)
+    }
+    val usedPercent = (usedRatio * 100f).roundToInt()
+
+    ForgeCard {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.Bottom,
         ) {
-            SectionHeader(
-                title = stringResource(R.string.storage_overview_title),
-                subtitle = stringResource(R.string.storage_overview_subtitle),
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.Bottom,
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = stringResource(R.string.storage_total_used),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Text(
-                        text = formatByteSize(overview.totalBytes),
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold,
-                    )
-                }
-                Column(horizontalAlignment = Alignment.End) {
-                    Text(
-                        text = stringResource(R.string.storage_free_space),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Text(
-                        text = formatByteSize(overview.usableBytes),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(R.string.storage_total_used),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    text = formatByteSize(overview.totalBytes),
+                    style = MaterialTheme.typography.displaySmallEmphasized,
+                )
             }
-            HorizontalDivider()
+            Column(horizontalAlignment = Alignment.End) {
+                Text(
+                    text = stringResource(R.string.storage_free_space),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    text = formatByteSize(overview.usableBytes),
+                    style = MaterialTheme.typography.titleMediumEmphasized,
+                )
+            }
+        }
+
+        Text(
+            text = stringResource(R.string.storage_v2_hero_caption),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+
+        ForgeWavyProgress(progress = usedRatio)
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Text(
+                text = stringResource(R.string.storage_v2_used_percent, usedPercent),
+                style = MaterialTheme.typography.labelMediumEmphasized,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            Text(
+                text = stringResource(R.string.storage_file_count, overview.fileCount),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+
+        PartitionBar(overview = overview)
+
+        Column(verticalArrangement = Arrangement.spacedBy(spacing.xs)) {
             overview.areas.forEach { usage ->
-                AreaRow(
-                    label = areaLabel(usage.area),
-                    bytes = usage.bytes,
+                PartitionLegendRow(
+                    usage = usage,
                     share = overview.shareOf(usage.area),
                 )
             }
-            Text(
-                text = stringResource(R.string.storage_file_count, overview.fileCount),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            if (overview.scanFailureCount > 0) {
+        }
+
+        if (overview.scanFailureCount > 0) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .semantics(mergeDescendants = true) {},
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(spacing.sm),
+            ) {
+                ForgeIcon(
+                    icon = ForgeIcons.TriangleAlert,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error,
+                )
                 Text(
                     text = stringResource(
                         R.string.storage_scan_failures,
@@ -338,66 +402,35 @@ private fun OverviewCard(overview: StorageOverview) {
     }
 }
 
+/** 音频 / 导入 / 导出的三色分区条；无占用时只显示轨道。 */
 @Composable
-private fun AreaRow(
-    label: String,
-    bytes: Long,
-    share: Float,
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Row(modifier = Modifier.fillMaxWidth()) {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.weight(1f),
-            )
-            Text(
-                text = formatByteSize(bytes),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        val shareDescription = stringResource(
-            R.string.storage_area_progress_content_description,
-            label,
-            (share.coerceIn(0f, 1f) * 100f).roundToInt(),
-        )
-        LinearProgressIndicator(
-            progress = { share },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(4.dp)
-                .semantics { contentDescription = shareDescription },
-        )
-    }
-}
+private fun PartitionBar(overview: StorageOverview) {
+    val shares = overview.areas.map { usage -> overview.shareOf(usage.area) }
+    val description = stringResource(
+        R.string.storage_v2_partition_bar_description,
+        (shares.getOrElse(0) { 0f } * 100f).roundToInt(),
+        (shares.getOrElse(1) { 0f } * 100f).roundToInt(),
+        (shares.getOrElse(2) { 0f } * 100f).roundToInt(),
+    )
 
-@Composable
-private fun ProjectsCard(projects: List<StorageProjectUsage>) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(10.dp)
+            .clip(MaterialTheme.shapes.small)
+            .background(MaterialTheme.colorScheme.surfaceContainerHighest)
+            .semantics { contentDescription = description },
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            SectionHeader(
-                title = stringResource(R.string.storage_projects_title),
-                subtitle = stringResource(R.string.storage_projects_subtitle, projects.size),
-            )
-            if (projects.isEmpty()) {
-                Text(
-                    text = stringResource(R.string.storage_projects_empty),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            } else {
-                projects.forEachIndexed { index, project ->
-                    if (index > 0) HorizontalDivider()
-                    ProjectRow(project = project)
+        if (overview.totalBytes > 0L) {
+            overview.areas.forEach { usage ->
+                val share = overview.shareOf(usage.area)
+                if (share > 0f) {
+                    Box(
+                        modifier = Modifier
+                            .weight(share)
+                            .fillMaxHeight()
+                            .background(areaColor(usage.area)),
+                    )
                 }
             }
         }
@@ -405,41 +438,65 @@ private fun ProjectsCard(projects: List<StorageProjectUsage>) {
 }
 
 @Composable
-private fun ProjectRow(project: StorageProjectUsage) {
+private fun PartitionLegendRow(usage: StorageAreaUsage, share: Float) {
+    val spacing = MaterialTheme.spacing
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(spacing.sm),
+    ) {
+        Box(
+            modifier = Modifier
+                .size(8.dp)
+                .clip(CircleShape)
+                .background(areaColor(usage.area)),
+        )
+        ForgeIcon(
+            icon = areaIcon(usage.area),
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            text = areaLabel(usage.area),
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.weight(1f),
+        )
+        Text(
+            text = stringResource(
+                R.string.storage_v2_partition_size_share,
+                formatByteSize(usage.bytes),
+                (share * 100f).roundToInt(),
+            ),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+// ---------------------------------------------------------------------------
+// 项目占用
+// ---------------------------------------------------------------------------
+
+@Composable
+private fun ProjectUsageRow(project: StorageProjectUsage) {
     val title = project.title
         ?: stringResource(R.string.storage_project_unknown, project.novelId)
-    val meta = if (project.chapterCount > 0) {
+    val subtitle = if (project.chapterCount > 0) {
         stringResource(R.string.storage_project_chapters, project.chapterCount)
     } else {
         stringResource(R.string.storage_project_no_chapters)
     }
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(min = 48.dp)
-            .semantics(mergeDescendants = true) {},
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-            )
-            Text(
-                text = meta,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        Spacer(Modifier.width(12.dp))
-        Text(
-            text = formatByteSize(project.bytes),
-            style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.primary,
-        )
-    }
+    ForgeListRow(
+        icon = if (project.title != null) ForgeIcons.BookOpen else ForgeIcons.FolderOpen,
+        title = title,
+        subtitle = subtitle,
+        trailingText = formatByteSize(project.bytes),
+    )
 }
+
+// ---------------------------------------------------------------------------
+// 保留期：快捷 chip + 滑块 + 数字输入 + 应用
+// ---------------------------------------------------------------------------
 
 @Composable
 private fun RetentionCard(
@@ -448,74 +505,87 @@ private fun RetentionCard(
     onSliderChange: (Int) -> Unit,
     onCommit: () -> Unit,
 ) {
+    val spacing = MaterialTheme.spacing
     val errorText = retentionErrorText(state.retentionError)
     val sliderDescription = stringResource(
         R.string.storage_retention_slider_description,
         state.retentionDays,
     )
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+    val quickOptions = QUICK_RETENTION_DAYS.map { days ->
+        ForgeIcons.Clock to stringResource(R.string.storage_v2_retention_day_option, days)
+    }
+
+    ForgeCard {
+        ForgeSectionHeader(
+            title = stringResource(R.string.storage_retention_title),
+            subtitle = stringResource(R.string.storage_v2_retention_section_subtitle),
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            SectionHeader(
-                title = stringResource(R.string.storage_retention_title),
-                subtitle = stringResource(R.string.storage_retention_subtitle),
+            Text(
+                text = stringResource(R.string.storage_retention_value, state.retentionDays),
+                style = MaterialTheme.typography.titleMediumEmphasized,
+                modifier = Modifier.weight(1f),
             )
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = stringResource(
-                        R.string.storage_retention_value,
-                        state.retentionDays,
-                    ),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.weight(1f),
-                )
-                Text(
-                    text = stringResource(R.string.storage_retention_range),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            Slider(
-                value = state.retentionDays.toFloat(),
-                onValueChange = { value -> onSliderChange(value.roundToInt()) },
-                onValueChangeFinished = onCommit,
-                valueRange = MIN_RETENTION_DAYS.toFloat()..MAX_RETENTION_DAYS.toFloat(),
-                enabled = !state.isBusy,
-                modifier = Modifier.semantics {
-                    contentDescription = sliderDescription
-                },
-            )
-            OutlinedTextField(
-                value = state.retentionInput,
-                onValueChange = onInputChange,
-                modifier = Modifier.fillMaxWidth(),
-                enabled = !state.isBusy,
-                label = { Text(stringResource(R.string.storage_retention_label)) },
-                singleLine = true,
-                isError = errorText != null,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                supportingText = {
-                    Text(
-                        text = errorText ?: stringResource(R.string.storage_retention_hint),
-                        color = if (errorText != null) {
-                            MaterialTheme.colorScheme.error
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        },
-                    )
-                },
+            Text(
+                text = stringResource(R.string.storage_retention_range),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+        ForgeSegmented(
+            options = quickOptions,
+            selectedIndex = QUICK_RETENTION_DAYS.indexOf(state.retentionDays),
+            onSelect = { index ->
+                QUICK_RETENTION_DAYS.getOrNull(index)?.let { days ->
+                    onSliderChange(days)
+                    onCommit()
+                }
+            },
+        )
+        Slider(
+            value = state.retentionDays.toFloat(),
+            onValueChange = { value -> onSliderChange(value.roundToInt()) },
+            onValueChangeFinished = onCommit,
+            valueRange = MIN_RETENTION_DAYS.toFloat()..MAX_RETENTION_DAYS.toFloat(),
+            enabled = !state.isBusy,
+            modifier = Modifier.semantics { contentDescription = sliderDescription },
+        )
+        OutlinedTextField(
+            value = state.retentionInput,
+            onValueChange = onInputChange,
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !state.isBusy,
+            singleLine = true,
+            label = { Text(stringResource(R.string.storage_retention_label)) },
+            isError = errorText != null,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            supportingText = {
+                Text(
+                    text = errorText ?: stringResource(R.string.storage_v2_retention_hint),
+                    color = if (errorText != null) {
+                        MaterialTheme.colorScheme.error
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                )
+            },
+        )
+        ForgePrimaryAction(
+            icon = ForgeIcons.Check,
+            label = stringResource(R.string.storage_v2_retention_apply),
+            onClick = onCommit,
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !state.isBusy && state.retentionError == null,
+        )
     }
 }
+
+// ---------------------------------------------------------------------------
+// 清理：确认 → 进度 → 结果
+// ---------------------------------------------------------------------------
 
 @Composable
 private fun CleanupCard(
@@ -524,128 +594,136 @@ private fun CleanupCard(
     onRetryCleanup: () -> Unit,
     onDismissResult: () -> Unit,
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            SectionHeader(
-                title = stringResource(R.string.storage_cleanup_title),
-                subtitle = stringResource(R.string.storage_cleanup_subtitle),
-            )
-            CleanupActionRow(
-                title = stringResource(R.string.storage_cleanup_orphans_title),
-                description = stringResource(R.string.storage_cleanup_orphans_desc),
-                meta = stringResource(
-                    R.string.storage_cleanup_meta,
-                    state.overview?.orphanCount ?: 0,
-                    formatByteSize(state.overview?.orphanBytes ?: 0L),
-                ),
-                actionText = stringResource(R.string.storage_action_clean_orphans),
-                enabled = state.canCleanOrphans && !state.isBusy,
-                onClick = { onRequestCleanup(StorageCleanupKind.ORPHANS) },
-            )
-            HorizontalDivider()
-            CleanupActionRow(
-                title = stringResource(R.string.storage_cleanup_expired_title),
-                description = stringResource(
-                    R.string.storage_cleanup_expired_desc,
-                    state.retentionDays,
-                ),
-                meta = stringResource(
-                    R.string.storage_cleanup_meta,
-                    state.overview?.expiredCount ?: 0,
-                    formatByteSize(state.overview?.expiredBytes ?: 0L),
-                ),
-                actionText = stringResource(R.string.storage_action_clean_expired),
-                enabled = state.canCleanExpired && !state.isBusy,
-                onClick = { onRequestCleanup(StorageCleanupKind.EXPIRED) },
-            )
-            Text(
-                text = stringResource(R.string.storage_expired_protected),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+    val overview = state.overview
+
+    ForgeCard {
+        ForgeSectionHeader(
+            title = stringResource(R.string.storage_cleanup_title),
+            subtitle = stringResource(R.string.storage_v2_cleanup_section_subtitle),
+        )
+
+        CleanupBlock(
+            icon = ForgeIcons.Trash,
+            title = stringResource(R.string.storage_cleanup_orphans_title),
+            description = stringResource(R.string.storage_cleanup_orphans_desc),
+            meta = stringResource(
+                R.string.storage_cleanup_meta,
+                overview?.orphanCount ?: 0,
+                formatByteSize(overview?.orphanBytes ?: 0L),
+            ),
+            actionLabel = stringResource(R.string.storage_action_clean_orphans),
+            enabled = state.canCleanOrphans,
+            danger = false,
+            onClick = { onRequestCleanup(StorageCleanupKind.ORPHANS) },
+        )
+
+        HorizontalDivider()
+
+        CleanupBlock(
+            icon = ForgeIcons.Clock,
+            title = stringResource(R.string.storage_cleanup_expired_title),
+            description = stringResource(
+                R.string.storage_cleanup_expired_desc,
+                state.retentionDays,
+            ),
+            meta = stringResource(
+                R.string.storage_cleanup_meta,
+                overview?.expiredCount ?: 0,
+                formatByteSize(overview?.expiredBytes ?: 0L),
+            ),
+            actionLabel = stringResource(R.string.storage_action_clean_expired),
+            enabled = state.canCleanExpired,
+            danger = true,
+            onClick = { onRequestCleanup(StorageCleanupKind.EXPIRED) },
+        )
+
+        NoteRow(
+            icon = ForgeIcons.Lock,
+            text = stringResource(R.string.storage_expired_protected),
+        )
+
+        val cleaning = state.cleaning
+        when {
+            cleaning != null -> CleaningRow(kind = cleaning)
+            state.hasResult -> CleanupResultSection(
+                state = state,
+                onRetryCleanup = onRetryCleanup,
+                onDismissResult = onDismissResult,
             )
 
-            val cleaning = state.cleaning
-            if (cleaning != null) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .semantics { liveRegion = LiveRegionMode.Polite },
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    LinearProgressIndicator(modifier = Modifier.weight(1f))
-                    Text(
-                        text = cleaningLabel(cleaning),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            } else if (state.hasResult) {
-                HorizontalDivider()
-                CleanupResultSection(
-                    state = state,
-                    onRetryCleanup = onRetryCleanup,
-                    onDismissResult = onDismissResult,
-                )
-            } else {
-                Text(
-                    text = stringResource(R.string.storage_cleanup_hint),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
+            else -> NoteRow(
+                icon = ForgeIcons.Info,
+                text = stringResource(R.string.storage_cleanup_hint),
+            )
         }
     }
 }
 
 @Composable
-private fun CleanupActionRow(
+private fun CleanupBlock(
+    @DrawableRes icon: Int,
     title: String,
     description: String,
     meta: String,
-    actionText: String,
+    actionLabel: String,
     enabled: Boolean,
+    danger: Boolean,
     onClick: () -> Unit,
 ) {
+    val spacing = MaterialTheme.spacing
+    Column(verticalArrangement = Arrangement.spacedBy(spacing.sm)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(spacing.md),
+        ) {
+            IconBubble(icon = icon, danger = danger)
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleSmallEmphasized,
+                )
+                Text(
+                    text = description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    text = meta,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = if (danger) {
+                        MaterialTheme.colorScheme.error
+                    } else {
+                        MaterialTheme.colorScheme.primary
+                    },
+                )
+            }
+        }
+        ForgeSecondaryAction(
+            icon = icon,
+            label = actionLabel,
+            onClick = onClick,
+            modifier = Modifier.fillMaxWidth(),
+            enabled = enabled,
+            danger = danger,
+        )
+    }
+}
+
+@Composable
+private fun CleaningRow(kind: StorageCleanupKind) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .heightIn(min = 48.dp),
+            .semantics { liveRegion = LiveRegionMode.Polite },
         verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.md),
     ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-            )
-            Text(
-                text = description,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Text(
-                text = meta,
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.primary,
-            )
-        }
-        Spacer(Modifier.width(12.dp))
-        FilledTonalButton(
-            onClick = onClick,
-            enabled = enabled,
-            modifier = Modifier.heightIn(min = 48.dp),
-        ) {
-            Text(actionText)
-        }
+        LoadingIndicator(modifier = Modifier.size(20.dp))
+        Text(
+            text = cleaningLabel(kind),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 
@@ -655,106 +733,138 @@ private fun CleanupResultSection(
     onRetryCleanup: () -> Unit,
     onDismissResult: () -> Unit,
 ) {
+    val spacing = MaterialTheme.spacing
     val result = state.lastCleanup
     val cleanupError = state.cleanupError
     val failed = result?.hasFailures == true || cleanupError != null
-    Text(
-        text = stringResource(
-            if (failed) {
-                R.string.storage_cleanup_result_failed_title
-            } else {
-                R.string.storage_cleanup_result_title
-            },
-        ),
-        modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
-        style = MaterialTheme.typography.titleSmall,
-        fontWeight = FontWeight.SemiBold,
-        color = if (failed) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
-    )
-    if (result != null) {
-        Text(
-            text = stringResource(
-                R.string.storage_cleanup_result_summary,
-                formatByteSize(result.freedBytes),
-                result.deletedCount,
-            ),
-            style = MaterialTheme.typography.bodyMedium,
-        )
-        if (result.deletedNothing) {
-            Text(
-                text = stringResource(R.string.storage_cleanup_result_none_deleted),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        if (result.failureCount > 0) {
-            Text(
-                text = stringResource(
-                    R.string.storage_cleanup_result_failures,
-                    result.failureCount,
-                ),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.error,
-            )
-        }
-        if (result.skippedReferencedCount > 0) {
-            Text(
-                text = stringResource(
-                    R.string.storage_cleanup_result_skipped_referenced,
-                    result.skippedReferencedCount,
-                ),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        if (result.skippedTooRecentCount > 0) {
-            Text(
-                text = stringResource(
-                    R.string.storage_cleanup_result_skipped_recent,
-                    result.skippedTooRecentCount,
-                ),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        if (result.skippedMissingCount > 0) {
-            Text(
-                text = stringResource(
-                    R.string.storage_cleanup_result_skipped_missing,
-                    result.skippedMissingCount,
-                ),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
-    if (cleanupError != null) {
-        Text(
-            text = stringResource(R.string.storage_cleanup_error, cleanupError),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.error,
-        )
-    }
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.End,
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .semantics { liveRegion = LiveRegionMode.Polite },
+        verticalArrangement = Arrangement.spacedBy(spacing.xs),
     ) {
-        if (state.canRetryCleanup) {
-            FilledTonalButton(
-                onClick = onRetryCleanup,
-                modifier = Modifier.heightIn(min = 48.dp),
-            ) {
-                Text(stringResource(R.string.storage_cleanup_action_retry))
-            }
-            Spacer(Modifier.width(8.dp))
-        }
-        TextButton(
-            onClick = onDismissResult,
-            modifier = Modifier.heightIn(min = 48.dp),
+        HorizontalDivider()
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(spacing.sm),
         ) {
-            Text(stringResource(R.string.storage_cleanup_action_dismiss))
+            ForgeIcon(
+                icon = if (failed) ForgeIcons.AlertCircle else ForgeIcons.CheckCircle,
+                contentDescription = null,
+                tint = if (failed) {
+                    MaterialTheme.colorScheme.error
+                } else {
+                    MaterialTheme.colorScheme.primary
+                },
+            )
+            Text(
+                text = stringResource(
+                    if (failed) {
+                        R.string.storage_cleanup_result_failed_title
+                    } else {
+                        R.string.storage_cleanup_result_title
+                    },
+                ),
+                style = MaterialTheme.typography.titleSmallEmphasized,
+                color = if (failed) {
+                    MaterialTheme.colorScheme.error
+                } else {
+                    MaterialTheme.colorScheme.primary
+                },
+            )
+        }
+        if (result != null) {
+            Text(
+                text = stringResource(
+                    R.string.storage_cleanup_result_summary,
+                    formatByteSize(result.freedBytes),
+                    result.deletedCount,
+                ),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            if (result.deletedNothing) {
+                ResultNote(
+                    text = stringResource(R.string.storage_cleanup_result_none_deleted),
+                    error = false,
+                )
+            }
+            if (result.failureCount > 0) {
+                ResultNote(
+                    text = stringResource(
+                        R.string.storage_cleanup_result_failures,
+                        result.failureCount,
+                    ),
+                    error = true,
+                )
+            }
+            if (result.skippedReferencedCount > 0) {
+                ResultNote(
+                    text = stringResource(
+                        R.string.storage_cleanup_result_skipped_referenced,
+                        result.skippedReferencedCount,
+                    ),
+                    error = false,
+                )
+            }
+            if (result.skippedTooRecentCount > 0) {
+                ResultNote(
+                    text = stringResource(
+                        R.string.storage_cleanup_result_skipped_recent,
+                        result.skippedTooRecentCount,
+                    ),
+                    error = false,
+                )
+            }
+            if (result.skippedMissingCount > 0) {
+                ResultNote(
+                    text = stringResource(
+                        R.string.storage_cleanup_result_skipped_missing,
+                        result.skippedMissingCount,
+                    ),
+                    error = false,
+                )
+            }
+        }
+        if (cleanupError != null) {
+            ResultNote(
+                text = stringResource(R.string.storage_cleanup_error, cleanupError),
+                error = true,
+            )
+        }
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(spacing.sm),
+        ) {
+            if (state.canRetryCleanup) {
+                ForgeSecondaryAction(
+                    icon = ForgeIcons.Refresh,
+                    label = stringResource(R.string.storage_cleanup_action_retry),
+                    onClick = onRetryCleanup,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+            ForgeSecondaryAction(
+                icon = ForgeIcons.Close,
+                label = stringResource(R.string.storage_cleanup_action_dismiss),
+                onClick = onDismissResult,
+                modifier = Modifier.fillMaxWidth(),
+            )
         }
     }
+}
+
+@Composable
+private fun ResultNote(text: String, error: Boolean) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.bodySmall,
+        color = if (error) {
+            MaterialTheme.colorScheme.error
+        } else {
+            MaterialTheme.colorScheme.onSurfaceVariant
+        },
+    )
 }
 
 @Composable
@@ -766,6 +876,17 @@ private fun CleanupConfirmDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
+        icon = {
+            ForgeIcon(
+                icon = if (kind == StorageCleanupKind.ORPHANS) {
+                    ForgeIcons.Trash
+                } else {
+                    ForgeIcons.Clock
+                },
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.error,
+            )
+        },
         title = {
             Text(
                 text = stringResource(
@@ -777,6 +898,7 @@ private fun CleanupConfirmDialog(
                             R.string.storage_cleanup_confirm_title_expired
                     },
                 ),
+                style = MaterialTheme.typography.titleLargeEmphasized,
             )
         },
         text = {
@@ -794,29 +916,128 @@ private fun CleanupConfirmDialog(
             )
         },
         confirmButton = {
-            TextButton(
+            ForgeSecondaryAction(
+                icon = ForgeIcons.Trash,
+                label = stringResource(R.string.storage_cleanup_confirm_action),
                 onClick = onConfirm,
-                modifier = Modifier.heightIn(min = 48.dp),
-            ) {
-                Text(stringResource(R.string.storage_cleanup_confirm_action))
-            }
+                danger = true,
+            )
         },
         dismissButton = {
-            TextButton(
+            ForgeSecondaryAction(
+                icon = ForgeIcons.Close,
+                label = stringResource(R.string.action_cancel),
                 onClick = onDismiss,
-                modifier = Modifier.heightIn(min = 48.dp),
-            ) {
-                Text(stringResource(R.string.action_cancel))
-            }
+            )
         },
     )
 }
+
+// ---------------------------------------------------------------------------
+// 共享小件
+// ---------------------------------------------------------------------------
+
+@Composable
+private fun LoadErrorCard(message: String, onRetry: () -> Unit) {
+    val spacing = MaterialTheme.spacing
+    ForgeCard {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(spacing.md),
+        ) {
+            ForgeIcon(
+                icon = ForgeIcons.TriangleAlert,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.error,
+            )
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.weight(1f),
+            )
+        }
+        ForgeSecondaryAction(
+            icon = ForgeIcons.Refresh,
+            label = stringResource(R.string.action_retry),
+            onClick = onRetry,
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
+}
+
+@Composable
+private fun NoteRow(@DrawableRes icon: Int, text: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .semantics(mergeDescendants = true) {},
+        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm),
+    ) {
+        ForgeIcon(
+            icon = icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.weight(1f),
+        )
+    }
+}
+
+@Composable
+private fun IconBubble(@DrawableRes icon: Int, danger: Boolean) {
+    val containerColor = if (danger) {
+        MaterialTheme.colorScheme.errorContainer
+    } else {
+        MaterialTheme.colorScheme.secondaryContainer
+    }
+    val contentColor = if (danger) {
+        MaterialTheme.colorScheme.onErrorContainer
+    } else {
+        MaterialTheme.colorScheme.onSecondaryContainer
+    }
+    Surface(
+        shape = MaterialTheme.shapes.large,
+        color = containerColor,
+        modifier = Modifier.size(44.dp),
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            ForgeIcon(icon = icon, contentDescription = null, tint = contentColor)
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// 文案映射
+// ---------------------------------------------------------------------------
 
 @Composable
 private fun areaLabel(area: StorageArea): String = when (area) {
     StorageArea.AUDIO -> stringResource(R.string.storage_area_audio)
     StorageArea.IMPORTS -> stringResource(R.string.storage_area_imports)
     StorageArea.EXPORTS -> stringResource(R.string.storage_area_exports)
+}
+
+@DrawableRes
+private fun areaIcon(area: StorageArea): Int = when (area) {
+    StorageArea.AUDIO -> ForgeIcons.AudioLines
+    StorageArea.IMPORTS -> ForgeIcons.FolderOpen
+    StorageArea.EXPORTS -> ForgeIcons.FileText
+}
+
+@Composable
+private fun areaColor(area: StorageArea): Color = when (area) {
+    StorageArea.AUDIO -> MaterialTheme.colorScheme.primary
+    StorageArea.IMPORTS -> MaterialTheme.colorScheme.secondary
+    StorageArea.EXPORTS -> MaterialTheme.colorScheme.tertiary
 }
 
 @Composable
@@ -833,8 +1054,11 @@ private fun retentionErrorText(error: RetentionError?): String? = when (error) {
     RetentionError.OutOfRange -> stringResource(R.string.storage_retention_error_range)
 }
 
+/** 保留期快捷选项（天）；选中项与 [StorageUiState.retentionDays] 精确匹配。 */
+private val QUICK_RETENTION_DAYS: List<Int> = listOf(7, 30, 90)
+
 // ---------------------------------------------------------------------------
-// Preview：正常 / 清理确认 / 空态 / 清理结果。文案全部来自 strings.xml。
+// Preview：正常 / 清理确认 / 空态 / 清理结果。文案全部来自 strings。
 // ---------------------------------------------------------------------------
 
 private fun previewOverview(): StorageOverview = StorageOverview(
@@ -865,7 +1089,7 @@ private fun previewState(): StorageUiState = StorageUiState(
     retentionDays = 30,
 )
 
-@Preview(name = "Storage Normal", showBackground = true, backgroundColor = 0xFFF7F8FC)
+@Preview(name = "Storage Forge Normal", showBackground = true, backgroundColor = 0xFFF7F8FC)
 @Composable
 private fun StorageNormalPreview() {
     AudioForgeTheme(darkTheme = false, dynamicColor = false) {
@@ -873,24 +1097,18 @@ private fun StorageNormalPreview() {
     }
 }
 
-@Preview(
-    name = "Storage Cleanup Confirm",
-    showBackground = true,
-    backgroundColor = 0xFFF7F8FC,
-)
+@Preview(name = "Storage Forge Cleanup Confirm", showBackground = true, backgroundColor = 0xFFF7F8FC)
 @Composable
 private fun StorageCleanupConfirmPreview() {
     AudioForgeTheme(darkTheme = false, dynamicColor = false) {
         StorageScreen(
-            state = previewState().copy(
-                pendingCleanup = StorageCleanupKind.EXPIRED,
-            ),
+            state = previewState().copy(pendingCleanup = StorageCleanupKind.EXPIRED),
         )
     }
 }
 
 @Preview(
-    name = "Storage Empty Dark 200%",
+    name = "Storage Forge Empty Dark 200%",
     showBackground = true,
     uiMode = Configuration.UI_MODE_NIGHT_YES,
     fontScale = 2f,
@@ -921,7 +1139,7 @@ private fun StorageEmptyPreview() {
     }
 }
 
-@Preview(name = "Storage Cleanup Result", showBackground = true, backgroundColor = 0xFFF7F8FC)
+@Preview(name = "Storage Forge Cleanup Result", showBackground = true, backgroundColor = 0xFFF7F8FC)
 @Composable
 private fun StorageCleanupResultPreview() {
     AudioForgeTheme(darkTheme = false, dynamicColor = false) {

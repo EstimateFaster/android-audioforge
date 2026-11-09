@@ -1,6 +1,7 @@
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class)
+
 package com.estimatefaster.audioforge.feature.tasks
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -9,22 +10,15 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -35,26 +29,32 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.ProgressBarRangeInfo
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.progressBarRangeInfo
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.estimatefaster.audioforge.R
 import com.estimatefaster.audioforge.data.db.JobEntity
-import com.estimatefaster.audioforge.ui.components.EmptyState
-import com.estimatefaster.audioforge.ui.components.ErrorBanner
-import com.estimatefaster.audioforge.ui.components.ErrorState
-import com.estimatefaster.audioforge.ui.components.LoadingState
-import com.estimatefaster.audioforge.ui.components.ProgressRing
-import com.estimatefaster.audioforge.ui.components.SectionHeader
 import com.estimatefaster.audioforge.ui.components.StatusKind
 import com.estimatefaster.audioforge.ui.components.StatusPill
-import com.estimatefaster.audioforge.ui.components.StatusTone
+import com.estimatefaster.audioforge.ui.forge.ForgeCard
+import com.estimatefaster.audioforge.ui.forge.ForgeEmpty
+import com.estimatefaster.audioforge.ui.forge.ForgeError
+import com.estimatefaster.audioforge.ui.forge.ForgeIcon
+import com.estimatefaster.audioforge.ui.forge.ForgeIconAction
+import com.estimatefaster.audioforge.ui.forge.ForgeIcons
+import com.estimatefaster.audioforge.ui.forge.ForgeListRow
+import com.estimatefaster.audioforge.ui.forge.ForgeLoading
+import com.estimatefaster.audioforge.ui.forge.ForgeSecondaryAction
+import com.estimatefaster.audioforge.ui.forge.ForgeSectionHeader
+import com.estimatefaster.audioforge.ui.forge.ForgeTopBar
+import com.estimatefaster.audioforge.ui.forge.ForgeWavyProgress
 import com.estimatefaster.audioforge.ui.theme.AudioForgeTheme
+import com.estimatefaster.audioforge.ui.theme.spacing
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -63,12 +63,12 @@ import java.time.format.FormatStyle
 /**
  * 任务页有状态入口（P4-08 / §12.4 S12）。
  *
- * 导航层只需注入 [TasksViewModel]、`onOpenProject` 与 [taskRunnerAvailable]；
- * 停止先弹确认框，确认后调用 `viewModel.stop(novelId)`（只写 stopRequested）。
+ * 公开签名保持不变：导航层只注入 [TasksViewModel]、`onOpenProject` 与
+ * [taskRunnerAvailable]；停止先二次确认，确认后回调 `onStop(novelId)`。
  *
- * [taskRunnerAvailable] 与 P4-05 的 `batchRunnerAvailable` 同口径：批次执行/队列
- * （P3-04 BatchRunner）尚未装配时为 false，停止按钮禁用并显示说明，避免给用户
- * “点了没反应”的假象。任务页本身仍可只读展示库里已有的任务与历史。
+ * 布局按 `docs/prototype/forge-framework.html` 的 Tasks 重写：
+ * TopBar（刷新 icon-only）→ 当前任务 hero（大字百分比 + Wavy 进度 + danger 停止）
+ * → 指标条 → 队列 → 历史任务。所有操作都带 Lucide 图标。
  */
 @Composable
 fun TasksScreen(
@@ -91,13 +91,16 @@ fun TasksScreen(
 }
 
 /**
- * 无状态任务页：当前任务卡 + 队列 + 最近任务。
+ * 无状态任务页。
  *
- * 停止按钮点击后先弹二次确认；确认才回调 [onStop]（参数是 novelId，不是 jobId，
- * 与页面/导航的解耦口径一致）。整行点击队列/历史会通过 [onOpenProject] 打开项目，
- * 失败重试在项目页/章节页完成。
+ * 状态机、校验与回调口径与旧版一致：
+ * - 停止按钮点击后先弹二次确认；确认才回调 [onStop]（参数是 novelId）；
+ * - 确认框打开期间任务自己结束会自动收起；
+ * - [taskRunnerAvailable] 为 false 时停止按钮禁用并显示说明。
+ *
+ * 视觉全部走 `ui/forge/`：ForgeTopBar / ForgeCard / ForgeListRow /
+ * ForgeSecondaryAction / ForgeIconAction / ForgeEmpty / ForgeError / ForgeLoading。
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TasksScreen(
     state: TasksUiState,
@@ -109,8 +112,8 @@ fun TasksScreen(
     taskRunnerAvailable: Boolean = false,
 ) {
     var pendingStopNovelId by rememberSaveable { mutableStateOf<Long?>(null) }
-    val actionError = state.actionError
     val loadError = state.loadError
+    val actionError = state.actionError
     val stopTarget = pendingStopNovelId?.let { novelId -> state.taskFor(novelId) }
 
     // 任务在确认框打开期间自己结束了：自动收起，避免对已结束任务发停止请求。
@@ -125,59 +128,42 @@ fun TasksScreen(
         modifier = modifier,
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text(
-                            text = stringResource(R.string.tasks_title),
-                            modifier = Modifier.semantics { heading() },
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.SemiBold,
-                        )
-                        Text(
-                            text = stringResource(R.string.tasks_subtitle),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
+            ForgeTopBar(
+                title = stringResource(R.string.tasks_title),
+                subtitle = stringResource(R.string.ux_tasks_subtitle),
+                actions = {
+                    ForgeIconAction(
+                        icon = ForgeIcons.Refresh,
+                        contentDescription = stringResource(R.string.ux_tasks_refresh),
+                        onClick = onRetry,
+                    )
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
-                ),
             )
         },
     ) { padding ->
+        val contentModifier = Modifier.padding(padding)
         when {
-            state.loading -> LoadingState(
-                message = stringResource(R.string.tasks_loading),
-                modifier = Modifier.padding(padding),
+            state.loading -> ForgeLoading(
+                label = stringResource(R.string.tasks_loading),
+                modifier = contentModifier,
             )
 
-            loadError != null -> Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-                contentAlignment = Alignment.Center,
-            ) {
-                ErrorState(
-                    message = stringResource(R.string.tasks_load_error, loadError),
-                    onRetry = onRetry,
-                )
-            }
+            loadError != null -> ForgeError(
+                message = stringResource(R.string.tasks_load_error, loadError),
+                modifier = contentModifier,
+                onRetry = onRetry,
+                retryLabel = stringResource(R.string.action_retry),
+            )
 
-            state.isEmpty -> Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-                contentAlignment = Alignment.Center,
-            ) {
-                EmptyState(
-                    title = stringResource(R.string.tasks_empty_title),
-                    description = stringResource(R.string.tasks_empty_description),
-                    actionText = stringResource(R.string.action_refresh),
-                    onAction = onRetry,
-                )
-            }
+            state.isEmpty -> ForgeEmpty(
+                icon = ForgeIcons.Inbox,
+                title = stringResource(R.string.ux_tasks_empty_title),
+                description = stringResource(R.string.ux_tasks_empty_desc),
+                modifier = contentModifier,
+                actionIcon = ForgeIcons.Refresh,
+                actionLabel = stringResource(R.string.action_refresh),
+                onAction = onRetry,
+            )
 
             else -> TasksContent(
                 state = state,
@@ -187,6 +173,7 @@ fun TasksScreen(
                 onDismissActionError = onDismissActionError,
                 onRequestStop = { novelId -> pendingStopNovelId = novelId },
                 onOpenProject = onOpenProject,
+                onRetry = onRetry,
             )
         }
     }
@@ -213,195 +200,318 @@ private fun TasksContent(
     onDismissActionError: () -> Unit,
     onRequestStop: (Long) -> Unit,
     onOpenProject: (Long) -> Unit,
+    onRetry: () -> Unit,
 ) {
+    val current = state.current
+
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
             .padding(contentPadding),
-        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
+        contentPadding = PaddingValues(
+            horizontal = MaterialTheme.spacing.lg,
+            vertical = MaterialTheme.spacing.lg,
+        ),
+        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.md),
     ) {
         if (actionError != null) {
             item(key = "action-error") {
-                ErrorBanner(
-                    message = stringResource(R.string.action_failed, actionError),
-                    onDismiss = onDismissActionError,
-                )
+                ActionErrorCard(message = actionError, onDismiss = onDismissActionError)
             }
         }
 
-        val current = state.current
+        item(key = "current") {
+            CurrentTaskSection(
+                card = current,
+                taskRunnerAvailable = taskRunnerAvailable,
+                onRequestStop = onRequestStop,
+            )
+        }
+
         if (current != null) {
-            item(key = "current-header") {
-                SectionHeader(title = stringResource(R.string.tasks_current_title))
+            item(key = "current-meta") {
+                TaskMetaStrip(card = current)
             }
-            item(key = "current-card") {
-                CurrentTaskCard(
-                    card = current,
-                    taskRunnerAvailable = taskRunnerAvailable,
-                    onRequestStop = { onRequestStop(current.novelId) },
-                )
-            }
-        } else {
-            item(key = "no-running") { NoRunningCard() }
         }
 
         if (state.queued.isNotEmpty()) {
             item(key = "queue-header") {
-                SectionHeader(
-                    title = stringResource(R.string.tasks_queue_title),
-                    subtitle = stringResource(R.string.tasks_queue_subtitle, state.queued.size),
+                ForgeSectionHeader(
+                    title = stringResource(R.string.ux_tasks_queue_title),
+                    subtitle = stringResource(R.string.ux_tasks_queue_count, state.queued.size),
                 )
             }
             items(items = state.queued, key = { "queue-${it.jobId}" }) { card ->
-                QueueTaskRow(card = card, onOpenProject = onOpenProject)
+                ForgeListRow(
+                    icon = if (card.status == TaskStatusUi.Running) {
+                        ForgeIcons.Loader
+                    } else {
+                        ForgeIcons.Clock
+                    },
+                    title = card.novelTitle,
+                    subtitle = stringResource(
+                        R.string.tasks_queue_item_meta,
+                        taskModeLabel(card.mode),
+                        card.percent,
+                    ),
+                    trailingIcon = ForgeIcons.ChevronRight,
+                    trailingDescription = stringResource(
+                        R.string.ux_tasks_open_project,
+                        card.novelTitle,
+                    ),
+                    onTrailingClick = { onOpenProject(card.novelId) },
+                )
             }
         }
 
         if (state.recent.isNotEmpty()) {
             item(key = "history-header") {
-                SectionHeader(
-                    title = stringResource(R.string.tasks_history_title),
-                    subtitle = stringResource(R.string.tasks_history_subtitle, state.recent.size),
+                ForgeSectionHeader(
+                    title = stringResource(R.string.ux_tasks_history_title),
+                    subtitle = stringResource(R.string.ux_tasks_history_count, state.recent.size),
+                    actionIcon = ForgeIcons.Refresh,
+                    actionDescription = stringResource(R.string.ux_tasks_refresh_list),
+                    onAction = onRetry,
                 )
             }
             items(items = state.recent, key = { "history-${it.jobId}" }) { item ->
-                HistoryRow(item = item, onOpenProject = onOpenProject)
+                HistoryCard(item = item, onOpenProject = onOpenProject)
             }
         }
     }
 }
 
 @Composable
-private fun CurrentTaskCard(
+private fun CurrentTaskSection(
+    card: TaskCardUi?,
+    taskRunnerAvailable: Boolean,
+    onRequestStop: (Long) -> Unit,
+) {
+    if (card == null) {
+        NoRunningCard()
+        return
+    }
+    CurrentTaskHero(
+        card = card,
+        taskRunnerAvailable = taskRunnerAvailable,
+        onRequestStop = { onRequestStop(card.novelId) },
+    )
+}
+
+@Composable
+private fun CurrentTaskHero(
     card: TaskCardUi,
     taskRunnerAvailable: Boolean,
     onRequestStop: () -> Unit,
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-    ) {
-        Column(
-            modifier = Modifier.padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            Row(verticalAlignment = Alignment.Top) {
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(2.dp),
-                ) {
-                    Text(
-                        text = card.novelTitle,
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    Text(
-                        text = stringResource(
-                            R.string.tasks_mode_label,
-                            taskModeLabel(card.mode),
-                        ),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    StatusPill(kind = StatusKind.Task, status = card.status.wire)
-                    if (card.isStopping) {
-                        StatusPill(
-                            text = stringResource(R.string.tasks_status_stopping),
-                            tone = StatusTone.Warning,
-                        )
-                    }
-                }
-            }
+    val stopping = card.isStopping
+    val chaptersTotal = card.stats.chaptersTotal
+    val kicker = when {
+        stopping -> stringResource(R.string.ux_tasks_kicker_stopping)
+        chaptersTotal > 0 -> stringResource(
+            R.string.ux_tasks_kicker_running,
+            (card.stats.chaptersDone + 1).coerceAtMost(chaptersTotal),
+            chaptersTotal,
+        )
 
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                ProgressRing(
-                    progress = card.progress,
-                    label = progressRingLabel(card),
-                    diameter = 96.dp,
-                    strokeWidth = 8.dp,
-                    liveRegion = true,
+        else -> stringResource(R.string.ux_tasks_kicker_running_plain)
+    }
+    val progressDescription = stringResource(R.string.ux_tasks_progress_desc)
+
+    ForgeCard(
+        containerColor = if (stopping) {
+            MaterialTheme.colorScheme.surfaceContainerHigh
+        } else {
+            MaterialTheme.colorScheme.surfaceContainerLow
+        },
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm),
+        ) {
+            ForgeIcon(
+                icon = if (stopping) ForgeIcons.ErrorCircle else ForgeIcons.Loader,
+                contentDescription = null,
+                tint = if (stopping) {
+                    MaterialTheme.colorScheme.error
+                } else {
+                    MaterialTheme.colorScheme.primary
+                },
+            )
+            Text(
+                text = kicker,
+                style = MaterialTheme.typography.labelMediumEmphasized,
+                color = if (stopping) {
+                    MaterialTheme.colorScheme.error
+                } else {
+                    MaterialTheme.colorScheme.primary
+                },
+            )
+        }
+
+        Text(
+            text = stringResource(
+                R.string.ux_tasks_title_mode,
+                card.novelTitle,
+                taskModeLabel(card.mode),
+            ),
+            style = MaterialTheme.typography.headlineSmallEmphasized,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Text(
+            text = stringResource(
+                R.string.tasks_started_elapsed,
+                formatTimestamp(card.startedAt),
+                formatTaskDuration(card.elapsedMs)
+                    ?: stringResource(R.string.tasks_value_unknown),
+            ),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+
+        if (stopping) {
+            Text(
+                text = if (chaptersTotal > 0) {
+                    stringResource(
+                        R.string.ux_tasks_stopping_body,
+                        card.stats.chaptersDone,
+                        chaptersTotal,
+                    )
+                } else {
+                    stringResource(R.string.ux_tasks_stopping_body_plain)
+                },
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        } else {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.Bottom,
+            ) {
+                Text(
+                    text = stringResource(R.string.progress_percent, card.percent),
+                    style = MaterialTheme.typography.displaySmallEmphasized,
                 )
-                Spacer(Modifier.width(18.dp))
+                Spacer(Modifier.weight(1f))
                 Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                    horizontalAlignment = Alignment.End,
+                    verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.xxs),
                 ) {
-                    Text(
-                        text = stringResource(
-                            R.string.tasks_progress_chapters,
-                            card.stats.chaptersDone,
-                            card.stats.chaptersTotal,
-                        ),
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                    Text(
-                        text = stringResource(
-                            R.string.tasks_progress_segments,
-                            card.stats.segDone,
-                            card.stats.segTotal,
-                        ),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    if (card.stats.hasTtsCounts) {
+                    if (card.currentTitle.isNotBlank()) {
                         Text(
                             text = stringResource(
-                                R.string.tasks_progress_tts,
-                                card.stats.ttsOk,
-                                card.stats.ttsFailed,
+                                R.string.tasks_current_chapter,
+                                card.currentTitle,
                             ),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
                         )
                     }
+                    Text(
+                        text = etaLabel(card),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
             }
+        }
 
-            if (card.currentTitle.isNotBlank()) {
-                Text(
-                    text = stringResource(R.string.tasks_current_chapter, card.currentTitle),
-                    style = MaterialTheme.typography.bodyMedium,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
+        ForgeWavyProgress(
+            progress = card.progress,
+            modifier = Modifier.semantics {
+                contentDescription = progressDescription
+                progressBarRangeInfo = ProgressBarRangeInfo(card.progress, 0f..1f)
+            },
+        )
 
+        ForgeSecondaryAction(
+            icon = ForgeIcons.ErrorCircle,
+            label = if (stopping) {
+                stringResource(R.string.tasks_status_stopping)
+            } else {
+                stringResource(R.string.ux_tasks_stop)
+            },
+            onClick = onRequestStop,
+            modifier = Modifier.fillMaxWidth(),
+            enabled = taskRunnerAvailable && !card.stopRequested,
+            danger = true,
+        )
+
+        if (!taskRunnerAvailable) {
             Text(
-                text = stringResource(
-                    R.string.tasks_started_elapsed,
-                    formatTimestamp(card.startedAt),
-                    formatTaskDuration(card.elapsedMs)
-                        ?: stringResource(R.string.tasks_value_unknown),
-                ),
-                style = MaterialTheme.typography.labelMedium,
+                text = stringResource(R.string.tasks_control_unavailable),
+                style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            if (!card.isStopping) {
+        }
+    }
+}
+
+@Composable
+private fun TaskMetaStrip(card: TaskCardUi) {
+    val duration = formatTaskDuration(card.elapsedMs)
+        ?: stringResource(R.string.tasks_value_unknown)
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.xs),
+    ) {
+        MetaLine(
+            items = listOf(
+                ForgeIcons.Users to stringResource(
+                    R.string.tasks_progress_chapters,
+                    card.stats.chaptersDone,
+                    card.stats.chaptersTotal,
+                ),
+                ForgeIcons.FileText to stringResource(
+                    R.string.tasks_progress_segments,
+                    card.stats.segDone,
+                    card.stats.segTotal,
+                ),
+            ),
+        )
+        val elapsed = ForgeIcons.Clock to stringResource(
+            R.string.ux_tasks_elapsed,
+            duration,
+        )
+        val tts = if (card.stats.hasTtsCounts) {
+            ForgeIcons.AudioLines to stringResource(
+                R.string.tasks_progress_tts,
+                card.stats.ttsOk,
+                card.stats.ttsFailed,
+            )
+        } else {
+            null
+        }
+        MetaLine(items = listOfNotNull(elapsed, tts))
+    }
+}
+
+@Composable
+private fun MetaLine(items: List<Pair<Int, String>>) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.md),
+    ) {
+        items.forEach { (icon, label) ->
+            Row(
+                modifier = Modifier.weight(1f),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.xs),
+            ) {
+                ForgeIcon(
+                    icon = icon,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
                 Text(
-                    text = etaLabel(card),
+                    text = label,
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-
-            OutlinedButton(
-                onClick = onRequestStop,
-                enabled = taskRunnerAvailable && !card.stopRequested,
-                modifier = Modifier.heightIn(min = 48.dp),
-            ) {
-                Text(stringResource(R.string.tasks_action_stop))
-            }
-            if (!taskRunnerAvailable) {
-                Text(
-                    text = stringResource(R.string.tasks_control_unavailable),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
         }
@@ -410,129 +520,157 @@ private fun CurrentTaskCard(
 
 @Composable
 private fun NoRunningCard() {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-        ),
-    ) {
-        Text(
-            text = stringResource(R.string.tasks_no_running),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(16.dp),
-        )
-    }
-}
-
-@Composable
-private fun QueueTaskRow(
-    card: TaskCardUi,
-    onOpenProject: (Long) -> Unit,
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(role = Role.Button) { onOpenProject(card.novelId) },
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-        ),
-    ) {
+    ForgeCard {
         Row(
-            modifier = Modifier.padding(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.md),
         ) {
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(2.dp),
-            ) {
-                Text(
-                    text = card.novelTitle,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Text(
-                    text = stringResource(
-                        R.string.tasks_queue_item_meta,
-                        taskModeLabel(card.mode),
-                        card.percent,
-                    ),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                if (card.currentTitle.isNotBlank()) {
-                    Text(
-                        text = card.currentTitle,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-            }
-            StatusPill(kind = StatusKind.Task, status = card.status.wire)
+            ForgeIcon(
+                icon = ForgeIcons.Inbox,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                text = stringResource(R.string.tasks_no_running),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }
 
 @Composable
-private fun HistoryRow(
-    item: TaskHistoryUi,
-    onOpenProject: (Long) -> Unit,
-) {
-    val duration = formatTaskDuration(item.durationMs)
-    val errorSummary = item.errorSummary
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(role = Role.Button) { onOpenProject(item.novelId) },
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
+private fun ActionErrorCard(message: String, onDismiss: () -> Unit) {
+    ForgeCard(containerColor = MaterialTheme.colorScheme.errorContainer) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.md),
         ) {
-            Row(verticalAlignment = Alignment.Top) {
+            ForgeIcon(
+                icon = ForgeIcons.AlertCircle,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onErrorContainer,
+            )
+            Text(
+                text = stringResource(R.string.ux_tasks_action_failed, message),
+                modifier = Modifier.weight(1f),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onErrorContainer,
+            )
+            ForgeIconAction(
+                icon = ForgeIcons.Close,
+                contentDescription = stringResource(R.string.action_dismiss),
+                onClick = onDismiss,
+            )
+        }
+    }
+}
+
+@Composable
+private fun HistoryCard(item: TaskHistoryUi, onOpenProject: (Long) -> Unit) {
+    val status = item.status
+    val container = when (status) {
+        TaskStatusUi.Done -> MaterialTheme.colorScheme.tertiaryContainer
+        TaskStatusUi.Error -> MaterialTheme.colorScheme.errorContainer
+        else -> MaterialTheme.colorScheme.surfaceContainerHighest
+    }
+    val content = when (status) {
+        TaskStatusUi.Done -> MaterialTheme.colorScheme.onTertiaryContainer
+        TaskStatusUi.Error -> MaterialTheme.colorScheme.onErrorContainer
+        else -> MaterialTheme.colorScheme.onSurfaceVariant
+    }
+    val statusIcon = when (status) {
+        TaskStatusUi.Done -> ForgeIcons.CheckCircle
+        TaskStatusUi.Cancelled -> ForgeIcons.Close
+        else -> ForgeIcons.ErrorCircle
+    }
+    val duration = formatTaskDuration(item.durationMs)
+        ?: stringResource(R.string.tasks_value_unknown)
+    val errorSummary = item.errorSummary
+
+    ForgeCard {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.Top,
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.md),
+        ) {
+            Surface(
+                modifier = Modifier.size(40.dp),
+                shape = MaterialTheme.shapes.large,
+                color = container,
+            ) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    ForgeIcon(
+                        icon = statusIcon,
+                        contentDescription = null,
+                        tint = content,
+                    )
+                }
+            }
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.xxs),
+            ) {
                 Text(
-                    text = item.novelTitle,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
+                    text = stringResource(
+                        R.string.ux_tasks_title_mode,
+                        item.novelTitle,
+                        taskModeLabel(item.mode),
+                    ),
+                    style = MaterialTheme.typography.titleSmallEmphasized,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f),
                 )
-                Spacer(Modifier.width(8.dp))
-                StatusPill(kind = StatusKind.Task, status = item.status.wire)
-            }
-            Text(
-                text = stringResource(
-                    R.string.tasks_history_meta,
-                    taskModeLabel(item.mode),
-                    duration ?: stringResource(R.string.tasks_value_unknown),
-                ),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Text(
-                text = stringResource(
-                    R.string.tasks_history_finished,
-                    formatTimestamp(item.finishedAt),
-                ),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            if (errorSummary != null) {
                 Text(
-                    text = stringResource(R.string.tasks_history_error, errorSummary),
+                    text = historyResultLabel(item),
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
+                Text(
+                    text = stringResource(
+                        R.string.tasks_history_finished,
+                        formatTimestamp(item.finishedAt),
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                if (errorSummary != null) {
+                    Text(
+                        text = stringResource(R.string.tasks_history_error, errorSummary),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             }
+            ForgeIconAction(
+                icon = ForgeIcons.ChevronRight,
+                contentDescription = stringResource(
+                    R.string.ux_tasks_open_project,
+                    item.novelTitle,
+                ),
+                onClick = { onOpenProject(item.novelId) },
+                container = false,
+            )
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            StatusPill(kind = StatusKind.Task, status = status.wire)
+            Text(
+                text = stringResource(R.string.ux_tasks_duration, duration),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }
@@ -545,20 +683,39 @@ private fun StopConfirmDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.tasks_stop_confirm_title)) },
-        text = { Text(stringResource(R.string.tasks_stop_confirm_message, novelTitle)) },
+        icon = {
+            ForgeIcon(
+                icon = ForgeIcons.ErrorCircle,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.error,
+            )
+        },
+        title = {
+            Text(
+                text = stringResource(R.string.tasks_stop_confirm_title),
+                style = MaterialTheme.typography.titleLargeEmphasized,
+            )
+        },
+        text = {
+            Text(
+                text = stringResource(R.string.tasks_stop_confirm_message, novelTitle),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        },
         confirmButton = {
-            TextButton(onClick = onConfirm) {
-                Text(
-                    text = stringResource(R.string.tasks_action_stop_confirm),
-                    color = MaterialTheme.colorScheme.error,
-                )
-            }
+            ForgeSecondaryAction(
+                icon = ForgeIcons.ErrorCircle,
+                label = stringResource(R.string.tasks_action_stop_confirm),
+                onClick = onConfirm,
+                danger = true,
+            )
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.action_cancel))
-            }
+            ForgeSecondaryAction(
+                icon = ForgeIcons.Close,
+                label = stringResource(R.string.action_cancel),
+                onClick = onDismiss,
+            )
         },
     )
 }
@@ -574,19 +731,37 @@ private fun taskModeLabel(mode: TaskModeUi): String = stringResource(
 )
 
 @Composable
-private fun progressRingLabel(card: TaskCardUi): String = stringResource(
-    when {
-        card.stats.segTotal > 0 -> R.string.tasks_progress_ring_segments
-        card.stats.chaptersTotal > 0 -> R.string.tasks_progress_ring_chapters
-        else -> R.string.tasks_progress_ring_empty
-    },
-)
+private fun historyResultLabel(item: TaskHistoryUi): String = when (item.status) {
+    TaskStatusUi.Done -> when {
+        item.stats.chaptersDone <= 0 -> stringResource(R.string.tasks_value_unknown)
+        item.stats.segDone > 0 -> stringResource(
+            R.string.ux_tasks_result_done,
+            item.stats.chaptersDone,
+            item.stats.segDone,
+        )
+
+        else -> stringResource(
+            R.string.tasks_progress_chapters,
+            item.stats.chaptersDone,
+            item.stats.chaptersTotal,
+        )
+    }
+
+    TaskStatusUi.Cancelled -> stringResource(
+        R.string.ux_tasks_result_cancelled,
+        item.stats.chaptersDone,
+        item.stats.chaptersTotal,
+    )
+
+    TaskStatusUi.Error -> stringResource(R.string.ux_tasks_result_error)
+    else -> stringResource(R.string.tasks_value_unknown)
+}
 
 @Composable
 private fun etaLabel(card: TaskCardUi): String {
     val eta = card.etaMs?.let { formatTaskDuration(it) }
     return if (eta != null) {
-        stringResource(R.string.tasks_eta, eta)
+        stringResource(R.string.ux_tasks_eta, eta)
     } else {
         stringResource(R.string.tasks_eta_unknown)
     }
@@ -599,7 +774,7 @@ private fun formatTimestamp(epochMs: Long): String = remember(epochMs) {
 }
 
 // ---------------------------------------------------------------------------
-// Preview：正常 / 空态 / 错误态。所有文案来自 strings.xml。
+// Preview：正常 / 仅历史 / 空态 / 错误态。文案来自 strings.xml 与本页新文案文件。
 // ---------------------------------------------------------------------------
 
 private const val PREVIEW_NOW: Long = 1_760_000_400_000L
@@ -663,7 +838,7 @@ private fun previewTasksState(): TasksUiState = buildTasksUiState(
                 status = "done",
                 startedAt = PREVIEW_NOW - 3_600_000L,
                 finishedAt = PREVIEW_NOW - 600_000L,
-                statsJson = """{"chaptersDone":5,"chaptersTotal":5}""",
+                statsJson = """{"chaptersDone":5,"chaptersTotal":5,"segDone":120,"segTotal":120}""",
             ),
         ),
         TaskJobSnapshot(

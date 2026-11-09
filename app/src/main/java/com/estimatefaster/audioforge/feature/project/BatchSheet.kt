@@ -1,32 +1,37 @@
+@file:OptIn(
+    androidx.compose.material3.ExperimentalMaterial3Api::class,
+    androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class,
+)
+
 package com.estimatefaster.audioforge.feature.project
 
+import androidx.annotation.DrawableRes
+import androidx.annotation.StringRes
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -34,20 +39,26 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.estimatefaster.audioforge.R
 import com.estimatefaster.audioforge.domain.jobs.BatchParams
-import com.estimatefaster.audioforge.ui.components.AdaptiveFieldRow
+import com.estimatefaster.audioforge.ui.forge.ForgeCard
+import com.estimatefaster.audioforge.ui.forge.ForgeChip
+import com.estimatefaster.audioforge.ui.forge.ForgeIcon
+import com.estimatefaster.audioforge.ui.forge.ForgeIconAction
+import com.estimatefaster.audioforge.ui.forge.ForgeIcons
+import com.estimatefaster.audioforge.ui.forge.ForgePrimaryAction
+import com.estimatefaster.audioforge.ui.forge.ForgeSecondaryAction
+import com.estimatefaster.audioforge.ui.forge.ForgeSheetHeader
 import com.estimatefaster.audioforge.ui.theme.AudioForgeTheme
-import kotlin.math.roundToInt
+import com.estimatefaster.audioforge.ui.theme.spacing
 
 /**
  * 批次设置 Sheet（P4-06 / 执行计划 §12.4 S05）。
@@ -65,7 +76,6 @@ import kotlin.math.roundToInt
  * @param hasFishKey 调用方当前是否已配置 Fish Audio Key
  * @param onOpenSettings 无 Key 时“去设置”入口
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BatchSheet(
     viewModel: BatchViewModel,
@@ -118,10 +128,13 @@ fun BatchSheet(
 /**
  * 无状态 Sheet 内容；Preview 与后续 UI 测试直接渲染它。
  *
- * 布局：标题 → 模式 → 起止范围 → 强制重跑 → 并发 → 估算 → 校验/Key/状态 → 操作。
- * 所有用户文案来自 `strings.xml`；状态中的错误枚举在这里映射成中文。
+ * 结构对齐 Forge Framework 的批量生成 Sheet：
+ * SheetHeader → 生成范围（chips + 起止章）→ 处理模式（chips）→ 选项（强制重跑 /
+ * 并发 stepper）→ 估算 → 校验 / Key / 状态 → 唯一主操作 + 次级停止。
+ *
+ * 校验、Key 拦截与开始/停止状态机仍由 [BatchUiState] 的派生属性决定，
+ * 这里只把枚举映射成新文案，不复制业务判断。
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BatchSheetContent(
     state: BatchUiState,
@@ -143,158 +156,146 @@ fun BatchSheetContent(
             .fillMaxWidth()
             .navigationBarsPadding()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 24.dp)
-            .padding(top = 8.dp, bottom = 24.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+            .padding(horizontal = MaterialTheme.spacing.lg)
+            .padding(top = MaterialTheme.spacing.xs, bottom = MaterialTheme.spacing.lg),
+        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.lg),
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(
-                text = stringResource(R.string.batch_sheet_title),
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.SemiBold,
-            )
-            Text(
-                text = stringResource(R.string.batch_sheet_subtitle),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
+        ForgeSheetHeader(
+            icon = ForgeIcons.Sparkles,
+            title = stringResource(R.string.ux2_batch_title),
+            onClose = onDismiss,
+            subtitle = stringResource(R.string.ux2_batch_subtitle),
+        )
 
-        ModeSelector(mode = state.mode, onModeChange = onModeChange)
-        RangeFields(
+        BatchRangeSection(
             state = state,
             onStartChange = onStartChange,
             onEndChange = onEndChange,
             onSelectUnfinished = onSelectUnfinished,
             onSelectAll = onSelectAll,
         )
-        ForceSwitch(force = state.force, onForceChange = onForceChange)
-        ConcurrencyField(
-            concurrency = state.concurrency,
+
+        BatchModeSection(
+            mode = state.mode,
+            onModeChange = onModeChange,
+        )
+
+        BatchOptionsSection(
+            state = state,
+            onForceChange = onForceChange,
             onConcurrencyChange = onConcurrencyChange,
         )
-        EstimateCard(state = state)
+
+        BatchEstimateCard(state = state)
 
         if (state.validationErrors.isNotEmpty()) {
-            ValidationCard(state = state)
+            BatchValidationCard(state = state)
         }
         if (state.missingKeys.isNotEmpty()) {
-            MissingKeysCard(
+            BatchMissingKeysCard(
                 missingKeys = state.missingKeys,
                 onOpenSettings = onOpenSettings,
             )
         }
         BatchStatusCard(state = state)
 
-        Button(
+        ForgePrimaryAction(
+            icon = ForgeIcons.Sparkles,
+            label = stringResource(R.string.ux2_batch_action_start),
             onClick = onStart,
+            modifier = Modifier.fillMaxWidth(),
             enabled = state.canStart,
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = 48.dp),
-        ) {
-            Text(stringResource(R.string.batch_action_start))
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            OutlinedButton(
-                onClick = onStop,
-                enabled = state.canStop,
-                modifier = Modifier
-                    .weight(1f)
-                    .heightIn(min = 48.dp),
-            ) {
-                Text(stringResource(R.string.batch_action_stop))
-            }
-            TextButton(
-                onClick = onDismiss,
-                modifier = Modifier
-                    .weight(1f)
-                    .heightIn(min = 48.dp),
-            ) {
-                Text(stringResource(R.string.action_cancel))
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun ModeSelector(
-    mode: BatchMode,
-    onModeChange: (BatchMode) -> Unit,
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(
-            text = stringResource(R.string.batch_mode_title),
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.SemiBold,
+            loading = state.starting,
         )
-        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-            BatchMode.entries.forEachIndexed { index, candidate ->
-                SegmentedButton(
-                    selected = mode == candidate,
-                    onClick = { onModeChange(candidate) },
-                    shape = SegmentedButtonDefaults.itemShape(
-                        index = index,
-                        count = BatchMode.entries.size,
-                    ),
-                    label = { Text(stringResource(candidate.labelRes())) },
-                )
-            }
-        }
+        ForgeSecondaryAction(
+            icon = ForgeIcons.Square,
+            label = stringResource(R.string.batch_action_stop),
+            onClick = onStop,
+            modifier = Modifier.fillMaxWidth(),
+            enabled = state.canStop,
+        )
+        Text(
+            text = stringResource(R.string.ux2_batch_note),
+            modifier = Modifier.fillMaxWidth(),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
     }
 }
 
 @Composable
-private fun RangeFields(
+private fun BatchRangeSection(
     state: BatchUiState,
     onStartChange: (String) -> Unit,
     onEndChange: (String) -> Unit,
     onSelectUnfinished: () -> Unit,
     onSelectAll: () -> Unit,
 ) {
+    val allSelected = state.chapterCount > 0 &&
+        state.startChapter == 1 &&
+        state.endChapter == state.chapterCount
+    val unfinished = state.chapters.filterNot { it.isComplete }
+    val unfinishedFirst = unfinished.minOfOrNull { it.number }
+    val unfinishedLast = unfinished.maxOfOrNull { it.number }
+    val unfinishedSelected = !allSelected &&
+        unfinishedFirst != null &&
+        unfinishedLast != null &&
+        state.startChapter == unfinishedFirst &&
+        state.endChapter == unfinishedLast
     val rangeInvalid = state.validationErrors.any {
         it == BatchValidationError.InvalidStart ||
             it == BatchValidationError.InvalidEnd ||
             it == BatchValidationError.StartAfterEnd
     }
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(
-            text = stringResource(R.string.batch_range_title),
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.SemiBold,
-        )
-        AdaptiveFieldRow(
-            {
-                OutlinedTextField(
-                    value = state.startText,
-                    onValueChange = onStartChange,
-                    label = { Text(stringResource(R.string.batch_range_start)) },
-                    singleLine = true,
-                    isError = rangeInvalid,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            },
-            {
-                OutlinedTextField(
-                    value = state.endText,
-                    onValueChange = onEndChange,
-                    label = { Text(stringResource(R.string.batch_range_end)) },
-                    singleLine = true,
-                    isError = rangeInvalid,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            },
-        )
-        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            TextButton(onClick = onSelectUnfinished) {
-                Text(stringResource(R.string.batch_action_select_unfinished))
-            }
-            TextButton(onClick = onSelectAll) {
-                Text(stringResource(R.string.batch_action_select_all))
-            }
+
+    BatchSection(
+        icon = ForgeIcons.List,
+        title = stringResource(R.string.ux2_batch_section_range),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm),
+        ) {
+            ForgeChip(
+                label = stringResource(R.string.ux2_batch_range_all),
+                selected = allSelected,
+                onClick = onSelectAll,
+                icon = ForgeIcons.List,
+            )
+            ForgeChip(
+                label = stringResource(R.string.ux2_batch_range_unfinished),
+                selected = unfinishedSelected,
+                onClick = onSelectUnfinished,
+                icon = ForgeIcons.Clock,
+            )
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm),
+        ) {
+            OutlinedTextField(
+                value = state.startText,
+                onValueChange = onStartChange,
+                label = { Text(stringResource(R.string.batch_range_start)) },
+                singleLine = true,
+                isError = rangeInvalid,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                shape = MaterialTheme.shapes.large,
+                modifier = Modifier.weight(1f),
+            )
+            OutlinedTextField(
+                value = state.endText,
+                onValueChange = onEndChange,
+                label = { Text(stringResource(R.string.batch_range_end)) },
+                singleLine = true,
+                isError = rangeInvalid,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                shape = MaterialTheme.shapes.large,
+                modifier = Modifier.weight(1f),
+            )
         }
         Text(
             text = stringResource(
@@ -306,7 +307,39 @@ private fun RangeFields(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Text(
-            text = stringResource(R.string.batch_range_default_hint),
+            text = stringResource(R.string.ux2_batch_selected_count, state.selectedChapterCount),
+            style = MaterialTheme.typography.labelMediumEmphasized,
+            color = MaterialTheme.colorScheme.primary,
+        )
+    }
+}
+
+@Composable
+private fun BatchModeSection(
+    mode: BatchMode,
+    onModeChange: (BatchMode) -> Unit,
+) {
+    BatchSection(
+        icon = ForgeIcons.Sparkles,
+        title = stringResource(R.string.ux2_batch_section_mode),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm),
+        ) {
+            BatchMode.entries.forEach { candidate ->
+                ForgeChip(
+                    label = stringResource(candidate.labelRes()),
+                    selected = mode == candidate,
+                    onClick = { onModeChange(candidate) },
+                    icon = candidate.iconRes(),
+                )
+            }
+        }
+        Text(
+            text = stringResource(mode.hintRes()),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -314,115 +347,95 @@ private fun RangeFields(
 }
 
 @Composable
-private fun ForceSwitch(
-    force: Boolean,
+private fun BatchOptionsSection(
+    state: BatchUiState,
     onForceChange: (Boolean) -> Unit,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(min = 48.dp)
-            .toggleable(
-                value = force,
-                role = Role.Switch,
-                onValueChange = onForceChange,
-            )
-            .padding(vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = stringResource(R.string.batch_force_title),
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-            )
-            Text(
-                text = stringResource(R.string.batch_force_description),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        Switch(
-            checked = force,
-            onCheckedChange = null,
-        )
-    }
-}
-
-@Composable
-private fun ConcurrencyField(
-    concurrency: Int,
     onConcurrencyChange: (Int) -> Unit,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                text = stringResource(R.string.batch_concurrency_title),
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.weight(1f),
-            )
-            Text(
-                text = stringResource(R.string.batch_concurrency_value, concurrency),
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary,
-            )
-        }
-        val sliderDescription = stringResource(
-            R.string.batch_concurrency_content_description,
-            concurrency,
-        )
-        Slider(
-            value = concurrency.coerceIn(1, BatchParams.MAX_CONCURRENCY).toFloat(),
-            onValueChange = { onConcurrencyChange(it.roundToInt()) },
-            modifier = Modifier.semantics { contentDescription = sliderDescription },
-            valueRange = 1f..BatchParams.MAX_CONCURRENCY.toFloat(),
-            steps = BatchParams.MAX_CONCURRENCY - 2,
-        )
-        Text(
-            text = stringResource(
-                R.string.batch_concurrency_hint,
-                BatchParams.MAX_CONCURRENCY,
-            ),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
-}
-
-@Composable
-private fun EstimateCard(state: BatchUiState) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface,
-        ),
+    BatchSection(
+        icon = ForgeIcons.Sliders,
+        title = stringResource(R.string.ux2_batch_section_options),
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            Text(
-                text = stringResource(R.string.batch_estimate_title),
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-            )
-            if (state.hasEstimate) {
-                Text(
-                    text = stringResource(
-                        R.string.batch_estimate_detail,
-                        state.selectedChapterCount,
-                        state.estimatedMinutes,
-                        state.estimatedCostText,
+        ForgeCard(contentPadding = PaddingValues(MaterialTheme.spacing.md)) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 56.dp)
+                    .toggleable(
+                        value = state.force,
+                        role = Role.Switch,
+                        onValueChange = onForceChange,
                     ),
-                    style = MaterialTheme.typography.bodyMedium,
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.md),
+            ) {
+                OptionIcon(icon = ForgeIcons.Refresh)
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                ) {
+                    Text(
+                        text = stringResource(R.string.ux2_batch_force_title),
+                        style = MaterialTheme.typography.titleSmallEmphasized,
+                    )
+                    Text(
+                        text = stringResource(R.string.ux2_batch_force_description),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Switch(checked = state.force, onCheckedChange = null)
+            }
+            HorizontalDivider(modifier = Modifier.padding(vertical = MaterialTheme.spacing.sm))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.md),
+            ) {
+                OptionIcon(icon = ForgeIcons.Gauge)
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                ) {
+                    Text(
+                        text = stringResource(R.string.ux2_batch_concurrency_title),
+                        style = MaterialTheme.typography.titleSmallEmphasized,
+                    )
+                    Text(
+                        text = stringResource(R.string.ux2_batch_concurrency_description),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.End,
+            ) {
+                ForgeIconAction(
+                    icon = ForgeIcons.Minus,
+                    contentDescription = stringResource(R.string.ux2_batch_concurrency_decrease),
+                    onClick = {
+                        if (state.concurrency > 1) {
+                            onConcurrencyChange(state.concurrency - 1)
+                        }
+                    },
                 )
-            } else {
                 Text(
-                    text = stringResource(R.string.batch_estimate_empty),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    text = stringResource(R.string.batch_concurrency_value, state.concurrency),
+                    modifier = Modifier.widthIn(min = 48.dp),
+                    style = MaterialTheme.typography.titleMediumEmphasized,
+                    textAlign = TextAlign.Center,
+                )
+                ForgeIconAction(
+                    icon = ForgeIcons.Plus,
+                    contentDescription = stringResource(R.string.ux2_batch_concurrency_increase),
+                    onClick = {
+                        if (state.concurrency < BatchParams.MAX_CONCURRENCY) {
+                            onConcurrencyChange(state.concurrency + 1)
+                        }
+                    },
                 )
             }
         }
@@ -430,66 +443,145 @@ private fun EstimateCard(state: BatchUiState) {
 }
 
 @Composable
-private fun ValidationCard(state: BatchUiState) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.errorContainer,
-        ),
+private fun OptionIcon(@DrawableRes icon: Int) {
+    Surface(
+        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.secondaryContainer,
+        modifier = Modifier.size(40.dp),
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            Text(
-                text = stringResource(R.string.batch_validation_title),
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onErrorContainer,
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            ForgeIcon(
+                icon = icon,
+                contentDescription = null,
+                modifier = Modifier.size(20.dp),
+                tint = MaterialTheme.colorScheme.onSecondaryContainer,
             )
-            state.validationErrors.distinct().forEach { error ->
+        }
+    }
+}
+
+@Composable
+private fun BatchEstimateCard(state: BatchUiState) {
+    ForgeCard(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm),
+            verticalAlignment = Alignment.Top,
+        ) {
+            ForgeIcon(
+                icon = ForgeIcons.Clock,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+            )
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
                 Text(
-                    text = validationMessage(error, state.chapterCount),
-                    style = MaterialTheme.typography.bodySmall,
+                    text = stringResource(R.string.batch_estimate_title),
+                    style = MaterialTheme.typography.titleSmallEmphasized,
+                )
+                if (state.hasEstimate) {
+                    Text(
+                        text = stringResource(
+                            R.string.batch_estimate_detail,
+                            state.selectedChapterCount,
+                            state.estimatedMinutes,
+                            state.estimatedCostText,
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                    Text(
+                        text = stringResource(R.string.ux2_batch_estimate_note),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                } else {
+                    Text(
+                        text = stringResource(R.string.batch_estimate_empty),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun BatchValidationCard(state: BatchUiState) {
+    ForgeCard(containerColor = MaterialTheme.colorScheme.errorContainer) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm),
+            verticalAlignment = Alignment.Top,
+        ) {
+            ForgeIcon(
+                icon = ForgeIcons.AlertCircle,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onErrorContainer,
+            )
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                Text(
+                    text = stringResource(R.string.batch_validation_title),
+                    style = MaterialTheme.typography.titleSmallEmphasized,
                     color = MaterialTheme.colorScheme.onErrorContainer,
                 )
+                state.validationErrors.distinct().forEach { error ->
+                    Text(
+                        text = validationMessage(error, state.chapterCount),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                    )
+                }
             }
         }
     }
 }
 
 @Composable
-private fun MissingKeysCard(
+private fun BatchMissingKeysCard(
     missingKeys: List<BatchKeyKind>,
     onOpenSettings: () -> Unit,
 ) {
+    val separator = stringResource(R.string.ux2_batch_missing_keys_separator)
     val labels = missingKeys.map { stringResource(it.labelRes()) }
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.secondaryContainer,
-        ),
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
+    ForgeCard(containerColor = MaterialTheme.colorScheme.secondaryContainer) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm),
+            verticalAlignment = Alignment.Top,
         ) {
-            Text(
-                text = stringResource(R.string.batch_missing_keys_title),
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSecondaryContainer,
+            ForgeIcon(
+                icon = ForgeIcons.Key,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSecondaryContainer,
             )
-            Text(
-                text = stringResource(
-                    R.string.batch_missing_keys_message,
-                    labels.joinToString(separator = "、"),
-                ),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSecondaryContainer,
-            )
-            TextButton(onClick = onOpenSettings) {
-                Text(stringResource(R.string.batch_action_open_settings))
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.xs),
+            ) {
+                Text(
+                    text = stringResource(R.string.batch_missing_keys_title),
+                    style = MaterialTheme.typography.titleSmallEmphasized,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                )
+                Text(
+                    text = stringResource(
+                        R.string.batch_missing_keys_message,
+                        labels.joinToString(separator = separator),
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                )
+                ForgeSecondaryAction(
+                    icon = ForgeIcons.Settings,
+                    label = stringResource(R.string.batch_action_open_settings),
+                    onClick = onOpenSettings,
+                )
             }
         }
     }
@@ -500,97 +592,139 @@ private fun BatchStatusCard(state: BatchUiState) {
     val stopStatus = state.stopStatus
     val startStatus = state.startStatus
     when {
-        stopStatus != null -> StopStatusCard(stopStatus)
-        startStatus != null -> StartStatusCard(startStatus)
+        stopStatus != null -> BatchStopStatusCard(status = stopStatus)
+        startStatus != null -> BatchStartStatusCard(status = startStatus)
     }
 }
 
 @Composable
-private fun StartStatusCard(status: BatchStartStatus) {
+private fun BatchStartStatusCard(status: BatchStartStatus) {
     val isError = status is BatchStartStatus.Failure
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = when {
-                isError -> MaterialTheme.colorScheme.errorContainer
-                status is BatchStartStatus.Started -> MaterialTheme.colorScheme.primaryContainer
-                else -> MaterialTheme.colorScheme.secondaryContainer
-            },
-        ),
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
+    val icon = when (status) {
+        BatchStartStatus.Starting -> ForgeIcons.Loader
+        is BatchStartStatus.Started -> ForgeIcons.CheckCircle
+        is BatchStartStatus.AlreadyRunning -> ForgeIcons.AlertCircle
+        is BatchStartStatus.Failure -> ForgeIcons.ErrorCircle
+    }
+    val container = when {
+        isError -> MaterialTheme.colorScheme.errorContainer
+        status is BatchStartStatus.Started -> MaterialTheme.colorScheme.primaryContainer
+        else -> MaterialTheme.colorScheme.secondaryContainer
+    }
+    val content = when {
+        isError -> MaterialTheme.colorScheme.onErrorContainer
+        status is BatchStartStatus.Started -> MaterialTheme.colorScheme.onPrimaryContainer
+        else -> MaterialTheme.colorScheme.onSecondaryContainer
+    }
+    BatchStatusRow(
+        icon = icon,
+        container = container,
+        content = content,
+        message = when (status) {
+            BatchStartStatus.Starting -> stringResource(R.string.batch_status_starting)
+            is BatchStartStatus.Started -> stringResource(R.string.batch_status_started, status.jobId)
+            is BatchStartStatus.AlreadyRunning -> {
+                stringResource(R.string.batch_status_already_running, status.jobId)
+            }
+            is BatchStartStatus.Failure -> stringResource(R.string.batch_status_failure, status.reason)
+        },
+    )
+}
+
+@Composable
+private fun BatchStopStatusCard(status: BatchStopStatus) {
+    val isError = status is BatchStopStatus.Failure
+    val icon = when (status) {
+        BatchStopStatus.Requesting -> ForgeIcons.Loader
+        is BatchStopStatus.Stopping -> ForgeIcons.Square
+        is BatchStopStatus.NotRunning -> ForgeIcons.Info
+        is BatchStopStatus.Failure -> ForgeIcons.ErrorCircle
+    }
+    val container = if (isError) {
+        MaterialTheme.colorScheme.errorContainer
+    } else {
+        MaterialTheme.colorScheme.secondaryContainer
+    }
+    val content = if (isError) {
+        MaterialTheme.colorScheme.onErrorContainer
+    } else {
+        MaterialTheme.colorScheme.onSecondaryContainer
+    }
+    BatchStatusRow(
+        icon = icon,
+        container = container,
+        content = content,
+        message = when (status) {
+            BatchStopStatus.Requesting -> stringResource(R.string.batch_status_requesting_stop)
+            is BatchStopStatus.Stopping -> stringResource(R.string.batch_status_stopping, status.jobId)
+            is BatchStopStatus.NotRunning -> stringResource(R.string.batch_status_not_running)
+            is BatchStopStatus.Failure -> {
+                stringResource(R.string.batch_status_stop_failure, status.reason)
+            }
+        },
+    )
+}
+
+@Composable
+private fun BatchStatusRow(
+    @DrawableRes icon: Int,
+    container: Color,
+    content: Color,
+    message: String,
+) {
+    ForgeCard(containerColor = container) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm),
+            verticalAlignment = Alignment.Top,
         ) {
-            Text(
-                text = stringResource(R.string.batch_status_title),
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
+            ForgeIcon(
+                icon = icon,
+                contentDescription = null,
+                tint = content,
             )
-            Text(
-                text = when (status) {
-                    BatchStartStatus.Starting -> stringResource(R.string.batch_status_starting)
-                    is BatchStartStatus.Started -> stringResource(
-                        R.string.batch_status_started,
-                        status.jobId,
-                    )
-                    is BatchStartStatus.AlreadyRunning -> stringResource(
-                        R.string.batch_status_already_running,
-                        status.jobId,
-                    )
-                    is BatchStartStatus.Failure -> stringResource(
-                        R.string.batch_status_failure,
-                        status.reason,
-                    )
-                },
-                style = MaterialTheme.typography.bodyMedium,
-            )
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                Text(
+                    text = stringResource(R.string.batch_status_title),
+                    style = MaterialTheme.typography.titleSmallEmphasized,
+                    color = content,
+                )
+                Text(
+                    text = message,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = content,
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun StopStatusCard(status: BatchStopStatus) {
-    val isError = status is BatchStopStatus.Failure
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = if (isError) {
-                MaterialTheme.colorScheme.errorContainer
-            } else {
-                MaterialTheme.colorScheme.secondaryContainer
-            },
-        ),
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
+private fun BatchSection(
+    @DrawableRes icon: Int,
+    title: String,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm)) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.xs),
         ) {
-            Text(
-                text = stringResource(R.string.batch_status_title),
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
+            ForgeIcon(
+                icon = icon,
+                contentDescription = null,
+                modifier = Modifier.size(16.dp),
+                tint = MaterialTheme.colorScheme.primary,
             )
             Text(
-                text = when (status) {
-                    BatchStopStatus.Requesting -> stringResource(
-                        R.string.batch_status_requesting_stop,
-                    )
-                    is BatchStopStatus.Stopping -> stringResource(
-                        R.string.batch_status_stopping,
-                        status.jobId,
-                    )
-                    is BatchStopStatus.NotRunning -> stringResource(
-                        R.string.batch_status_not_running,
-                    )
-                    is BatchStopStatus.Failure -> stringResource(
-                        R.string.batch_status_stop_failure,
-                        status.reason,
-                    )
-                },
-                style = MaterialTheme.typography.bodyMedium,
+                text = title,
+                style = MaterialTheme.typography.titleSmallEmphasized,
             )
         }
+        content()
     }
 }
 
@@ -617,10 +751,25 @@ private fun validationMessage(error: BatchValidationError, chapterCount: Int): S
         )
     }
 
+@StringRes
 private fun BatchMode.labelRes(): Int = when (this) {
-    BatchMode.Full -> R.string.batch_mode_full
-    BatchMode.Parse -> R.string.batch_mode_parse
-    BatchMode.Render -> R.string.batch_mode_render
+    BatchMode.Full -> R.string.ux2_batch_mode_full
+    BatchMode.Parse -> R.string.ux2_batch_mode_parse
+    BatchMode.Render -> R.string.ux2_batch_mode_render
+}
+
+@DrawableRes
+private fun BatchMode.iconRes(): Int = when (this) {
+    BatchMode.Full -> ForgeIcons.Sparkles
+    BatchMode.Parse -> ForgeIcons.FileText
+    BatchMode.Render -> ForgeIcons.AudioLines
+}
+
+@StringRes
+private fun BatchMode.hintRes(): Int = when (this) {
+    BatchMode.Full -> R.string.ux2_batch_mode_full_hint
+    BatchMode.Parse -> R.string.ux2_batch_mode_parse_hint
+    BatchMode.Render -> R.string.ux2_batch_mode_render_hint
 }
 
 private fun BatchKeyKind.labelRes(): Int = when (this) {
@@ -629,7 +778,7 @@ private fun BatchKeyKind.labelRes(): Int = when (this) {
 }
 
 // ---------------------------------------------------------------------------
-// Preview
+// Preview：正常 / 缺 Key / 校验错误。示例数据只在 Preview 区使用。
 // ---------------------------------------------------------------------------
 
 private fun previewChapters(): List<BatchChapterUi> = listOf(

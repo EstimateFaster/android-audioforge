@@ -1,38 +1,33 @@
+@file:OptIn(
+    androidx.compose.foundation.layout.ExperimentalLayoutApi::class,
+    androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class,
+)
+
 package com.estimatefaster.audioforge.feature.export
 
 import android.net.Uri
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SheetValue
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -42,12 +37,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
-import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
-import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.stateDescription
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -55,13 +47,24 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.estimatefaster.audioforge.R
 import com.estimatefaster.audioforge.ui.components.AdaptiveFieldRow
-import com.estimatefaster.audioforge.ui.components.EmptyState
-import com.estimatefaster.audioforge.ui.components.ErrorState
-import com.estimatefaster.audioforge.ui.components.SectionHeader
+import com.estimatefaster.audioforge.ui.forge.ForgeCard
+import com.estimatefaster.audioforge.ui.forge.ForgeChip
+import com.estimatefaster.audioforge.ui.forge.ForgeEmpty
+import com.estimatefaster.audioforge.ui.forge.ForgeError
+import com.estimatefaster.audioforge.ui.forge.ForgeIcon
+import com.estimatefaster.audioforge.ui.forge.ForgeIcons
+import com.estimatefaster.audioforge.ui.forge.ForgeLoading
+import com.estimatefaster.audioforge.ui.forge.ForgePrimaryAction
+import com.estimatefaster.audioforge.ui.forge.ForgeSecondaryAction
+import com.estimatefaster.audioforge.ui.forge.ForgeSectionHeader
+import com.estimatefaster.audioforge.ui.forge.ForgeSheetHeader
+import com.estimatefaster.audioforge.ui.forge.ForgeWavyProgress
 import com.estimatefaster.audioforge.ui.theme.AudioForgeTheme
+import com.estimatefaster.audioforge.ui.theme.spacing
+import kotlin.math.roundToInt
 
 /**
- * 导出/分享 Sheet（P5-11 / 执行计划 §12.4 S13、§15 P5-11）。
+ * 导出/分享 Sheet（P5-11 / 执行计划 §12.4 S13、§15 P5-11，UX v2 重设计）。
  *
  * 有状态入口：收集 [ExportViewModel.state] 后委托给 [ExportSheetContent]。导出中禁止
  * 下滑/返回关闭（[ExportViewModel.cancel] 是唯一出口，避免半途丢进度）；完成后把成功
@@ -117,12 +120,13 @@ fun ExportSheet(
 /**
  * 无状态 Sheet 内容；Preview 与 UI 测试直接渲染它。
  *
- * 布局按阶段切换：
- * - 选择：范围控件 → 起止章输入（仅起止范围）→ 章节列表（时长/体积）→ 汇总 → 开始；
- * - 导出中：进度条 x/y → 当前章名 → 成功/失败计数 → 取消；
- * - 结果：成功列表 → 失败列表与重试 → 分享/完成。
+ * 布局对应 `docs/prototype/forge-framework.html` 的 Export Sheet：
+ * - 选择：导出范围 chips → 起止章输入（仅起止范围）→ 章节列表 → 预估 → 开始导出；
+ * - 导出中：Wavy 进度 → 百分比 / 当前章 / 成功失败计数 → 取消；
+ * - 结果：成功文件 / 失败列表与重试 → 完成 / 分享。
  *
- * 加载、加载失败与“无已完成章节”空态优先于阶段内容；文案全部来自 `strings.xml`。
+ * 加载、加载失败与“无已完成章节”空态优先于阶段内容；文案全部来自字符串资源。
+ * 所有按钮都是「Lucide 图标 + 文案」或纯图标操作，没有无图标可点击文字。
  */
 @Composable
 fun ExportSheetContent(
@@ -144,26 +148,40 @@ fun ExportSheetContent(
             .fillMaxWidth()
             .navigationBarsPadding()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 24.dp)
-            .padding(top = 8.dp, bottom = 24.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+            .padding(horizontal = MaterialTheme.spacing.xl)
+            .padding(top = MaterialTheme.spacing.sm, bottom = MaterialTheme.spacing.xl),
+        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.lg),
     ) {
-        ExportHeader()
+        ForgeSheetHeader(
+            icon = ForgeIcons.Download,
+            title = stringResource(R.string.export_sheet_title),
+            subtitle = stringResource(R.string.export_sheet_subtitle),
+            onClose = onDismiss,
+        )
 
         when {
-            state.loading -> ExportLoading()
-            loadError != null -> ErrorState(
-                message = stringResource(R.string.export_load_error, loadError),
-                retryText = stringResource(R.string.export_action_retry_load),
-                onRetry = onRetryLoad,
-            )
+            state.loading -> SheetStateBox {
+                ForgeLoading(label = stringResource(R.string.export_loading))
+            }
 
-            state.isEmpty -> EmptyState(
-                title = stringResource(R.string.export_empty_title),
-                description = stringResource(R.string.export_empty_description),
-                actionText = stringResource(R.string.export_action_retry_load),
-                onAction = onRetryLoad,
-            )
+            loadError != null -> SheetStateBox {
+                ForgeError(
+                    message = stringResource(R.string.export_load_error, loadError),
+                    onRetry = onRetryLoad,
+                    retryLabel = stringResource(R.string.export_action_retry_load),
+                )
+            }
+
+            state.isEmpty -> SheetStateBox {
+                ForgeEmpty(
+                    icon = ForgeIcons.Inbox,
+                    title = stringResource(R.string.export_empty_title),
+                    description = stringResource(R.string.export_empty_description),
+                    actionIcon = ForgeIcons.Refresh,
+                    actionLabel = stringResource(R.string.export_action_retry_load),
+                    onAction = onRetryLoad,
+                )
+            }
 
             else -> when (state.phase) {
                 ExportPhase.Selection -> SelectionSection(
@@ -191,42 +209,19 @@ fun ExportSheetContent(
     }
 }
 
+/** 空/载入/错误态在可滚动 Sheet 里给一个稳定的最小高度，避免居中内容塌陷。 */
 @Composable
-private fun ExportHeader() {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text(
-            text = stringResource(R.string.export_sheet_title),
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.SemiBold,
-        )
-        Text(
-            text = stringResource(R.string.export_sheet_subtitle),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
-}
-
-@Composable
-private fun ExportLoading() {
-    Row(
+private fun SheetStateBox(content: @Composable () -> Unit) {
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 24.dp),
-        horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically,
+            .heightIn(min = 280.dp),
+        contentAlignment = Alignment.Center,
     ) {
-        CircularProgressIndicator()
-        Spacer(Modifier.width(12.dp))
-        Text(
-            text = stringResource(R.string.export_loading),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        content()
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SelectionSection(
     state: ExportUiState,
@@ -236,7 +231,7 @@ private fun SelectionSection(
     onStart: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    SectionHeader(
+    ForgeSectionHeader(
         title = stringResource(R.string.export_range_title),
         subtitle = stringResource(R.string.export_range_subtitle),
     )
@@ -256,12 +251,10 @@ private fun SelectionSection(
         selectionError != ExportValidationError.NoChapters &&
         selectionError != ExportValidationError.NoCompleted
     ) {
-        ValidationCard(
-            message = selectionMessage(selectionError, state.chapters.size),
-        )
+        ValidationCard(message = selectionMessage(selectionError, state.chapters.size))
     }
 
-    SectionHeader(
+    ForgeSectionHeader(
         title = stringResource(R.string.export_list_title),
         subtitle = stringResource(
             R.string.export_list_subtitle,
@@ -270,11 +263,16 @@ private fun SelectionSection(
         ),
     )
     val selectedIds = state.selectedChapters.map { it.chapterIdx }.toSet()
-    state.chapters.take(MAX_LIST_ROWS).forEach { chapter ->
-        ChapterRow(
-            chapter = chapter,
-            selected = chapter.chapterIdx in selectedIds,
-        )
+    ForgeCard(
+        modifier = Modifier.fillMaxWidth(),
+        contentPadding = PaddingValues(MaterialTheme.spacing.sm),
+    ) {
+        state.chapters.take(MAX_LIST_ROWS).forEach { chapter ->
+            ChapterRow(
+                chapter = chapter,
+                selected = chapter.chapterIdx in selectedIds,
+            )
+        }
     }
     if (state.chapters.size > MAX_LIST_ROWS) {
         Text(
@@ -290,47 +288,42 @@ private fun SelectionSection(
 
     ExportSummaryCard(state)
 
-    Button(
+    val startLabel = if (state.selectedCount > 0) {
+        stringResource(R.string.export_action_start_count, state.selectedCount)
+    } else {
+        stringResource(R.string.export_action_start)
+    }
+    ForgePrimaryAction(
+        icon = ForgeIcons.Download,
+        label = startLabel,
         onClick = onStart,
+        modifier = Modifier.fillMaxWidth(),
         enabled = state.canStart,
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(min = 48.dp),
-    ) {
-        Text(
-            text = if (state.selectedCount > 0) {
-                stringResource(R.string.export_action_start_count, state.selectedCount)
-            } else {
-                stringResource(R.string.export_action_start)
-            },
-        )
-    }
-    TextButton(
+    )
+    ForgeSecondaryAction(
+        icon = ForgeIcons.Close,
+        label = stringResource(R.string.export_action_close),
         onClick = onDismiss,
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(min = 48.dp),
-    ) {
-        Text(stringResource(R.string.export_action_close))
-    }
+        modifier = Modifier.fillMaxWidth(),
+    )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun RangeSelector(
     range: ExportRange,
     onRangeChange: (ExportRange) -> Unit,
 ) {
-    SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-        ExportRange.entries.forEachIndexed { index, candidate ->
-            SegmentedButton(
+    FlowRow(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm),
+        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm),
+    ) {
+        ExportRange.entries.forEach { candidate ->
+            ForgeChip(
+                label = stringResource(candidate.labelRes()),
                 selected = range == candidate,
                 onClick = { onRangeChange(candidate) },
-                shape = SegmentedButtonDefaults.itemShape(
-                    index = index,
-                    count = ExportRange.entries.size,
-                ),
-                label = { Text(stringResource(candidate.labelRes())) },
+                icon = candidate.iconRes(),
             )
         }
     }
@@ -348,7 +341,7 @@ private fun RangeFields(
     val endInvalid = error == ExportValidationError.InvalidEnd ||
         error == ExportValidationError.StartAfterEnd
 
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm)) {
         AdaptiveFieldRow(
             {
                 OutlinedTextField(
@@ -356,6 +349,7 @@ private fun RangeFields(
                     onValueChange = onStartTextChange,
                     label = { Text(stringResource(R.string.export_range_start)) },
                     singleLine = true,
+                    shape = MaterialTheme.shapes.large,
                     isError = startInvalid,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
@@ -367,6 +361,7 @@ private fun RangeFields(
                     onValueChange = onEndTextChange,
                     label = { Text(stringResource(R.string.export_range_end)) },
                     singleLine = true,
+                    shape = MaterialTheme.shapes.large,
                     isError = endInvalid,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
@@ -397,25 +392,42 @@ private fun ChapterRow(
         stringResource(R.string.export_value_unknown)
     }
     val notReadyLabel = stringResource(R.string.export_chapter_not_ready)
+    val selectedLabel = stringResource(R.string.ux_v2_export_chapter_selected)
+    val leadingColor = if (selected) {
+        MaterialTheme.colorScheme.secondaryContainer
+    } else {
+        MaterialTheme.colorScheme.surfaceContainerHigh
+    }
+    val leadingTint = if (selected) {
+        MaterialTheme.colorScheme.onSecondaryContainer
+    } else {
+        MaterialTheme.colorScheme.onSurfaceVariant
+    }
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp)
-            .semantics(mergeDescendants = true) {
-                this.selected = selected
-                if (!chapter.audioDone) {
-                    stateDescription = notReadyLabel
-                }
-            },
+            .padding(
+                horizontal = MaterialTheme.spacing.sm,
+                vertical = MaterialTheme.spacing.sm,
+            ),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.md),
     ) {
-        Checkbox(
-            checked = selected,
-            onCheckedChange = null,
-            modifier = Modifier.clearAndSetSemantics { },
-        )
+        Surface(
+            modifier = Modifier.size(40.dp),
+            shape = MaterialTheme.shapes.medium,
+            color = leadingColor,
+            contentColor = leadingTint,
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                ForgeIcon(
+                    icon = if (chapter.audioDone) ForgeIcons.FileText else ForgeIcons.Clock,
+                    contentDescription = null,
+                    tint = leadingTint,
+                )
+            }
+        }
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = chapter.title,
@@ -424,16 +436,32 @@ private fun ChapterRow(
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
-                text = stringResource(R.string.export_chapter_meta, chapter.number, duration, size),
+                text = stringResource(
+                    R.string.export_chapter_meta,
+                    chapter.number,
+                    duration,
+                    size,
+                ),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
         if (!chapter.audioDone) {
+            ForgeIcon(
+                icon = ForgeIcons.AlertCircle,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.error,
+            )
             Text(
                 text = notReadyLabel,
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.error,
+            )
+        } else if (selected) {
+            ForgeIcon(
+                icon = ForgeIcons.CheckCircle,
+                contentDescription = selectedLabel,
+                tint = MaterialTheme.colorScheme.primary,
             )
         }
     }
@@ -441,52 +469,74 @@ private fun ChapterRow(
 
 @Composable
 private fun ExportSummaryCard(state: ExportUiState) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface,
-        ),
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
+    ForgeCard(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.md),
+            verticalAlignment = Alignment.Top,
         ) {
-            Text(
-                text = stringResource(R.string.export_summary_title),
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-            )
-            Text(
-                text = if (state.selectedCount > 0) {
-                    stringResource(
-                        R.string.export_summary,
-                        state.selectedCount,
-                        formatExportDuration(state.selectedDurationMs),
-                        formatExportFileSize(state.selectedSizeBytes),
+            Surface(
+                modifier = Modifier.size(44.dp),
+                shape = MaterialTheme.shapes.large,
+                color = MaterialTheme.colorScheme.tertiaryContainer,
+                contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    ForgeIcon(
+                        icon = ForgeIcons.Storage,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onTertiaryContainer,
                     )
-                } else {
-                    stringResource(R.string.export_summary_empty)
-                },
-                style = MaterialTheme.typography.bodyMedium,
-            )
+                }
+            }
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.xxs),
+            ) {
+                Text(
+                    text = stringResource(R.string.export_summary_title),
+                    style = MaterialTheme.typography.titleSmallEmphasized,
+                )
+                Text(
+                    text = if (state.selectedCount > 0) {
+                        stringResource(
+                            R.string.export_summary,
+                            state.selectedCount,
+                            formatExportDuration(state.selectedDurationMs),
+                            formatExportFileSize(state.selectedSizeBytes),
+                        )
+                    } else {
+                        stringResource(R.string.export_summary_empty)
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
         }
     }
 }
 
 @Composable
 private fun ValidationCard(message: String) {
-    Card(
+    ForgeCard(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.errorContainer,
-        ),
+        containerColor = MaterialTheme.colorScheme.errorContainer,
+        contentPadding = PaddingValues(MaterialTheme.spacing.md),
     ) {
-        Text(
-            text = message,
-            modifier = Modifier.padding(16.dp),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onErrorContainer,
-        )
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            ForgeIcon(
+                icon = ForgeIcons.AlertCircle,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onErrorContainer,
+            )
+            Text(
+                text = message,
+                modifier = Modifier.weight(1f),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onErrorContainer,
+            )
+        }
     }
 }
 
@@ -495,7 +545,7 @@ private fun ExportingSection(
     state: ExportUiState,
     onCancel: () -> Unit,
 ) {
-    SectionHeader(
+    ForgeSectionHeader(
         title = stringResource(R.string.export_progress_title),
         subtitle = stringResource(
             R.string.export_progress_count,
@@ -503,46 +553,107 @@ private fun ExportingSection(
             state.total,
         ),
     )
-    LinearProgressIndicator(
-        progress = { state.progress },
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(6.dp)
-            .semantics { liveRegion = LiveRegionMode.Polite },
+    val percentLabel = stringResource(
+        R.string.ux_v2_export_progress_percent,
+        (state.progress * 100).roundToInt(),
     )
-    val currentTitle = state.currentChapterTitle
-    if (currentTitle != null) {
-        Text(
-            text = stringResource(R.string.export_progress_current, currentTitle),
-            style = MaterialTheme.typography.bodyMedium,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
+    ForgeCard(modifier = Modifier.fillMaxWidth()) {
+        FlowRow(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm),
+        ) {
+            Text(
+                text = percentLabel,
+                style = MaterialTheme.typography.headlineSmallEmphasized,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.md),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                CountLabel(
+                    icon = ForgeIcons.CheckCircle,
+                    text = stringResource(R.string.export_progress_succeeded, state.succeeded.size),
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+                CountLabel(
+                    icon = ForgeIcons.AlertCircle,
+                    text = stringResource(R.string.export_progress_failed, state.failures.size),
+                    tint = MaterialTheme.colorScheme.error,
+                )
+            }
+        }
+        ForgeWavyProgress(
+            progress = state.progress,
+            modifier = Modifier
+                .fillMaxWidth()
+                .semantics {
+                    contentDescription = percentLabel
+                    liveRegion = LiveRegionMode.Polite
+                },
         )
+        val currentTitle = state.currentChapterTitle
+        if (currentTitle != null) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                ForgeIcon(
+                    icon = ForgeIcons.AudioLines,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+                Text(
+                    text = stringResource(R.string.export_progress_current, currentTitle),
+                    style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm),
+            verticalAlignment = Alignment.Top,
+        ) {
+            ForgeIcon(
+                icon = ForgeIcons.Info,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                text = stringResource(R.string.export_cancel_note),
+                modifier = Modifier.weight(1f),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
     }
-    Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-        Text(
-            text = stringResource(R.string.export_progress_succeeded, state.succeeded.size),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Text(
-            text = stringResource(R.string.export_progress_failed, state.failures.size),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
-    Text(
-        text = stringResource(R.string.export_cancel_note),
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
-    OutlinedButton(
+    ForgeSecondaryAction(
+        icon = ForgeIcons.Close,
+        label = stringResource(R.string.export_action_cancel_export),
         onClick = onCancel,
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(min = 48.dp),
+        modifier = Modifier.fillMaxWidth(),
+        danger = true,
+    )
+}
+
+@Composable
+private fun CountLabel(
+    @DrawableRes icon: Int,
+    text: String,
+    tint: androidx.compose.ui.graphics.Color,
+) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.xxs),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(stringResource(R.string.export_action_cancel_export))
+        ForgeIcon(icon = icon, contentDescription = null, tint = tint)
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelMedium,
+            color = tint,
+        )
     }
 }
 
@@ -553,7 +664,7 @@ private fun ResultSection(
     onShare: (List<Uri>) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    SectionHeader(
+    ForgeSectionHeader(
         title = stringResource(R.string.export_result_title),
         subtitle = stringResource(
             R.string.export_result_summary,
@@ -563,26 +674,52 @@ private fun ResultSection(
     )
 
     if (state.cancelled) {
-        Card(
+        ForgeCard(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.secondaryContainer,
-            ),
+            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+            contentPadding = PaddingValues(MaterialTheme.spacing.md),
         ) {
-            Text(
-                text = stringResource(R.string.export_result_cancelled),
-                modifier = Modifier.padding(16.dp),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSecondaryContainer,
-            )
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                ForgeIcon(
+                    icon = ForgeIcons.Info,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                )
+                Text(
+                    text = stringResource(R.string.export_result_cancelled),
+                    modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                )
+            }
         }
     }
 
-    Text(
-        text = stringResource(R.string.export_result_success_title),
-        style = MaterialTheme.typography.titleSmall,
-        fontWeight = FontWeight.SemiBold,
-    )
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        ForgeIcon(
+            icon = ForgeIcons.CheckCircle,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+        )
+        Text(
+            text = stringResource(R.string.export_result_success_title),
+            modifier = Modifier.weight(1f),
+            style = MaterialTheme.typography.titleSmallEmphasized,
+        )
+        Text(
+            text = stringResource(R.string.ux_v2_export_result_files_count, state.succeeded.size),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+
     if (state.succeeded.isEmpty()) {
         Text(
             text = stringResource(R.string.export_result_no_success),
@@ -590,8 +727,13 @@ private fun ResultSection(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     } else {
-        state.succeeded.take(MAX_LIST_ROWS).forEach { file ->
-            ExportedFileRow(file)
+        ForgeCard(
+            modifier = Modifier.fillMaxWidth(),
+            contentPadding = PaddingValues(MaterialTheme.spacing.sm),
+        ) {
+            state.succeeded.take(MAX_LIST_ROWS).forEach { file ->
+                ExportedFileRow(file = file)
+            }
         }
         if (state.succeeded.size > MAX_LIST_ROWS) {
             Text(
@@ -607,80 +749,131 @@ private fun ResultSection(
     }
 
     if (state.failures.isNotEmpty()) {
-        HorizontalDivider()
-        Text(
-            text = stringResource(R.string.export_result_failure_title),
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.SemiBold,
-        )
-        state.failures.take(MAX_LIST_ROWS).forEach { failure ->
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            ForgeIcon(
+                icon = ForgeIcons.AlertCircle,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.error,
+            )
             Text(
-                text = stringResource(
-                    R.string.export_result_failure_line,
-                    failure.title,
-                    failure.message,
-                ),
-                style = MaterialTheme.typography.bodySmall,
+                text = stringResource(R.string.export_result_failure_title),
+                style = MaterialTheme.typography.titleSmallEmphasized,
                 color = MaterialTheme.colorScheme.error,
             )
         }
-        OutlinedButton(
-            onClick = onRetryFailed,
-            enabled = state.canRetryFailed,
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = 48.dp),
+        ForgeCard(
+            modifier = Modifier.fillMaxWidth(),
+            containerColor = MaterialTheme.colorScheme.errorContainer,
+            contentPadding = PaddingValues(MaterialTheme.spacing.sm),
         ) {
-            Text(stringResource(R.string.export_action_retry_failed))
+            state.failures.take(MAX_LIST_ROWS).forEach { failure ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(MaterialTheme.spacing.sm),
+                    horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm),
+                    verticalAlignment = Alignment.Top,
+                ) {
+                    ForgeIcon(
+                        icon = ForgeIcons.AlertCircle,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onErrorContainer,
+                    )
+                    Text(
+                        text = stringResource(
+                            R.string.export_result_failure_line,
+                            failure.title,
+                            failure.message,
+                        ),
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                    )
+                }
+            }
         }
+        ForgeSecondaryAction(
+            icon = ForgeIcons.Refresh,
+            label = stringResource(R.string.export_action_retry_failed),
+            onClick = onRetryFailed,
+            modifier = Modifier.fillMaxWidth(),
+            enabled = state.canRetryFailed,
+        )
     }
 
-    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        OutlinedButton(
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.md),
+    ) {
+        ForgeSecondaryAction(
+            icon = ForgeIcons.Check,
+            label = stringResource(R.string.export_action_done),
             onClick = onDismiss,
-            modifier = Modifier
-                .weight(1f)
-                .heightIn(min = 48.dp),
-        ) {
-            Text(stringResource(R.string.export_action_done))
-        }
-        Button(
+            modifier = Modifier.weight(1f),
+        )
+        ForgePrimaryAction(
+            icon = ForgeIcons.Share,
+            label = stringResource(R.string.export_action_share),
             onClick = { onShare(state.shareUris.map { uri -> Uri.parse(uri) }) },
+            modifier = Modifier.weight(1f),
             enabled = state.canShare,
-            modifier = Modifier
-                .weight(1f)
-                .heightIn(min = 48.dp),
-        ) {
-            Text(stringResource(R.string.export_action_share))
-        }
+        )
     }
-    Text(
-        text = stringResource(R.string.export_result_share_hint),
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
+
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm),
+        verticalAlignment = Alignment.Top,
+    ) {
+        ForgeIcon(
+            icon = ForgeIcons.Info,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            text = stringResource(R.string.export_result_share_hint),
+            modifier = Modifier.weight(1f),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
 }
 
 @Composable
 private fun ExportedFileRow(file: ExportedFile) {
-    Column(
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp),
+            .padding(
+                horizontal = MaterialTheme.spacing.sm,
+                vertical = MaterialTheme.spacing.sm,
+            ),
+        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(
-            text = file.displayName,
-            style = MaterialTheme.typography.bodyMedium,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
+        ForgeIcon(
+            icon = ForgeIcons.FileText,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
         )
-        Text(
-            text = file.title,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = file.displayName,
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = file.title,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
     }
 }
 
@@ -717,6 +910,13 @@ private fun ExportRange.labelRes(): Int = when (this) {
     ExportRange.AllCompleted -> R.string.export_range_all
     ExportRange.CurrentChapter -> R.string.export_range_current
     ExportRange.ChapterRange -> R.string.export_range_custom
+}
+
+@DrawableRes
+private fun ExportRange.iconRes(): Int = when (this) {
+    ExportRange.AllCompleted -> ForgeIcons.BookOpen
+    ExportRange.CurrentChapter -> ForgeIcons.FileText
+    ExportRange.ChapterRange -> ForgeIcons.List
 }
 
 private const val MAX_LIST_ROWS = 50

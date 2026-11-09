@@ -1,11 +1,14 @@
 package com.estimatefaster.audioforge.ui
 
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasScrollToNodeAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
@@ -54,37 +57,36 @@ class NavigationSmokeTest {
         composeRule.onNodeWithText(onboardingTitle).assertIsDisplayed()
         composeRule.onNodeWithText(skip).assertIsDisplayed().performClick()
 
-        waitForText(text(R.string.project_library_title))
-        composeRule.onNodeWithText(text(R.string.project_library_title)).assertIsDisplayed()
+        waitForText(text(R.string.ux2_projects_title))
+        assertTextDisplayed(text(R.string.ux2_projects_title))
 
         // 数据库已清空，项目库应稳定落在空态；导入 FAB 始终可见。
-        waitForText(text(R.string.project_library_empty_title))
-        composeRule.onNodeWithText(text(R.string.project_library_empty_title)).assertIsDisplayed()
-        composeRule.onNodeWithText(text(R.string.project_library_empty_action)).assertIsDisplayed()
-        composeRule.onNodeWithText(text(R.string.project_library_import)).assertIsDisplayed()
+        waitForText(text(R.string.ux2_projects_empty_title))
+        assertTextDisplayed(text(R.string.ux2_projects_empty_title))
+        assertTextDisplayed(text(R.string.ux2_projects_empty_action))
     }
 
     @Test
     fun bottom_navigation_switches_projects_tasks_and_settings() {
         skipOnboarding()
 
-        openTopLevelTab(R.string.nav_tasks)
-        waitForText(text(R.string.tasks_subtitle))
-        composeRule.onNodeWithText(text(R.string.tasks_subtitle)).assertIsDisplayed()
+        openTopLevelTab(R.string.ux_nav_tab_tasks)
+        waitForText(text(R.string.ux_tasks_subtitle))
+        assertTextDisplayed(text(R.string.ux_tasks_subtitle))
 
-        openTopLevelTab(R.string.nav_settings)
+        openTopLevelTab(R.string.ux_nav_tab_settings)
         waitForText(text(R.string.settings_section_api))
-        composeRule.onNodeWithText(text(R.string.settings_section_api)).assertIsDisplayed()
+        assertTextDisplayed(text(R.string.settings_section_api))
 
-        openTopLevelTab(R.string.nav_projects)
-        waitForText(text(R.string.project_library_title))
-        composeRule.onNodeWithText(text(R.string.project_library_title)).assertIsDisplayed()
+        openTopLevelTab(R.string.ux_nav_tab_library)
+        waitForText(text(R.string.ux2_projects_title))
+        assertTextDisplayed(text(R.string.ux2_projects_title))
     }
 
     @Test
     fun settings_opens_storage_and_about_then_returns() {
         skipOnboarding()
-        openTopLevelTab(R.string.nav_settings)
+        openTopLevelTab(R.string.ux_nav_tab_settings)
         waitForSettingsContent()
 
         scrollSettingsTo(text(R.string.settings_action_open_storage))
@@ -92,10 +94,9 @@ class NavigationSmokeTest {
             .assertIsDisplayed()
             .performClick()
 
-        // 设置页没有「刷新」，它是存储页顶栏的稳定标记。
-        waitForText(text(R.string.action_refresh))
-        composeRule.onNodeWithText(text(R.string.storage_title)).assertIsDisplayed()
-        composeRule.onNodeWithText(text(R.string.action_back)).assertIsDisplayed().performClick()
+        waitForText(text(R.string.storage_title))
+        assertTextDisplayed(text(R.string.storage_title))
+        composeRule.onNodeWithContentDescription(text(R.string.action_back)).assertIsDisplayed().performClick()
         waitForSettingsContent()
 
         scrollSettingsTo(text(R.string.settings_action_open_about))
@@ -103,11 +104,31 @@ class NavigationSmokeTest {
             .assertIsDisplayed()
             .performClick()
 
-        // 同上：设置页没有「刷新」，用它判断关于页已经进入且转场结束。
-        waitForText(text(R.string.action_refresh))
-        composeRule.onNodeWithText(text(R.string.about_title)).assertIsDisplayed()
-        composeRule.onNodeWithText(text(R.string.action_back)).assertIsDisplayed().performClick()
+        waitForText(text(R.string.about_title))
+        assertTextDisplayed(text(R.string.about_title))
+        composeRule.onNodeWithContentDescription(text(R.string.action_back)).assertIsDisplayed().performClick()
         waitForSettingsContent()
+    }
+
+    @Test
+    fun theme_switch_applies_immediately_and_keeps_navigation() {
+        skipOnboarding()
+        openTopLevelTab(R.string.ux_nav_tab_settings)
+        waitForSettingsContent()
+
+        scrollSettingsTo(text(R.string.settings_theme_dark))
+        composeRule.onNodeWithText(text(R.string.settings_theme_dark)).performClick()
+        composeRule.waitForIdle()
+        composeRule.onNodeWithText(text(R.string.settings_theme_dark)).assertIsSelected()
+
+        scrollSettingsTo(text(R.string.settings_theme_light))
+        composeRule.onNodeWithText(text(R.string.settings_theme_light)).performClick()
+        composeRule.waitForIdle()
+        composeRule.onNodeWithText(text(R.string.settings_theme_light)).assertIsSelected()
+
+        openTopLevelTab(R.string.ux_nav_tab_library)
+        waitForText(text(R.string.ux2_projects_title))
+        assertTextDisplayed(text(R.string.ux2_projects_title))
     }
 
     // ------------------------------------------------------------------
@@ -118,7 +139,7 @@ class NavigationSmokeTest {
         val skip = text(R.string.onboarding_skip)
         waitForText(skip)
         composeRule.onNodeWithText(skip).performClick()
-        waitForText(text(R.string.project_library_title))
+        waitForText(text(R.string.ux2_projects_title))
     }
 
     private fun openTopLevelTab(labelRes: Int) {
@@ -128,6 +149,10 @@ class NavigationSmokeTest {
 
     private fun scrollSettingsTo(label: String) {
         composeRule.onNode(hasScrollToNodeAction()).performScrollToNode(hasText(label))
+    }
+
+    private fun assertTextDisplayed(value: String) {
+        composeRule.onAllNodesWithText(value).onFirst().assertIsDisplayed()
     }
 
     private fun waitForText(value: String) {
@@ -144,7 +169,7 @@ class NavigationSmokeTest {
      * 保证 [scrollSettingsTo] 拿到的是设置页自己的 LazyColumn 而不是上一页面的列表。
      */
     private fun waitForSettingsContent() {
-        waitForText(text(R.string.action_save))
+        waitForText(text(R.string.settings_title))
         composeRule.waitUntil(UI_TIMEOUT_MS) {
             composeRule.onAllNodes(hasScrollToNodeAction()).fetchSemanticsNodes().isNotEmpty()
         }

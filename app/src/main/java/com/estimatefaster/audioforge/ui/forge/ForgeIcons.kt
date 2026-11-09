@@ -26,6 +26,7 @@ object ForgeIcons {
     @DrawableRes val SkipNext = LucideR.drawable.lucide_ic_skip_forward
     @DrawableRes val SkipPrevious = LucideR.drawable.lucide_ic_skip_back
     @DrawableRes val Plus = LucideR.drawable.lucide_ic_plus
+    @DrawableRes val Minus = LucideR.drawable.lucide_ic_minus
     @DrawableRes val Search = LucideR.drawable.lucide_ic_search
     @DrawableRes val Settings = LucideR.drawable.lucide_ic_settings
     @DrawableRes val Sliders = LucideR.drawable.lucide_ic_sliders_horizontal
@@ -35,17 +36,25 @@ object ForgeIcons {
     @DrawableRes val Upload = LucideR.drawable.lucide_ic_upload
     @DrawableRes val Share = LucideR.drawable.lucide_ic_share_2
     @DrawableRes val Trash = LucideR.drawable.lucide_ic_trash_2
+    @DrawableRes val Copy = LucideR.drawable.lucide_ic_copy
     @DrawableRes val Edit = LucideR.drawable.lucide_ic_pencil
     @DrawableRes val List = LucideR.drawable.lucide_ic_list
     @DrawableRes val Check = LucideR.drawable.lucide_ic_check
+    @DrawableRes val Circle = LucideR.drawable.lucide_ic_circle
     @DrawableRes val Close = LucideR.drawable.lucide_ic_x
     @DrawableRes val Back = LucideR.drawable.lucide_ic_arrow_left
     @DrawableRes val ChevronRight = LucideR.drawable.lucide_ic_chevron_right
     @DrawableRes val ChevronLeft = LucideR.drawable.lucide_ic_chevron_left
     @DrawableRes val ChevronDown = LucideR.drawable.lucide_ic_chevron_down
+    @DrawableRes val ChevronUp = LucideR.drawable.lucide_ic_chevron_up
     @DrawableRes val More = LucideR.drawable.lucide_ic_ellipsis
     @DrawableRes val Menu = LucideR.drawable.lucide_ic_menu
     @DrawableRes val Refresh = LucideR.drawable.lucide_ic_refresh_cw
+    @DrawableRes val RotateCcw = LucideR.drawable.lucide_ic_rotate_ccw
+    @DrawableRes val Square = LucideR.drawable.lucide_ic_square
+    @DrawableRes val Repeat = LucideR.drawable.lucide_ic_repeat
+    @DrawableRes val Tag = LucideR.drawable.lucide_ic_tag
+
     @DrawableRes val Storage = LucideR.drawable.lucide_ic_hard_drive
     @DrawableRes val Info = LucideR.drawable.lucide_ic_info
     @DrawableRes val Key = LucideR.drawable.lucide_ic_key_round
@@ -67,6 +76,7 @@ object ForgeIcons {
     @DrawableRes val Smartphone = LucideR.drawable.lucide_ic_smartphone
     @DrawableRes val CheckCircle = LucideR.drawable.lucide_ic_circle_check
     @DrawableRes val AlertCircle = LucideR.drawable.lucide_ic_circle_alert
+    @DrawableRes val TriangleAlert = LucideR.drawable.lucide_ic_triangle_alert
     @DrawableRes val ErrorCircle = LucideR.drawable.lucide_ic_circle_x
     @DrawableRes val Loader = LucideR.drawable.lucide_ic_loader_circle
     @DrawableRes val Inbox = LucideR.drawable.lucide_ic_inbox

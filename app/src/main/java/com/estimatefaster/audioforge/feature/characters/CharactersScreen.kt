@@ -1,53 +1,42 @@
+@file:OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+
 package com.estimatefaster.audioforge.feature.characters
 
 import android.content.res.Configuration
-import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.horizontalScroll
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -56,17 +45,27 @@ import com.estimatefaster.audioforge.R
 import com.estimatefaster.audioforge.core.model.Gender
 import com.estimatefaster.audioforge.core.model.Importance
 import com.estimatefaster.audioforge.data.db.CharacterEntity
-import com.estimatefaster.audioforge.ui.components.EmptyState
-import com.estimatefaster.audioforge.ui.components.ErrorState
 import com.estimatefaster.audioforge.ui.components.RoleAvatar
+import com.estimatefaster.audioforge.ui.forge.ForgeCard
+import com.estimatefaster.audioforge.ui.forge.ForgeChip
+import com.estimatefaster.audioforge.ui.forge.ForgeEmpty
+import com.estimatefaster.audioforge.ui.forge.ForgeError
+import com.estimatefaster.audioforge.ui.forge.ForgeIcon
+import com.estimatefaster.audioforge.ui.forge.ForgeIconAction
+import com.estimatefaster.audioforge.ui.forge.ForgeIcons
+import com.estimatefaster.audioforge.ui.forge.ForgeLoading
+import com.estimatefaster.audioforge.ui.forge.ForgePrimaryAction
+import com.estimatefaster.audioforge.ui.forge.ForgeSectionHeader
+import com.estimatefaster.audioforge.ui.forge.ForgeTopBar
 import com.estimatefaster.audioforge.ui.theme.AudioForgeTheme
+import com.estimatefaster.audioforge.ui.theme.spacing
 
 /**
- * 人物音色页（P5-04 / 执行计划 §12.4 S08）。
+ * 人物音色页（Forge Framework v1）。
  *
  * 有状态入口：收集 [CharactersViewModel.state] 后委托给无状态版本。
- * 页面本身不写库：点击角色换音色（P5-05 Sheet）、长按/“更多”的重命名、
- * 编辑别名、排除角色都通过回调交给宿主。
+ * 页面本身不写库：点击角色换音色（VoicePicker Sheet）、重命名 / 编辑别名 /
+ * 排除角色 / 调参都通过回调交给宿主。
  */
 @Composable
 fun CharactersScreen(
@@ -102,13 +101,10 @@ fun CharactersScreen(
 /**
  * 无状态人物音色页。
  *
- * - 顶部：返回、标题、“已用角色数 / 总数”；
- * - 搜索（名字/别名）+ 性别/重要性筛选（AND 组合）；
- * - 角色卡：头像、名字、别名、性别/重要性标签、音色类别、当前音色、锁定标记；
- * - 点击整卡换音色；长按或“更多”打开重命名/编辑别名/排除菜单；
- * - 空态、筛选无结果、首屏加载、错误态复用 P4-02 组件。
+ * 结构对齐 prototype 的 Characters：topbar → 搜索 → 性别/重要性 chips →
+ * “角色与音色”列表 → 锁定说明。搜索 + 两维筛选仍是 AND 组合，空态区分
+ * “本书无角色”和“筛选无结果”。
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CharactersScreen(
     state: CharactersUiState,
@@ -127,181 +123,225 @@ fun CharactersScreen(
     onParseNovel: (() -> Unit)? = null,
 ) {
     val loadError = state.loadError
+    val searchFocus = remember { FocusRequester() }
+    val hasSearchField = !state.isInitialLoading && loadError == null && !state.isEmpty
+
     Scaffold(
         modifier = modifier,
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
-            TopAppBar(
-                navigationIcon = {
-                    TextButton(
-                        onClick = onBack,
-                        modifier = Modifier.heightIn(min = 48.dp),
-                    ) {
-                        Text(stringResource(R.string.action_back))
-                    }
+            ForgeTopBar(
+                title = stringResource(R.string.ux2_characters_title),
+                subtitle = if (state.totalCount == 0) {
+                    null
+                } else {
+                    stringResource(
+                        R.string.ux2_characters_subtitle,
+                        state.totalCount,
+                        state.usedCount,
+                    )
                 },
-                title = {
-                    Column {
-                        Text(
-                            text = stringResource(R.string.characters_title),
-                            modifier = Modifier.semantics { heading() },
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.SemiBold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
+                navigationIcon = ForgeIcons.Back,
+                navigationDescription = stringResource(R.string.ux2_characters_back),
+                onNavigation = onBack,
+                actions = {
+                    if (hasSearchField) {
+                        ForgeIconAction(
+                            icon = ForgeIcons.Search,
+                            contentDescription = stringResource(R.string.ux2_characters_search),
+                            onClick = { searchFocus.requestFocus() },
+                            container = false,
                         )
-                        if (state.totalCount > 0) {
-                            Text(
-                                text = stringResource(
-                                    R.string.characters_count,
-                                    state.usedCount,
-                                    state.totalCount,
-                                ),
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
-                ),
             )
         },
     ) { padding ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),
         ) {
-            if (state.allCharacters.isNotEmpty()) {
-                OutlinedTextField(
-                    value = state.query,
-                    onValueChange = onQueryChange,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(start = 20.dp, end = 20.dp, top = 4.dp),
-                    label = { Text(stringResource(R.string.characters_search_label)) },
-                    placeholder = {
-                        Text(stringResource(R.string.characters_search_placeholder))
+            when {
+                state.isInitialLoading -> ForgeLoading(
+                    label = stringResource(R.string.ux2_characters_loading),
+                    modifier = Modifier.fillMaxSize(),
+                )
+
+                loadError != null -> ForgeError(
+                    message = stringResource(R.string.ux2_characters_load_error, loadError),
+                    onRetry = onRetry,
+                )
+
+                state.isEmpty -> ForgeEmpty(
+                    icon = ForgeIcons.Users,
+                    title = stringResource(R.string.ux2_characters_empty_title),
+                    description = stringResource(R.string.ux2_characters_empty_description),
+                    actionIcon = if (onParseNovel != null) {
+                        ForgeIcons.Wand
+                    } else {
+                        ForgeIcons.Refresh
                     },
-                    singleLine = true,
-                    trailingIcon = {
-                        if (state.query.isNotEmpty()) {
-                            TextButton(
-                                onClick = { onQueryChange("") },
-                                modifier = Modifier.heightIn(min = 48.dp),
-                            ) {
-                                Text(stringResource(R.string.characters_search_clear))
-                            }
-                        }
+                    actionLabel = if (onParseNovel != null) {
+                        stringResource(R.string.ux2_characters_parse)
+                    } else {
+                        stringResource(R.string.ux2_characters_reload)
                     },
+                    onAction = onParseNovel ?: onRetry,
                 )
-                CharacterGenderFilterRow(
-                    selected = state.genderFilter,
-                    onSelect = onGenderFilterChange,
+
+                else -> CharactersContent(
+                    state = state,
+                    searchFocus = searchFocus,
+                    onQueryChange = onQueryChange,
+                    onGenderFilterChange = onGenderFilterChange,
+                    onImportanceFilterChange = onImportanceFilterChange,
+                    onClearFilters = onClearFilters,
+                    onVoiceClick = onVoiceClick,
+                    onRenameCharacter = onRenameCharacter,
+                    onEditAliases = onEditAliases,
+                    onExcludeCharacter = onExcludeCharacter,
+                    onTuneCharacter = onTuneCharacter,
                 )
-                CharacterImportanceFilterRow(
-                    selected = state.importanceFilter,
-                    onSelect = onImportanceFilterChange,
-                )
-                if (state.hasActiveFilters) {
-                    Text(
-                        text = stringResource(
-                            R.string.characters_count_filtered,
-                            state.visibleCount,
-                            state.totalCount,
+            }
+        }
+    }
+}
+
+@Composable
+private fun CharactersContent(
+    state: CharactersUiState,
+    searchFocus: FocusRequester,
+    onQueryChange: (String) -> Unit,
+    onGenderFilterChange: (Gender?) -> Unit,
+    onImportanceFilterChange: (Importance?) -> Unit,
+    onClearFilters: () -> Unit,
+    onVoiceClick: (String) -> Unit,
+    onRenameCharacter: (String) -> Unit,
+    onEditAliases: (String) -> Unit,
+    onExcludeCharacter: (String) -> Unit,
+    onTuneCharacter: (String) -> Unit,
+) {
+    Column(modifier = Modifier.fillMaxSize()) {
+        CharacterSearchField(
+            state = state,
+            focusRequester = searchFocus,
+            onQueryChange = onQueryChange,
+            modifier = Modifier.padding(
+                start = MaterialTheme.spacing.lg,
+                end = MaterialTheme.spacing.lg,
+                top = MaterialTheme.spacing.sm,
+            ),
+        )
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f),
+            contentPadding = PaddingValues(
+                start = MaterialTheme.spacing.lg,
+                end = MaterialTheme.spacing.lg,
+                top = MaterialTheme.spacing.xs,
+                bottom = MaterialTheme.spacing.xl,
+            ),
+            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.md),
+        ) {
+            item(key = "gender-filter") {
+                CharacterFilterGroup(
+                    label = stringResource(R.string.ux2_characters_filter_gender),
+                ) {
+                    ForgeChip(
+                        label = filterLabel(
+                            label = stringResource(R.string.ux2_characters_filter_all),
+                            count = state.totalCount,
                         ),
-                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 2.dp),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        selected = state.genderFilter == null,
+                        onClick = { onGenderFilterChange(null) },
+                        icon = ForgeIcons.Users,
+                    )
+                    Gender.entries.forEach { gender ->
+                        ForgeChip(
+                            label = filterLabel(
+                                label = stringResource(gender.labelRes()),
+                                count = state.allCharacters.count { it.gender == gender },
+                            ),
+                            selected = state.genderFilter == gender,
+                            onClick = { onGenderFilterChange(gender) },
+                            icon = ForgeIcons.UserRound,
+                        )
+                    }
+                }
+            }
+            item(key = "importance-filter") {
+                CharacterFilterGroup(
+                    label = stringResource(R.string.ux2_characters_filter_importance),
+                ) {
+                    ForgeChip(
+                        label = filterLabel(
+                            label = stringResource(R.string.ux2_characters_filter_all),
+                            count = state.totalCount,
+                        ),
+                        selected = state.importanceFilter == null,
+                        onClick = { onImportanceFilterChange(null) },
+                        icon = ForgeIcons.Users,
+                    )
+                    Importance.entries.forEach { importance ->
+                        ForgeChip(
+                            label = filterLabel(
+                                label = stringResource(importance.labelRes()),
+                                count = state.allCharacters.count { it.importance == importance },
+                            ),
+                            selected = state.importanceFilter == importance,
+                            onClick = { onImportanceFilterChange(importance) },
+                            icon = ForgeIcons.UserRound,
+                        )
+                    }
+                }
+            }
+            item(key = "section") {
+                ForgeSectionHeader(
+                    title = stringResource(R.string.ux2_characters_section_title),
+                    subtitle = stringResource(
+                        R.string.ux2_characters_section_count,
+                        state.visibleCount,
+                    ),
+                    modifier = Modifier.padding(top = MaterialTheme.spacing.xs),
+                )
+            }
+
+            if (state.isFilteredEmpty) {
+                item(key = "filtered-empty") {
+                    ForgeEmpty(
+                        icon = ForgeIcons.Search,
+                        title = stringResource(R.string.ux2_characters_filtered_title),
+                        description = stringResource(R.string.ux2_characters_filtered_description),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 320.dp),
+                        actionIcon = ForgeIcons.Refresh,
+                        actionLabel = stringResource(R.string.ux2_characters_clear_filters),
+                        onAction = onClearFilters,
+                    )
+                }
+            } else {
+                items(
+                    items = state.visibleCharacters,
+                    key = { character -> character.key },
+                    contentType = { _ -> "character" },
+                ) { character ->
+                    CharacterCard(
+                        character = character,
+                        onVoiceClick = { onVoiceClick(character.roleId) },
+                        onRename = { onRenameCharacter(character.roleId) },
+                        onEditAliases = { onEditAliases(character.roleId) },
+                        onExclude = { onExcludeCharacter(character.roleId) },
+                        onTune = { onTuneCharacter(character.roleId) },
                     )
                 }
             }
 
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f),
-            ) {
-                when {
-                    state.isInitialLoading -> CharactersLoading(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 24.dp),
-                    )
-
-                    loadError != null -> Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 12.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        ErrorState(
-                            message = stringResource(R.string.characters_load_error, loadError),
-                            onRetry = onRetry,
-                        )
-                    }
-
-                    state.isEmpty -> Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 12.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        EmptyState(
-                            title = stringResource(R.string.characters_empty_title),
-                            description = stringResource(R.string.characters_empty_description),
-                            actionText = if (onParseNovel != null) {
-                                stringResource(R.string.characters_empty_action_parse)
-                            } else {
-                                null
-                            },
-                            onAction = onParseNovel,
-                        )
-                    }
-
-                    state.isFilteredEmpty -> Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 12.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        EmptyState(
-                            title = stringResource(R.string.characters_filtered_empty_title),
-                            description = stringResource(
-                                R.string.characters_filtered_empty_description,
-                            ),
-                            actionText = stringResource(R.string.characters_filtered_empty_action),
-                            onAction = onClearFilters,
-                        )
-                    }
-
-                    else -> LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(
-                            start = 20.dp,
-                            end = 20.dp,
-                            top = 8.dp,
-                            bottom = 24.dp,
-                        ),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        items(
-                            items = state.visibleCharacters,
-                            key = { character -> character.key },
-                            contentType = { _ -> "character" },
-                        ) { character ->
-                            CharacterCard(
-                                character = character,
-                                onVoiceClick = { onVoiceClick(character.roleId) },
-                                onRename = { onRenameCharacter(character.roleId) },
-                                onEditAliases = { onEditAliases(character.roleId) },
-                                onExclude = { onExcludeCharacter(character.roleId) },
-                                onTune = { onTuneCharacter(character.roleId) },
-                            )
-                        }
-                    }
+            if (state.allCharacters.isNotEmpty()) {
+                item(key = "lock-note") {
+                    CharacterLockNote()
                 }
             }
         }
@@ -309,70 +349,74 @@ fun CharactersScreen(
 }
 
 @Composable
-private fun CharacterGenderFilterRow(
-    selected: Gender?,
-    onSelect: (Gender?) -> Unit,
+private fun CharacterSearchField(
+    state: CharactersUiState,
+    focusRequester: FocusRequester,
+    onQueryChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    CharacterFilterChipRow(
-        label = stringResource(R.string.characters_filter_gender),
-        options = listOf<Pair<Gender?, String>>(
-            null to stringResource(R.string.characters_filter_all),
-            Gender.Male to stringResource(R.string.characters_gender_male),
-            Gender.Female to stringResource(R.string.characters_gender_female),
-            Gender.Unknown to stringResource(R.string.characters_gender_unknown),
-        ),
-        selected = selected,
-        onSelect = onSelect,
-    )
-}
-
-@Composable
-private fun CharacterImportanceFilterRow(
-    selected: Importance?,
-    onSelect: (Importance?) -> Unit,
-) {
-    CharacterFilterChipRow(
-        label = stringResource(R.string.characters_filter_importance),
-        options = listOf<Pair<Importance?, String>>(
-            null to stringResource(R.string.characters_filter_all),
-            Importance.Protagonist to stringResource(R.string.characters_importance_protagonist),
-            Importance.Supporting to stringResource(R.string.characters_importance_supporting),
-            Importance.Minor to stringResource(R.string.characters_importance_minor),
-        ),
-        selected = selected,
-        onSelect = onSelect,
-    )
-}
-
-@Composable
-private fun <T> CharacterFilterChipRow(
-    label: String,
-    options: List<Pair<T?, String>>,
-    selected: T?,
-    onSelect: (T?) -> Unit,
-) {
-    Row(
-        modifier = Modifier
+    OutlinedTextField(
+        value = state.query,
+        onValueChange = onQueryChange,
+        modifier = modifier
             .fillMaxWidth()
-            .horizontalScroll(rememberScrollState())
-            .padding(horizontal = 20.dp, vertical = 2.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
+            .focusRequester(focusRequester),
+        singleLine = true,
+        shape = MaterialTheme.shapes.extraLarge,
+        leadingIcon = {
+            ForgeIcon(
+                icon = ForgeIcons.Search,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        },
+        trailingIcon = if (state.query.isNotEmpty()) {
+            {
+                IconButton(
+                    onClick = { onQueryChange("") },
+                    modifier = Modifier.size(48.dp),
+                ) {
+                    ForgeIcon(
+                        icon = ForgeIcons.Close,
+                        contentDescription = stringResource(R.string.ux2_characters_search_clear),
+                    )
+                }
+            }
+        } else {
+            null
+        },
+        placeholder = {
+            Text(
+                text = stringResource(R.string.ux2_characters_search_hint),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        },
+    )
+}
+
+@Composable
+private fun CharacterFilterGroup(
+    label: String,
+    chips: @Composable () -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.xs)) {
         Text(
             text = label,
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        options.forEach { (value, text) ->
-            FilterChip(
-                selected = selected == value,
-                onClick = { onSelect(value) },
-                label = { Text(text) },
-            )
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm),
+            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm),
+        ) {
+            chips()
         }
     }
 }
+
+@Composable
+private fun filterLabel(label: String, count: Int): String =
+    stringResource(R.string.ux2_characters_filter_count, label, count)
 
 @Composable
 private fun CharacterCard(
@@ -384,67 +428,77 @@ private fun CharacterCard(
     onTune: () -> Unit,
 ) {
     var menuExpanded by rememberSaveable(character.key) { mutableStateOf(false) }
-    val shape = MaterialTheme.shapes.medium
     val displayName = character.displayName.ifBlank {
-        stringResource(R.string.role_avatar_unknown)
+        stringResource(R.string.ux2_characters_unknown_name)
     }
-    val clickLabel = stringResource(R.string.characters_voice_change_content_description)
-    val moreDescription = stringResource(
-        R.string.characters_more_content_description,
-        displayName,
-    )
     val voiceName = character.voiceLabel
         ?: character.category.takeIf { it.isNotEmpty() }
-        ?: stringResource(R.string.characters_voice_unassigned)
+        ?: stringResource(R.string.ux2_characters_voice_unassigned)
+    val tuneDescription = stringResource(R.string.ux2_characters_tune, displayName)
+    val moreDescription = stringResource(R.string.ux2_characters_more, displayName)
 
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(shape)
-            .combinedClickable(
-                onClickLabel = clickLabel,
-                onLongClickLabel = stringResource(R.string.action_more),
-                onLongClick = { menuExpanded = true },
-                onClick = onVoiceClick,
-            ),
-        shape = shape,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface,
-        ),
+    ForgeCard(
+        modifier = Modifier.fillMaxWidth(),
+        onClick = onVoiceClick,
+        contentPadding = PaddingValues(MaterialTheme.spacing.md),
     ) {
         Row(
-            modifier = Modifier.padding(start = 16.dp, end = 8.dp, top = 12.dp, bottom = 12.dp),
             verticalAlignment = Alignment.Top,
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.md),
         ) {
-            // 名字在右侧可见，头像只做装饰，避免 TalkBack 把同一人物读两遍。
-            RoleAvatar(name = displayName, size = 48.dp, decorative = true)
-            Spacer(Modifier.width(12.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = displayName,
-                        modifier = Modifier.weight(1f),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+            RoleAvatar(name = displayName, size = 56.dp, decorative = true)
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.xs),
+            ) {
+                Text(
+                    text = displayName,
+                    style = MaterialTheme.typography.titleMediumEmphasized,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.xs),
+                ) {
+                    ImportanceTag(importance = character.importance)
                     if (character.locked) {
-                        Spacer(Modifier.width(6.dp))
                         CharacterTag(
-                            text = stringResource(R.string.characters_locked),
-                            container = MaterialTheme.colorScheme.secondaryContainer,
-                            content = MaterialTheme.colorScheme.onSecondaryContainer,
+                            text = stringResource(R.string.ux2_characters_locked),
+                            container = MaterialTheme.colorScheme.tertiaryContainer,
+                            content = MaterialTheme.colorScheme.onTertiaryContainer,
+                            icon = ForgeIcons.Lock,
                         )
                     }
                 }
-                if (character.aliases.isNotEmpty()) {
-                    Spacer(Modifier.height(2.dp))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.xs),
+                ) {
+                    ForgeIcon(
+                        icon = ForgeIcons.AudioLines,
+                        contentDescription = null,
+                        modifier = Modifier.size(14.dp),
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
                     Text(
                         text = stringResource(
-                            R.string.characters_alias,
+                            R.string.ux2_characters_voice_line,
+                            voiceName,
+                            stringResource(character.gender.labelRes()),
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                if (character.aliases.isNotEmpty()) {
+                    Text(
+                        text = stringResource(
+                            R.string.ux2_characters_aliases,
                             character.aliases.joinToString(
-                                stringResource(R.string.characters_alias_separator),
+                                stringResource(R.string.ux2_characters_alias_separator),
                             ),
                         ),
                         style = MaterialTheme.typography.bodySmall,
@@ -453,48 +507,7 @@ private fun CharacterCard(
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
-                Spacer(Modifier.height(6.dp))
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    CharacterTag(
-                        text = stringResource(character.gender.labelRes()),
-                        container = MaterialTheme.colorScheme.surfaceVariant,
-                        content = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    CharacterTag(
-                        text = stringResource(character.importance.labelRes()),
-                        container = MaterialTheme.colorScheme.surfaceVariant,
-                        content = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    if (character.category.isNotEmpty()) {
-                        Text(
-                            text = stringResource(
-                                R.string.characters_category,
-                                character.category,
-                            ),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    }
-                }
-                Spacer(Modifier.height(6.dp))
-                Text(
-                    text = stringResource(R.string.characters_voice_current, voiceName),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = if (character.hasVoice) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    },
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
                 if (character.note.isNotEmpty()) {
-                    Spacer(Modifier.height(2.dp))
                     Text(
                         text = character.note,
                         style = MaterialTheme.typography.bodySmall,
@@ -503,84 +516,116 @@ private fun CharacterCard(
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
-            }
-            Column(horizontalAlignment = Alignment.End) {
-                TextButton(
-                    onClick = onVoiceClick,
-                    modifier = Modifier.heightIn(min = 48.dp),
-                ) {
-                    Text(stringResource(R.string.characters_voice_change))
+                if (character.category.isNotEmpty()) {
+                    CharacterTag(
+                        text = character.category,
+                        container = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        content = MaterialTheme.colorScheme.onSurfaceVariant,
+                        icon = ForgeIcons.Tag,
+                    )
                 }
-                Box {
-                    TextButton(
-                        onClick = { menuExpanded = true },
-                        modifier = Modifier
-                            .heightIn(min = 48.dp)
-                            .semantics { contentDescription = moreDescription },
-                    ) {
-                        Text(stringResource(R.string.action_more))
-                    }
-                    CharacterMenu(
-                        expanded = menuExpanded,
-                        onDismiss = { menuExpanded = false },
-                        onRename = {
+            }
+            Box {
+                ForgeIconAction(
+                    icon = ForgeIcons.More,
+                    contentDescription = moreDescription,
+                    onClick = { menuExpanded = true },
+                    container = false,
+                )
+                DropdownMenu(
+                    expanded = menuExpanded,
+                    onDismissRequest = { menuExpanded = false },
+                ) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.ux2_characters_menu_rename)) },
+                        onClick = {
                             menuExpanded = false
                             onRename()
                         },
-                        onEditAliases = {
+                        leadingIcon = {
+                            ForgeIcon(ForgeIcons.Edit, contentDescription = null)
+                        },
+                    )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.ux2_characters_menu_alias)) },
+                        onClick = {
                             menuExpanded = false
                             onEditAliases()
                         },
-                        onTune = {
+                        leadingIcon = {
+                            ForgeIcon(ForgeIcons.Tag, contentDescription = null)
+                        },
+                    )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.ux2_characters_menu_tune)) },
+                        onClick = {
                             menuExpanded = false
                             onTune()
                         },
-                        onExclude = {
+                        leadingIcon = {
+                            ForgeIcon(ForgeIcons.Sliders, contentDescription = null)
+                        },
+                    )
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                text = stringResource(R.string.ux2_characters_menu_exclude),
+                                color = MaterialTheme.colorScheme.error,
+                            )
+                        },
+                        onClick = {
                             menuExpanded = false
                             onExclude()
+                        },
+                        leadingIcon = {
+                            ForgeIcon(
+                                icon = ForgeIcons.Trash,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.error,
+                            )
                         },
                     )
                 }
             }
         }
+
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm),
+        ) {
+            ForgePrimaryAction(
+                icon = ForgeIcons.AudioLines,
+                label = stringResource(R.string.ux2_characters_voice_change),
+                onClick = onVoiceClick,
+                modifier = Modifier.weight(1f),
+            )
+            ForgeIconAction(
+                icon = ForgeIcons.Sliders,
+                contentDescription = tuneDescription,
+                onClick = onTune,
+                container = true,
+            )
+        }
     }
 }
 
 @Composable
-private fun CharacterMenu(
-    expanded: Boolean,
-    onDismiss: () -> Unit,
-    onRename: () -> Unit,
-    onEditAliases: () -> Unit,
-    onTune: () -> Unit,
-    onExclude: () -> Unit,
-) {
-    DropdownMenu(
-        expanded = expanded,
-        onDismissRequest = onDismiss,
-    ) {
-        DropdownMenuItem(
-            text = { Text(stringResource(R.string.action_rename)) },
-            onClick = onRename,
-        )
-        DropdownMenuItem(
-            text = { Text(stringResource(R.string.characters_action_edit_alias)) },
-            onClick = onEditAliases,
-        )
-        DropdownMenuItem(
-            text = { Text(stringResource(R.string.characters_action_tune)) },
-            onClick = onTune,
-        )
-        DropdownMenuItem(
-            text = {
-                Text(
-                    text = stringResource(R.string.characters_action_exclude),
-                    color = MaterialTheme.colorScheme.error,
-                )
-            },
-            onClick = onExclude,
-        )
+private fun ImportanceTag(importance: Importance) {
+    val container = when (importance) {
+        Importance.Protagonist -> MaterialTheme.colorScheme.primaryContainer
+        Importance.Supporting -> MaterialTheme.colorScheme.secondaryContainer
+        Importance.Minor -> MaterialTheme.colorScheme.surfaceContainerHigh
     }
+    val content = when (importance) {
+        Importance.Protagonist -> MaterialTheme.colorScheme.onPrimaryContainer
+        Importance.Supporting -> MaterialTheme.colorScheme.onSecondaryContainer
+        Importance.Minor -> MaterialTheme.colorScheme.onSurfaceVariant
+    }
+    CharacterTag(
+        text = stringResource(importance.labelRes()),
+        container = container,
+        content = content,
+    )
 }
 
 @Composable
@@ -588,54 +633,76 @@ private fun CharacterTag(
     text: String,
     container: Color,
     content: Color,
+    icon: Int? = null,
 ) {
     Surface(
-        shape = RoundedCornerShape(percent = 50),
+        shape = MaterialTheme.shapes.small,
         color = container,
     ) {
-        Text(
-            text = text,
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-            style = MaterialTheme.typography.labelSmall,
-            color = content,
-            maxLines = 1,
-        )
+        Row(
+            modifier = Modifier.padding(
+                horizontal = MaterialTheme.spacing.sm,
+                vertical = MaterialTheme.spacing.xxs,
+            ),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.xxs),
+        ) {
+            if (icon != null) {
+                ForgeIcon(
+                    icon = icon,
+                    contentDescription = null,
+                    modifier = Modifier.size(12.dp),
+                    tint = content,
+                )
+            }
+            Text(
+                text = text,
+                style = MaterialTheme.typography.labelSmall,
+                color = content,
+                maxLines = 1,
+            )
+        }
     }
 }
 
 @Composable
-private fun CharactersLoading(modifier: Modifier = Modifier) {
-    Column(
-        modifier = modifier,
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        CircularProgressIndicator()
-        Spacer(Modifier.height(12.dp))
-        Text(
-            text = stringResource(R.string.characters_loading),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+private fun CharacterLockNote() {
+    ForgeCard(containerColor = MaterialTheme.colorScheme.tertiaryContainer) {
+        Row(
+            verticalAlignment = Alignment.Top,
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm),
+        ) {
+            ForgeIcon(
+                icon = ForgeIcons.Lock,
+                contentDescription = null,
+                modifier = Modifier.size(16.dp),
+                tint = MaterialTheme.colorScheme.onTertiaryContainer,
+            )
+            Text(
+                text = stringResource(R.string.ux2_characters_lock_note),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onTertiaryContainer,
+            )
+        }
     }
 }
 
-@Composable
+@StringRes
 private fun Gender.labelRes(): Int = when (this) {
-    Gender.Male -> R.string.characters_gender_male
-    Gender.Female -> R.string.characters_gender_female
-    Gender.Unknown -> R.string.characters_gender_unknown
+    Gender.Male -> R.string.ux2_characters_gender_male
+    Gender.Female -> R.string.ux2_characters_gender_female
+    Gender.Unknown -> R.string.ux2_characters_gender_unknown
 }
 
-@Composable
+@StringRes
 private fun Importance.labelRes(): Int = when (this) {
-    Importance.Protagonist -> R.string.characters_importance_protagonist
-    Importance.Supporting -> R.string.characters_importance_supporting
-    Importance.Minor -> R.string.characters_importance_minor
+    Importance.Protagonist -> R.string.ux2_characters_importance_protagonist
+    Importance.Supporting -> R.string.ux2_characters_importance_supporting
+    Importance.Minor -> R.string.ux2_characters_importance_minor
 }
 
 // ---------------------------------------------------------------------------
-// Preview 数据：只用固定非动态色，分别检查正常列表与空态。
+// Preview：正常列表 / 空态（深色 200%）。数据只是固定夹具。
 // ---------------------------------------------------------------------------
 
 private val previewVoiceLabels: Map<String, String> = mapOf(
@@ -702,27 +769,13 @@ private fun previewCharactersState(): CharactersUiState {
     )
 }
 
-@Preview(name = "Characters", showBackground = true, backgroundColor = 0xFFF7F8FC)
+@Preview(name = "Characters Forge", showBackground = true, backgroundColor = 0xFFF7F9F8)
 @Composable
-private fun CharactersPreview() {
+private fun CharactersForgePreview() {
     AudioForgeTheme(dynamicColor = false) {
         CharactersScreen(
             state = previewCharactersState(),
             onParseNovel = {},
-        )
-    }
-}
-
-@Preview(name = "Characters Filtered Empty", showBackground = true, backgroundColor = 0xFFF7F8FC)
-@Composable
-private fun CharactersFilteredEmptyPreview() {
-    AudioForgeTheme(dynamicColor = false) {
-        CharactersScreen(
-            state = previewCharactersState().copy(
-                query = "不存在的人物",
-                genderFilter = Gender.Female,
-                importanceFilter = Importance.Minor,
-            ),
         )
     }
 }

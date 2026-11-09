@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- UX v2 引导 / 播放器 / 导出：只放本轮新增文案，旧 key 继续复用。 -->
+
+    <!-- 引导 Onboarding -->
+    <string name="ux_v2_onboarding_topbar_subtitle">%1$s · 首次启动</string>
+    <string name="ux_v2_onboarding_hero_tagline_welcome">让文字开口</string>
+    <string name="ux_v2_onboarding_hero_tagline_keys">连接你的模型</string>
+    <string name="ux_v2_onboarding_hero_tagline_permissions">把后台说明白</string>
+    <string name="ux_v2_onboarding_step_rail_description">步骤 %1$d / %2$d</string>
+    <string name="ux_v2_onboarding_primary_start">开始配置</string>
+    <string name="ux_v2_onboarding_primary_finish">开始使用</string>
+    <string name="ux_v2_onboarding_storage_title">存储访问</string>
+    <string name="ux_v2_onboarding_storage_body">导入 txt、写入章节音频与最终导出文件都需要本机存储。</string>
+
+    <!-- 播放器 Player -->
+    <string name="ux_v2_player_topbar_title">正在播放</string>
+    <string name="ux_v2_player_topbar_subtitle">%1$s · 本地音频</string>
+    <string name="ux_v2_player_segment_indicator">第 %1$d / %2$d 句</string>
+    <string name="ux_v2_player_chapter_meta">%1$d 段 · %2$s</string>
+
+    <!-- 导出 Export -->
+    <string name="ux_v2_export_chapter_selected">已选</string>
+    <string name="ux_v2_export_progress_percent">%1$d%%</string>
+    <string name="ux_v2_export_result_files_count">共 %1$d 个文件</string>
+</resources>

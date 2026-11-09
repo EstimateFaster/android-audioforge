@@ -1,27 +1,31 @@
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class)
+
 package com.estimatefaster.audioforge.feature.projects
 
 import android.content.res.Configuration
 import android.text.format.Formatter
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -30,33 +34,38 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.estimatefaster.audioforge.R
+import com.estimatefaster.audioforge.ui.forge.ForgeCard
+import com.estimatefaster.audioforge.ui.forge.ForgeChip
+import com.estimatefaster.audioforge.ui.forge.ForgeError
+import com.estimatefaster.audioforge.ui.forge.ForgeIcon
+import com.estimatefaster.audioforge.ui.forge.ForgeIcons
+import com.estimatefaster.audioforge.ui.forge.ForgeListRow
+import com.estimatefaster.audioforge.ui.forge.ForgePrimaryAction
+import com.estimatefaster.audioforge.ui.forge.ForgeSecondaryAction
+import com.estimatefaster.audioforge.ui.forge.ForgeSheetHeader
+import com.estimatefaster.audioforge.ui.forge.ForgeWavyProgress
 import com.estimatefaster.audioforge.ui.theme.AudioForgeTheme
+import com.estimatefaster.audioforge.ui.theme.spacing
 
 /**
- * 导入 Sheet 的有状态入口（P4-04 / 执行计划 §12.4 S03）。
+ * 导入 Sheet 的有状态入口（Forge Framework v1 · Import）。
  *
- * 只负责：
+ * 保留原状态机与全部回调：
  * 1. 创建 SAF `OpenDocument("text/plain")` launcher，把选中的 uri 交给
  *    [ImportViewModel.onFilePicked]；
  * 2. 收集 [ImportViewModel.events]：成功 → `onImported(novelId)`；重名选「打开已有」
  *    → `onOpenExisting(id)`，两者都会关闭 Sheet；
  * 3. 关闭（下滑/取消/成功）时取消在途导入，用例负责清理半成品文件。
- *
- * 集成提示：`ProjectLibraryScreen` 的 FAB `onImport` 目前只是回调；接入时在该页
- * 用 `if (showImport) ImportSheet(viewModel, onDismiss = { showImport = false },
- * onImported = onOpenProject, onOpenExisting = onOpenProject)` 即可。
  *
  * @param onDismiss 关闭 Sheet（由调用方控制可见性）
  * @param onImported 导入成功后进入新项目
@@ -120,16 +129,11 @@ fun ImportSheet(
 }
 
 /**
- * 无状态 Sheet 内容；Preview 与将来 UI 测试都直接渲染它。
+ * 无状态 Sheet 内容；Preview 与 UI 测试直接渲染它。
  *
- * 状态 → 布局：
- * - `Idle`：选择文件入口；
- * - `Selected`：文件卡 + 导入；
- * - `Importing`：文件卡 + 进度条/百分比 + 取消；
- * - `NeedsEncoding`：候选编码按钮，选中后重开源流重试；
- * - `Duplicate`：AlertDialog「打开已有项目 / 取消」；
- * - `Error`：可读原因 + 重试（仅用例失败/源打不开）+ 重新选择；
- * - `Success`：成功占位（正常路径会立即通过事件关闭）。
+ * 对齐 `forge-framework.html` 的 Import Sheet：Sheet 头（Lucide 图标 + 标题 +
+ * 关闭）→ 选择文件 → 分阶段内容（导入 / 编码 / 重名 / 错误 / 成功）→ 本机导入说明。
+ * 所有操作均为 Lucide icon + 文案或纯图标；正文与说明文字不可点击。
  */
 @Composable
 fun ImportSheetContent(
@@ -147,122 +151,160 @@ fun ImportSheetContent(
         modifier = modifier
             .fillMaxWidth()
             .navigationBarsPadding()
-            .padding(horizontal = 24.dp)
-            .padding(top = 8.dp, bottom = 24.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 20.dp)
+            .padding(top = 4.dp, bottom = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.lg),
     ) {
-        Text(
-            text = stringResource(R.string.import_sheet_title),
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.SemiBold,
-        )
-        Text(
-            text = stringResource(R.string.import_sheet_subtitle),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        ForgeSheetHeader(
+            icon = ForgeIcons.Upload,
+            title = stringResource(R.string.ux2_import_title),
+            subtitle = stringResource(R.string.ux2_import_subtitle),
+            onClose = onCancel,
         )
 
-        state.selection?.let { selection -> SelectedFileCard(selection = selection) }
+        ImportSectionHeader(
+            icon = ForgeIcons.FileText,
+            title = stringResource(R.string.ux2_import_step_file),
+        )
+
+        val selection = state.selection
+        if (selection == null) {
+            PickFileCard(onPickFile = onPickFile)
+        } else {
+            SelectedFileCard(
+                selection = selection,
+                canReselect = state.phase != ImportPhase.Importing,
+                onReselect = onPickFile,
+            )
+        }
 
         when (state.phase) {
-            ImportPhase.Idle -> {
-                Text(
-                    text = stringResource(R.string.import_file_type_hint),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Button(
-                    onClick = onPickFile,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = 48.dp),
-                ) {
-                    Text(stringResource(R.string.import_pick_file))
-                }
-            }
+            ImportPhase.Idle -> Unit
 
             ImportPhase.Selected -> {
-                Text(
-                    text = stringResource(R.string.import_file_type_hint),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Button(
+                ForgePrimaryAction(
+                    icon = ForgeIcons.Upload,
+                    label = stringResource(R.string.ux2_import_start),
                     onClick = onStartImport,
+                    modifier = Modifier.fillMaxWidth(),
                     enabled = state.canStartImport,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = 48.dp),
-                ) {
-                    Text(stringResource(R.string.import_action_start))
-                }
-                TextButton(
+                )
+                ForgeSecondaryAction(
+                    icon = ForgeIcons.Refresh,
+                    label = stringResource(R.string.ux2_import_reselect),
                     onClick = onPickFile,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = 48.dp),
-                ) {
-                    Text(stringResource(R.string.import_pick_again))
-                }
+                    modifier = Modifier.fillMaxWidth(),
+                )
             }
 
             ImportPhase.Importing -> {
                 ImportProgress(state = state)
-                TextButton(
+                ForgeSecondaryAction(
+                    icon = ForgeIcons.Close,
+                    label = stringResource(R.string.ux2_import_cancel),
                     onClick = onCancel,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = 48.dp),
-                ) {
-                    Text(stringResource(R.string.import_action_cancel))
-                }
+                    modifier = Modifier.fillMaxWidth(),
+                )
             }
 
             ImportPhase.NeedsEncoding -> {
-                EncodingChooser(state = state, onChooseEncoding = onChooseEncoding)
-                TextButton(
-                    onClick = onCancel,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = 48.dp),
-                ) {
-                    Text(stringResource(R.string.import_action_cancel))
+                ImportSectionHeader(
+                    icon = ForgeIcons.Globe,
+                    title = stringResource(R.string.ux2_import_step_encoding),
+                )
+                Text(
+                    text = stringResource(R.string.ux2_import_encoding_title),
+                    style = MaterialTheme.typography.titleSmallEmphasized,
+                )
+                Text(
+                    text = stringResource(R.string.ux2_import_encoding_desc),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                if (state.encodingCandidates.isEmpty()) {
+                    Text(
+                        text = stringResource(R.string.ux2_import_error_unknown),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                } else {
+                    state.encodingCandidates.forEach { encoding ->
+                        ForgeChip(
+                            label = stringResource(R.string.ux2_import_encoding_action, encoding),
+                            selected = state.selectedEncoding == encoding,
+                            onClick = { onChooseEncoding(encoding) },
+                            icon = if (encoding.startsWith("UTF", ignoreCase = true)) {
+                                ForgeIcons.Globe
+                            } else {
+                                ForgeIcons.FileText
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
                 }
+                ForgeSecondaryAction(
+                    icon = ForgeIcons.Close,
+                    label = stringResource(R.string.ux2_import_cancel),
+                    onClick = onCancel,
+                    modifier = Modifier.fillMaxWidth(),
+                )
             }
 
             ImportPhase.Duplicate -> {
-                // 具体动作在下方 AlertDialog 里；这里保留说明，避免用户只看到弹窗。
                 Text(
-                    text = stringResource(R.string.import_duplicate_note),
+                    text = stringResource(R.string.ux2_import_duplicate_note),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                ForgeSecondaryAction(
+                    icon = ForgeIcons.Close,
+                    label = stringResource(R.string.ux2_import_cancel),
+                    onClick = onCancel,
+                    modifier = Modifier.fillMaxWidth(),
                 )
             }
 
             ImportPhase.Error -> {
-                ImportErrorPanel(
-                    state = state,
-                    onRetry = onRetry,
-                    onPickFile = onPickFile,
-                )
-                TextButton(
-                    onClick = onCancel,
+                ForgeError(
+                    message = stringResource(
+                        R.string.ux2_import_error_message,
+                        state.error.errorMessage(),
+                    ),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .heightIn(min = 48.dp),
-                ) {
-                    Text(stringResource(R.string.import_action_cancel))
-                }
+                        .heightIn(min = 300.dp),
+                    onRetry = if (state.canRetry) onRetry else null,
+                    retryLabel = stringResource(R.string.ux2_import_retry),
+                )
+                ForgeSecondaryAction(
+                    icon = ForgeIcons.Upload,
+                    label = stringResource(R.string.ux2_import_reselect),
+                    onClick = onPickFile,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                ForgeSecondaryAction(
+                    icon = ForgeIcons.Close,
+                    label = stringResource(R.string.ux2_import_cancel),
+                    onClick = onCancel,
+                    modifier = Modifier.fillMaxWidth(),
+                )
             }
 
             ImportPhase.Success -> {
-                Text(
-                    text = stringResource(R.string.import_success),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
+                ForgeListRow(
+                    icon = ForgeIcons.CheckCircle,
+                    title = stringResource(R.string.ux2_import_success),
+                    subtitle = stringResource(R.string.ux2_import_success_hint),
                 )
             }
         }
+
+        Text(
+            text = stringResource(R.string.ux2_import_note),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 
     if (state.phase == ImportPhase.Duplicate) {
@@ -274,69 +316,105 @@ fun ImportSheetContent(
     }
 }
 
+// ---------------------------------------------------------------------------
+// 选择文件
+// ---------------------------------------------------------------------------
+
 @Composable
-private fun SelectedFileCard(
-    selection: ImportFileSelection,
+private fun PickFileCard(
+    onPickFile: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val context = LocalContext.current
-    val sizeText = selection.sizeBytes
-        ?.takeIf { it >= 0L }
-        ?.let { bytes -> Formatter.formatFileSize(context, bytes) }
-        ?: stringResource(R.string.import_size_unknown)
-
-    Card(
-        modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-        ),
+    ForgeCard(
+        modifier = modifier,
+        onClick = onPickFile,
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(MaterialTheme.spacing.md),
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.md),
         ) {
-            Text(
-                text = stringResource(R.string.import_selected_file),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Text(
-                text = selection.displayName,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 3,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Text(
-                text = stringResource(R.string.import_file_size, sizeText),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            Surface(
+                shape = MaterialTheme.shapes.large,
+                color = MaterialTheme.colorScheme.primaryContainer,
+                modifier = Modifier.size(48.dp),
+            ) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    ForgeIcon(
+                        icon = ForgeIcons.Upload,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                    )
+                }
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(R.string.ux2_import_pick_title),
+                    style = MaterialTheme.typography.titleSmallEmphasized,
+                )
+                Text(
+                    text = stringResource(R.string.ux2_import_pick_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            ForgeIcon(
+                icon = ForgeIcons.ChevronRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
 }
 
 @Composable
+private fun SelectedFileCard(
+    selection: ImportFileSelection,
+    canReselect: Boolean,
+    onReselect: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val context = LocalContext.current
+    val sizeText = selection.sizeBytes
+        ?.takeIf { bytes -> bytes >= 0L }
+        ?.let { bytes -> Formatter.formatFileSize(context, bytes) }
+        ?: stringResource(R.string.ux2_import_size_unknown)
+
+    ForgeListRow(
+        icon = ForgeIcons.FileText,
+        title = selection.displayName,
+        subtitle = stringResource(R.string.ux2_import_file_size, sizeText),
+        trailingText = stringResource(R.string.ux2_import_file_desc),
+        trailingIcon = if (canReselect) ForgeIcons.Refresh else null,
+        trailingDescription = stringResource(R.string.ux2_import_file_reselect),
+        onTrailingClick = if (canReselect) onReselect else null,
+        modifier = modifier,
+    )
+}
+
+// ---------------------------------------------------------------------------
+// 导入进度 / 编码 / 错误 / 重名
+// ---------------------------------------------------------------------------
+
+@Composable
 private fun ImportProgress(
     state: ImportUiState,
     modifier: Modifier = Modifier,
 ) {
+    val progressDescription = stringResource(R.string.ux2_import_importing)
     Column(
         modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                text = stringResource(R.string.import_importing_title),
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
+                text = progressDescription,
+                style = MaterialTheme.typography.titleSmallEmphasized,
                 modifier = Modifier.weight(1f),
             )
             if (state.isProgressDeterminate) {
                 Text(
-                    text = stringResource(R.string.progress_percent, state.percent),
+                    text = stringResource(R.string.ux2_import_progress_percent, state.percent),
                     // 百分比只做视觉提示；进度条自身会向 TalkBack 播报数值。
                     modifier = Modifier.clearAndSetSemantics { },
                     style = MaterialTheme.typography.labelLarge,
@@ -344,103 +422,52 @@ private fun ImportProgress(
                 )
             }
         }
-        val progressDescription = stringResource(R.string.import_importing_title)
         if (state.isProgressDeterminate) {
-            LinearProgressIndicator(
-                progress = { state.safeProgress },
+            ForgeWavyProgress(
+                progress = state.safeProgress,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(min = 4.dp)
                     .semantics { contentDescription = progressDescription },
             )
         } else {
-            // SAF 未提供 SIZE：用不确定进度，绝不伪造百分比。
-            LinearProgressIndicator(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 4.dp)
-                    .semantics { contentDescription = progressDescription },
-            )
-        }
-    }
-}
-
-@Composable
-private fun EncodingChooser(
-    state: ImportUiState,
-    onChooseEncoding: (String) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Column(
-        modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        Text(
-            text = stringResource(R.string.import_encoding_title),
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
-        )
-        Text(
-            text = stringResource(R.string.import_encoding_description),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        state.encodingCandidates.forEach { encoding ->
-            OutlinedButton(
-                onClick = { onChooseEncoding(encoding) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 48.dp),
+            // SAF 未提供 SIZE：不伪造百分比，用加载指示 + 文案说明。
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm),
             ) {
-                Text(stringResource(R.string.import_encoding_action, encoding))
+                LoadingIndicator(modifier = Modifier.size(20.dp))
+                Text(
+                    text = stringResource(R.string.ux2_import_progress_unknown),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         }
     }
 }
 
 @Composable
-private fun ImportErrorPanel(
-    state: ImportUiState,
-    onRetry: () -> Unit,
-    onPickFile: () -> Unit,
+private fun ImportSectionHeader(
+    @DrawableRes icon: Int,
+    title: String,
     modifier: Modifier = Modifier,
 ) {
-    Column(
+    Row(
         modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm),
     ) {
-        Text(
-            text = stringResource(R.string.import_error_title),
-            modifier = Modifier.semantics {
-                liveRegion = LiveRegionMode.Polite
-            },
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.error,
+        Icon(
+            painter = painterResource(icon),
+            contentDescription = null,
+            modifier = Modifier.size(18.dp),
+            tint = MaterialTheme.colorScheme.primary,
         )
         Text(
-            text = state.error.errorMessage(),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurface,
+            text = title,
+            style = MaterialTheme.typography.titleSmallEmphasized,
+            modifier = Modifier.semantics { heading() },
         )
-        if (state.canRetry) {
-            Button(
-                onClick = onRetry,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 48.dp),
-            ) {
-                Text(stringResource(R.string.action_retry))
-            }
-        }
-        OutlinedButton(
-            onClick = onPickFile,
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = 48.dp),
-        ) {
-            Text(stringResource(R.string.import_action_reselect))
-        }
     }
 }
 
@@ -452,31 +479,41 @@ private fun DuplicateDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.import_duplicate_title)) },
+        icon = { ForgeIcon(ForgeIcons.Library, contentDescription = null) },
+        title = {
+            Text(
+                text = stringResource(R.string.ux2_import_duplicate_title),
+                style = MaterialTheme.typography.titleLargeEmphasized,
+            )
+        },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm)) {
                 Text(
                     text = stringResource(
-                        R.string.import_duplicate_message,
+                        R.string.ux2_import_duplicate_message,
                         duplicate?.title.orEmpty(),
                     ),
                 )
                 Text(
-                    text = stringResource(R.string.import_duplicate_note),
+                    text = stringResource(R.string.ux2_import_duplicate_note),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         },
         confirmButton = {
-            TextButton(onClick = onOpenExisting) {
-                Text(stringResource(R.string.import_action_open_existing))
-            }
+            ForgePrimaryAction(
+                icon = ForgeIcons.BookOpen,
+                label = stringResource(R.string.ux2_import_duplicate_open),
+                onClick = onOpenExisting,
+            )
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.action_cancel))
-            }
+            ForgeSecondaryAction(
+                icon = ForgeIcons.Close,
+                label = stringResource(R.string.ux2_import_duplicate_dismiss),
+                onClick = onDismiss,
+            )
         },
     )
 }
@@ -485,20 +522,20 @@ private fun DuplicateDialog(
 @Composable
 private fun ImportError?.errorMessage(): String = when (this) {
     is ImportError.Validation -> stringResource(reason.messageRes())
-    ImportError.SourceUnavailable -> stringResource(R.string.import_error_unreadable)
+    ImportError.SourceUnavailable -> stringResource(R.string.ux2_import_error_unreadable)
     is ImportError.ImportFailed -> message
-    null -> stringResource(R.string.import_error_title)
+    null -> stringResource(R.string.ux2_import_error_unknown)
 }
 
 private fun ImportValidationError.messageRes(): Int = when (this) {
-    ImportValidationError.NotTxt -> R.string.import_error_not_txt
-    ImportValidationError.EmptyFile -> R.string.import_error_empty
-    ImportValidationError.TooLarge -> R.string.import_error_too_large
-    ImportValidationError.InvalidSize -> R.string.import_error_invalid_size
+    ImportValidationError.NotTxt -> R.string.ux2_import_error_not_txt
+    ImportValidationError.EmptyFile -> R.string.ux2_import_error_empty
+    ImportValidationError.TooLarge -> R.string.ux2_import_error_too_large
+    ImportValidationError.InvalidSize -> R.string.ux2_import_error_invalid_size
 }
 
 // ---------------------------------------------------------------------------
-// Preview：已选择 / 导入中 / 错误 / 编码重试 / 重名（至少 3 个场景）。
+// Preview：空 / 已选 / 导入中 / 编码 / 错误 / 重名 / 深色 200%。
 // ---------------------------------------------------------------------------
 
 private fun previewSelection(
@@ -511,7 +548,7 @@ private fun previewSelection(
 )
 
 @Preview(
-    name = "ImportSheet Idle",
+    name = "Import Idle",
     showBackground = true,
     backgroundColor = 0xFFF7F8FC,
 )
@@ -525,7 +562,7 @@ private fun ImportSheetIdlePreview() {
 }
 
 @Preview(
-    name = "ImportSheet Selected",
+    name = "Import Selected",
     showBackground = true,
     backgroundColor = 0xFFF7F8FC,
 )
@@ -544,7 +581,7 @@ private fun ImportSheetSelectedPreview() {
 }
 
 @Preview(
-    name = "ImportSheet Importing",
+    name = "Import Importing",
     showBackground = true,
     backgroundColor = 0xFFF7F8FC,
 )
@@ -564,7 +601,7 @@ private fun ImportSheetImportingPreview() {
 }
 
 @Preview(
-    name = "ImportSheet NeedsEncoding",
+    name = "Import NeedsEncoding",
     showBackground = true,
     backgroundColor = 0xFFF7F8FC,
 )
@@ -584,7 +621,7 @@ private fun ImportSheetNeedsEncodingPreview() {
 }
 
 @Preview(
-    name = "ImportSheet Error",
+    name = "Import Error",
     showBackground = true,
     backgroundColor = 0xFFF7F8FC,
 )
@@ -597,7 +634,7 @@ private fun ImportSheetErrorPreview() {
                     phase = ImportPhase.Error,
                     selection = previewSelection(),
                     error = ImportError.ImportFailed(
-                        stringResource(R.string.import_error_preview),
+                        stringResource(R.string.ux2_import_error_unreadable),
                     ),
                 ),
             )
@@ -606,7 +643,7 @@ private fun ImportSheetErrorPreview() {
 }
 
 @Preview(
-    name = "ImportSheet Duplicate",
+    name = "Import Duplicate",
     showBackground = true,
     backgroundColor = 0xFFF7F8FC,
 )
@@ -626,7 +663,7 @@ private fun ImportSheetDuplicatePreview() {
 }
 
 @Preview(
-    name = "ImportSheet Dark 200%",
+    name = "Import Dark 200%",
     showBackground = true,
     uiMode = Configuration.UI_MODE_NIGHT_YES,
     fontScale = 2f,
