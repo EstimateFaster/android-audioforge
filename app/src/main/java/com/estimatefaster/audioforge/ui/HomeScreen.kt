@@ -8,21 +8,15 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -37,18 +31,28 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import com.estimatefaster.audioforge.BuildConfig
 import com.estimatefaster.audioforge.R
 import com.estimatefaster.audioforge.core.audio.FfmpegProbeState
 import com.estimatefaster.audioforge.data.db.RoomProbeState
+import com.estimatefaster.audioforge.ui.components.ExpressiveCard
+import com.estimatefaster.audioforge.ui.components.ExpressivePrimaryButton
+import com.estimatefaster.audioforge.ui.components.ExpressiveTonalButton
+import com.estimatefaster.audioforge.ui.components.SectionHeader
 import com.estimatefaster.audioforge.ui.theme.AudioForgeTheme
+import com.estimatefaster.audioforge.ui.theme.spacing
 import com.estimatefaster.audioforge.work.ProbeWorkSnapshot
 import com.estimatefaster.audioforge.work.ProbeWorkStatus
 
+/**
+ * 首页（Expressive 重做）。
+ *
+ * 结构：`HeroCard`（primaryContainer 大圆角）→ 清单 → Debug 冒烟检测 → 下一步 → 页脚。
+ * 所有分组用 [SectionHeader]，卡片统一 [ExpressiveCard]，动作只用 expressive 按钮；
+ * 原有回调与文案 key 保持不变。
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
@@ -61,16 +65,16 @@ fun HomeScreen(
     onStopProbeWorker: () -> Unit = {},
 ) {
     var showDetails by rememberSaveable { mutableStateOf(false) }
+    val spacing = MaterialTheme.spacing
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
-                    Column {
+                    Column(verticalArrangement = Arrangement.spacedBy(spacing.xxs)) {
                         Text(
                             text = stringResource(R.string.home_title),
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.SemiBold,
+                            style = MaterialTheme.typography.titleLargeEmphasized,
                         )
                         Text(
                             text = stringResource(R.string.home_subtitle),
@@ -89,14 +93,30 @@ fun HomeScreen(
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
-                .padding(horizontal = 20.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
+                .padding(padding),
+            contentPadding = PaddingValues(
+                start = spacing.xl,
+                end = spacing.xl,
+                top = spacing.sm,
+                bottom = spacing.lg,
+            ),
+            verticalArrangement = Arrangement.spacedBy(spacing.lg),
         ) {
-            item { Spacer(Modifier.height(4.dp)) }
             item { HeroCard() }
+            item {
+                SectionHeader(
+                    title = stringResource(R.string.checklist_title),
+                    subtitle = stringResource(R.string.ux_home_checklist_subtitle),
+                )
+            }
             item { ChecklistCard() }
             if (BuildConfig.DEBUG) {
+                item {
+                    SectionHeader(
+                        title = stringResource(R.string.ux_home_diagnostics_title),
+                        subtitle = stringResource(R.string.ux_home_diagnostics_subtitle),
+                    )
+                }
                 item { RoomProbeCard(roomProbeState, onRunRoomProbe) }
                 item { FfmpegProbeCard(ffmpegProbeState, onRunFfmpegProbe) }
                 item { ProbeWorkerCard(probeWork, onStartProbeWorker, onStopProbeWorker) }
@@ -104,15 +124,11 @@ fun HomeScreen(
             item { NextCard(showDetails) { showDetails = !showDetails } }
             item {
                 AnimatedVisibility(visible = showDetails) {
-                    Card(
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                        ),
-                    ) {
+                    ExpressiveCard {
                         Text(
                             text = stringResource(R.string.phase0_details),
-                            modifier = Modifier.padding(16.dp),
                             style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 }
@@ -120,7 +136,7 @@ fun HomeScreen(
             item {
                 Text(
                     text = stringResource(R.string.footer),
-                    modifier = Modifier.padding(vertical = 18.dp),
+                    modifier = Modifier.padding(vertical = spacing.md),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -131,25 +147,25 @@ fun HomeScreen(
 
 @Composable
 private fun HeroCard() {
+    val spacing = MaterialTheme.spacing
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.extraLarge,
+        shape = MaterialTheme.shapes.extraExtraLarge,
         color = MaterialTheme.colorScheme.primaryContainer,
+        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
     ) {
-        Column(modifier = Modifier.padding(22.dp)) {
+        Column(
+            modifier = Modifier.padding(spacing.xxl),
+            verticalArrangement = Arrangement.spacedBy(spacing.sm),
+        ) {
             Text(
                 text = stringResource(R.string.phase0_badge),
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                style = MaterialTheme.typography.labelLargeEmphasized,
             )
-            Spacer(Modifier.height(10.dp))
             Text(
                 text = stringResource(R.string.home_title),
                 style = MaterialTheme.typography.displaySmall,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onPrimaryContainer,
             )
-            Spacer(Modifier.height(6.dp))
             Text(
                 text = stringResource(R.string.home_intro),
                 style = MaterialTheme.typography.bodyLarge,
@@ -161,42 +177,32 @@ private fun HeroCard() {
 
 @Composable
 private fun ChecklistCard() {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-    ) {
-        Column(modifier = Modifier.padding(18.dp)) {
-            Text(
-                text = stringResource(R.string.checklist_title),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-            )
-            Spacer(Modifier.height(10.dp))
-            listOf(
-                R.string.checklist_1,
-                R.string.checklist_2,
-                R.string.checklist_3,
-                R.string.checklist_4,
-            ).forEachIndexed { index, textRes ->
-                if (index > 0) {
-                    HorizontalDivider(
-                        modifier = Modifier.padding(vertical = 9.dp),
-                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
-                    )
-                }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = "✓",
-                        modifier = Modifier.size(22.dp),
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                    Text(
-                        text = stringResource(textRes),
-                        modifier = Modifier.padding(start = 10.dp),
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                }
+    val spacing = MaterialTheme.spacing
+    ExpressiveCard {
+        listOf(
+            R.string.checklist_1,
+            R.string.checklist_2,
+            R.string.checklist_3,
+            R.string.checklist_4,
+        ).forEachIndexed { index, textRes ->
+            if (index > 0) {
+                HorizontalDivider(
+                    color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                )
+            }
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(spacing.md),
+            ) {
+                Text(
+                    text = "✓",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                Text(
+                    text = stringResource(textRes),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
             }
         }
     }
@@ -205,93 +211,69 @@ private fun ChecklistCard() {
 @Composable
 private fun RoomProbeCard(state: RoomProbeState, onReRun: () -> Unit) {
     val failed = state is RoomProbeState.Failed
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-    ) {
-        Column(modifier = Modifier.padding(18.dp)) {
-            Text(
-                text = stringResource(R.string.diag_title),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-            )
-            Spacer(Modifier.height(6.dp))
-            Text(
-                text = when (state) {
-                    RoomProbeState.Idle -> stringResource(R.string.diag_room_idle)
-                    RoomProbeState.Running -> stringResource(R.string.diag_room_running)
-                    is RoomProbeState.Passed -> stringResource(
-                        R.string.diag_room_passed,
-                        state.counter,
-                        state.elapsedMs,
-                    )
-                    is RoomProbeState.Failed -> stringResource(
-                        R.string.diag_room_failed,
-                        state.message,
-                    )
-                },
-                style = MaterialTheme.typography.bodyMedium,
-                color = if (failed) {
-                    MaterialTheme.colorScheme.error
-                } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                },
-            )
-            Spacer(Modifier.height(12.dp))
-            FilledTonalButton(
-                onClick = onReRun,
-                enabled = state !is RoomProbeState.Running,
-            ) {
-                Text(stringResource(R.string.diag_room_action))
-            }
-        }
+    ExpressiveCard {
+        SectionHeader(title = stringResource(R.string.diag_title))
+        Text(
+            text = when (state) {
+                RoomProbeState.Idle -> stringResource(R.string.diag_room_idle)
+                RoomProbeState.Running -> stringResource(R.string.diag_room_running)
+                is RoomProbeState.Passed -> stringResource(
+                    R.string.diag_room_passed,
+                    state.counter,
+                    state.elapsedMs,
+                )
+                is RoomProbeState.Failed -> stringResource(
+                    R.string.diag_room_failed,
+                    state.message,
+                )
+            },
+            style = MaterialTheme.typography.bodyMedium,
+            color = if (failed) {
+                MaterialTheme.colorScheme.error
+            } else {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            },
+        )
+        ExpressiveTonalButton(
+            text = stringResource(R.string.diag_room_action),
+            onClick = onReRun,
+            enabled = state !is RoomProbeState.Running,
+        )
     }
 }
 
 @Composable
 private fun FfmpegProbeCard(state: FfmpegProbeState, onRun: () -> Unit) {
     val failed = state is FfmpegProbeState.Failed
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-    ) {
-        Column(modifier = Modifier.padding(18.dp)) {
-            Text(
-                text = stringResource(R.string.diag_ffmpeg_title),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-            )
-            Spacer(Modifier.height(6.dp))
-            Text(
-                text = when (state) {
-                    FfmpegProbeState.Idle -> stringResource(R.string.diag_ffmpeg_idle)
-                    FfmpegProbeState.Running -> stringResource(R.string.diag_ffmpeg_running)
-                    is FfmpegProbeState.Passed -> stringResource(
-                        R.string.diag_ffmpeg_passed,
-                        state.version,
-                        state.silenceBytes,
-                        state.joinedDurationMs,
-                    )
-                    is FfmpegProbeState.Failed -> stringResource(
-                        R.string.diag_ffmpeg_failed,
-                        state.message,
-                    )
-                },
-                style = MaterialTheme.typography.bodyMedium,
-                color = if (failed) {
-                    MaterialTheme.colorScheme.error
-                } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                },
-            )
-            Spacer(Modifier.height(12.dp))
-            FilledTonalButton(
-                onClick = onRun,
-                enabled = state !is FfmpegProbeState.Running,
-            ) {
-                Text(stringResource(R.string.diag_ffmpeg_action))
-            }
-        }
+    ExpressiveCard {
+        SectionHeader(title = stringResource(R.string.diag_ffmpeg_title))
+        Text(
+            text = when (state) {
+                FfmpegProbeState.Idle -> stringResource(R.string.diag_ffmpeg_idle)
+                FfmpegProbeState.Running -> stringResource(R.string.diag_ffmpeg_running)
+                is FfmpegProbeState.Passed -> stringResource(
+                    R.string.diag_ffmpeg_passed,
+                    state.version,
+                    state.silenceBytes,
+                    state.joinedDurationMs,
+                )
+                is FfmpegProbeState.Failed -> stringResource(
+                    R.string.diag_ffmpeg_failed,
+                    state.message,
+                )
+            },
+            style = MaterialTheme.typography.bodyMedium,
+            color = if (failed) {
+                MaterialTheme.colorScheme.error
+            } else {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            },
+        )
+        ExpressiveTonalButton(
+            text = stringResource(R.string.diag_ffmpeg_action),
+            onClick = onRun,
+            enabled = state !is FfmpegProbeState.Running,
+        )
     }
 }
 
@@ -309,51 +291,40 @@ private fun ProbeWorkerCard(
         onStart()
     }
 
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-    ) {
-        Column(modifier = Modifier.padding(18.dp)) {
-            Text(
-                text = stringResource(R.string.diag_work_title),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
+    ExpressiveCard {
+        SectionHeader(title = stringResource(R.string.diag_work_title))
+        Text(
+            text = stringResource(
+                R.string.diag_work_status,
+                stringResource(snapshot.status.labelRes()),
+                snapshot.progress,
+            ),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.md)) {
+            ExpressivePrimaryButton(
+                text = stringResource(R.string.diag_work_start),
+                onClick = {
+                    val needsPermission =
+                        Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                            ContextCompat.checkSelfPermission(
+                                context,
+                                Manifest.permission.POST_NOTIFICATIONS,
+                            ) != PackageManager.PERMISSION_GRANTED
+                    if (needsPermission) {
+                        permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                    } else {
+                        onStart()
+                    }
+                },
+                enabled = snapshot.status != ProbeWorkStatus.RUNNING &&
+                    snapshot.status != ProbeWorkStatus.ENQUEUED,
             )
-            Spacer(Modifier.height(6.dp))
-            Text(
-                text = stringResource(
-                    R.string.diag_work_status,
-                    stringResource(snapshot.status.labelRes()),
-                    snapshot.progress,
-                ),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            ExpressiveTonalButton(
+                text = stringResource(R.string.diag_work_stop),
+                onClick = onStop,
             )
-            Spacer(Modifier.height(12.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                FilledTonalButton(
-                    onClick = {
-                        val needsPermission =
-                            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-                                ContextCompat.checkSelfPermission(
-                                    context,
-                                    Manifest.permission.POST_NOTIFICATIONS,
-                                ) != PackageManager.PERMISSION_GRANTED
-                        if (needsPermission) {
-                            permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                        } else {
-                            onStart()
-                        }
-                    },
-                    enabled = snapshot.status != ProbeWorkStatus.RUNNING &&
-                        snapshot.status != ProbeWorkStatus.ENQUEUED,
-                ) {
-                    Text(stringResource(R.string.diag_work_start))
-                }
-                OutlinedButton(onClick = onStop) {
-                    Text(stringResource(R.string.diag_work_stop))
-                }
-            }
         }
     }
 }
@@ -370,33 +341,23 @@ private fun ProbeWorkStatus.labelRes(): Int = when (this) {
 
 @Composable
 private fun NextCard(showDetails: Boolean, onToggle: () -> Unit) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-    ) {
-        Column(modifier = Modifier.padding(18.dp)) {
-            Text(
-                text = stringResource(R.string.next_title),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-            )
-            Spacer(Modifier.height(6.dp))
-            Text(
-                text = stringResource(R.string.next_body),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Spacer(Modifier.height(14.dp))
-            FilledTonalButton(onClick = onToggle) {
-                Text(
-                    if (showDetails) "收起" else stringResource(R.string.next_action),
-                )
-            }
-        }
+    ExpressiveCard {
+        SectionHeader(
+            title = stringResource(R.string.next_title),
+            subtitle = stringResource(R.string.next_body),
+        )
+        ExpressiveTonalButton(
+            text = if (showDetails) {
+                stringResource(R.string.ux_home_collapse)
+            } else {
+                stringResource(R.string.next_action)
+            },
+            onClick = onToggle,
+        )
     }
 }
 
-@Preview(showBackground = true, backgroundColor = 0xFFF7F8FC)
+@Preview(showBackground = true)
 @Composable
 private fun HomeScreenPreview() {
     AudioForgeTheme(dynamicColor = false) {
@@ -404,7 +365,7 @@ private fun HomeScreenPreview() {
     }
 }
 
-@Preview(showBackground = true, backgroundColor = 0xFFF7F8FC)
+@Preview(showBackground = true)
 @Composable
 private fun RoomProbeCardPreview() {
     AudioForgeTheme(dynamicColor = false) {
@@ -415,7 +376,7 @@ private fun RoomProbeCardPreview() {
     }
 }
 
-@Preview(showBackground = true, backgroundColor = 0xFFF7F8FC)
+@Preview(showBackground = true)
 @Composable
 private fun FfmpegProbeCardPreview() {
     AudioForgeTheme(dynamicColor = false) {
@@ -430,7 +391,7 @@ private fun FfmpegProbeCardPreview() {
     }
 }
 
-@Preview(showBackground = true, backgroundColor = 0xFFF7F8FC)
+@Preview(showBackground = true)
 @Composable
 private fun ProbeWorkerCardPreview() {
     AudioForgeTheme(dynamicColor = false) {
