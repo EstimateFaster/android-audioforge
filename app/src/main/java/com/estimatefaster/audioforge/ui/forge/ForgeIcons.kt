@@ -26,6 +26,7 @@ object ForgeIcons {
     @DrawableRes val SkipNext = LucideR.drawable.lucide_ic_skip_forward
     @DrawableRes val SkipPrevious = LucideR.drawable.lucide_ic_skip_back
     @DrawableRes val Plus = LucideR.drawable.lucide_ic_plus
+    @DrawableRes val Minus = LucideR.drawable.lucide_ic_minus
     @DrawableRes val Search = LucideR.drawable.lucide_ic_search
     @DrawableRes val Settings = LucideR.drawable.lucide_ic_settings
     @DrawableRes val Sliders = LucideR.drawable.lucide_ic_sliders_horizontal
@@ -46,6 +47,8 @@ object ForgeIcons {
     @DrawableRes val More = LucideR.drawable.lucide_ic_ellipsis
     @DrawableRes val Menu = LucideR.drawable.lucide_ic_menu
     @DrawableRes val Refresh = LucideR.drawable.lucide_ic_refresh_cw
+    @DrawableRes val RotateCcw = LucideR.drawable.lucide_ic_rotate_ccw
+    @DrawableRes val Square = LucideR.drawable.lucide_ic_square
     @DrawableRes val Storage = LucideR.drawable.lucide_ic_hard_drive
     @DrawableRes val Info = LucideR.drawable.lucide_ic_info
     @DrawableRes val Key = LucideR.drawable.lucide_ic_key_round

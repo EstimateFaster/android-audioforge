@@ -1,5 +1,9 @@
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class)
+
 package com.estimatefaster.audioforge.feature.project
 
+import androidx.annotation.DrawableRes
+import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -11,32 +15,22 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -45,12 +39,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.clearAndSetSemantics
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -59,21 +51,28 @@ import com.estimatefaster.audioforge.R
 import com.estimatefaster.audioforge.data.db.ChapterBrief
 import com.estimatefaster.audioforge.data.db.CharacterEntity
 import com.estimatefaster.audioforge.data.db.ProjectSummary
-import com.estimatefaster.audioforge.ui.components.EmptyState
-import com.estimatefaster.audioforge.ui.components.ErrorState
-import com.estimatefaster.audioforge.ui.components.ProgressRing
-import com.estimatefaster.audioforge.ui.components.RoleAvatar
-import com.estimatefaster.audioforge.ui.components.SectionHeader
-import com.estimatefaster.audioforge.ui.components.StatusKind
-import com.estimatefaster.audioforge.ui.components.StatusPill
-import com.estimatefaster.audioforge.ui.components.StatusTone
+import com.estimatefaster.audioforge.ui.forge.ForgeCard
+import com.estimatefaster.audioforge.ui.forge.ForgeDialog
+import com.estimatefaster.audioforge.ui.forge.ForgeEmpty
+import com.estimatefaster.audioforge.ui.forge.ForgeError
+import com.estimatefaster.audioforge.ui.forge.ForgeIcon
+import com.estimatefaster.audioforge.ui.forge.ForgeIconAction
+import com.estimatefaster.audioforge.ui.forge.ForgeIcons
+import com.estimatefaster.audioforge.ui.forge.ForgeListRow
+import com.estimatefaster.audioforge.ui.forge.ForgeLoading
+import com.estimatefaster.audioforge.ui.forge.ForgePrimaryAction
+import com.estimatefaster.audioforge.ui.forge.ForgeSecondaryAction
+import com.estimatefaster.audioforge.ui.forge.ForgeSectionHeader
+import com.estimatefaster.audioforge.ui.forge.ForgeTopBar
+import com.estimatefaster.audioforge.ui.forge.ForgeWavyProgress
 import com.estimatefaster.audioforge.ui.theme.AudioForgeTheme
+import com.estimatefaster.audioforge.ui.theme.spacing
 
 /**
  * 项目详情页（P4-05 / 执行计划 §12.4 S04）。
  *
- * 有状态入口：从 [ProjectViewModel.state] 收集状态后委托给无状态版本，
- * 方便 Preview 与后续导航层复用。
+ * 有状态入口：从 [ProjectViewModel.state] 收集状态后委托给无状态版本。
+ * Forge Framework 重写只改变呈现，公开回调、加载/空/错误分支保持不变。
  */
 @Composable
 fun ProjectScreen(
@@ -115,14 +114,14 @@ fun ProjectScreen(
 /**
  * 无状态项目详情页。
  *
- * - 顶部：书名、来源、字符数、更多（重命名/删除）；
- * - 摘要/进度/控制/告警/人物条；
- * - 加载/错误/空态复用 P4-02 组件。
+ * 结构对齐 `docs/prototype/forge-framework.html` 的项目详情：
+ * 顶部 ForgeTopBar（播放全书 / 更多）→ 封面 hero → 整体进度（Wavy）→
+ * 告警 → 人物条 → 章节入口 → 底部固定 action dock。
  *
- * 批次执行尚未接入（P3-04）：[batchRunnerAvailable] 为 false 时开始/停止禁用，
+ * 正常态只有「继续生成」一个实心主操作；运行中额外提供次级「停止生成」。
+ * 批次执行尚未接入（P3-04）：[batchRunnerAvailable] 为 false 时主操作禁用，
  * 并显示“任务模块接入后可开始”。回调只做 UI 解耦，不直接访问仓库。
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProjectScreen(
     state: ProjectUiState,
@@ -148,174 +147,155 @@ fun ProjectScreen(
 
     val project = state.project
     val loadError = state.loadError
+    val stats = state.chapterStats
 
     Scaffold(
         modifier = modifier,
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
-            TopAppBar(
-                navigationIcon = {
-                    TextButton(
-                        onClick = onBack,
-                        modifier = Modifier.heightIn(min = 48.dp),
-                    ) {
-                        Text(stringResource(R.string.action_back))
-                    }
+            ForgeTopBar(
+                title = stringResource(R.string.ux2_project_title),
+                subtitle = project?.let {
+                    stringResource(R.string.ux2_project_topbar_subtitle, it.title, stats.total)
                 },
-                title = {
-                    Column {
-                        Text(
-                            text = project?.title
-                                ?: stringResource(R.string.project_screen_title),
-                            modifier = Modifier.semantics { heading() },
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.SemiBold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                        if (project != null) {
-                            Text(
-                                text = stringResource(
-                                    R.string.project_header_meta,
-                                    project.sourceName,
-                                    project.charCount,
-                                ),
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                        }
-                    }
-                },
+                navigationIcon = ForgeIcons.Back,
+                navigationDescription = stringResource(R.string.action_back),
+                onNavigation = onBack,
                 actions = {
                     if (project != null) {
+                        ForgeIconAction(
+                            icon = ForgeIcons.Headphones,
+                            contentDescription = stringResource(R.string.ux2_project_play_all),
+                            onClick = onOpenPlayer,
+                            container = false,
+                        )
                         Box {
-                            TextButton(
+                            ForgeIconAction(
+                                icon = ForgeIcons.More,
+                                contentDescription = stringResource(R.string.ux2_project_more),
                                 onClick = { menuExpanded = true },
-                                modifier = Modifier.heightIn(min = 48.dp),
-                            ) {
-                                Text(stringResource(R.string.action_more))
-                            }
+                                container = false,
+                            )
                             DropdownMenu(
                                 expanded = menuExpanded,
                                 onDismissRequest = { menuExpanded = false },
                             ) {
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.project_more_chapters)) },
-                                    onClick = {
-                                        menuExpanded = false
-                                        onOpenChapters()
-                                    },
-                                )
-                                DropdownMenuItem(
-                                    text = {
-                                        Text(stringResource(R.string.project_more_characters))
-                                    },
-                                    onClick = {
-                                        menuExpanded = false
-                                        onOpenCharacters()
-                                    },
-                                )
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.project_more_player)) },
-                                    onClick = {
-                                        menuExpanded = false
-                                        onOpenPlayer()
-                                    },
-                                )
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.project_more_export)) },
-                                    onClick = {
-                                        menuExpanded = false
-                                        onOpenExport()
-                                    },
-                                )
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.project_more_storage)) },
-                                    onClick = {
-                                        menuExpanded = false
-                                        onOpenStorage()
-                                    },
-                                )
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.project_more_about)) },
-                                    onClick = {
-                                        menuExpanded = false
-                                        onOpenAbout()
-                                    },
-                                )
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.action_rename)) },
-                                    onClick = {
-                                        menuExpanded = false
-                                        renameText = project.title
-                                        showRenameDialog = true
-                                    },
-                                )
-                                DropdownMenuItem(
-                                    text = {
-                                        Text(
-                                            text = stringResource(R.string.action_delete),
-                                            color = MaterialTheme.colorScheme.error,
-                                        )
-                                    },
-                                    onClick = {
-                                        menuExpanded = false
-                                        showDeleteDialog = true
-                                    },
-                                )
+                                ProjectMenuItem(
+                                    icon = ForgeIcons.List,
+                                    label = stringResource(R.string.project_more_chapters),
+                                ) {
+                                    menuExpanded = false
+                                    onOpenChapters()
+                                }
+                                ProjectMenuItem(
+                                    icon = ForgeIcons.Users,
+                                    label = stringResource(R.string.project_more_characters),
+                                ) {
+                                    menuExpanded = false
+                                    onOpenCharacters()
+                                }
+                                ProjectMenuItem(
+                                    icon = ForgeIcons.Headphones,
+                                    label = stringResource(R.string.project_more_player),
+                                ) {
+                                    menuExpanded = false
+                                    onOpenPlayer()
+                                }
+                                ProjectMenuItem(
+                                    icon = ForgeIcons.Download,
+                                    label = stringResource(R.string.project_more_export),
+                                ) {
+                                    menuExpanded = false
+                                    onOpenExport()
+                                }
+                                ProjectMenuItem(
+                                    icon = ForgeIcons.Storage,
+                                    label = stringResource(R.string.project_more_storage),
+                                ) {
+                                    menuExpanded = false
+                                    onOpenStorage()
+                                }
+                                ProjectMenuItem(
+                                    icon = ForgeIcons.Info,
+                                    label = stringResource(R.string.project_more_about),
+                                ) {
+                                    menuExpanded = false
+                                    onOpenAbout()
+                                }
+                                ProjectMenuItem(
+                                    icon = ForgeIcons.Edit,
+                                    label = stringResource(R.string.action_rename),
+                                ) {
+                                    menuExpanded = false
+                                    renameText = project.title
+                                    showRenameDialog = true
+                                }
+                                ProjectMenuItem(
+                                    icon = ForgeIcons.Trash,
+                                    label = stringResource(R.string.action_delete),
+                                    danger = true,
+                                ) {
+                                    menuExpanded = false
+                                    showDeleteDialog = true
+                                }
                             }
                         }
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
-                ),
             )
+        },
+        bottomBar = {
+            if (state.hasChapters) {
+                ContinueDock(
+                    stats = stats,
+                    batchRunnerAvailable = batchRunnerAvailable,
+                    onStartBatch = onStartBatch,
+                    onStopBatch = onStopBatch,
+                )
+            }
         },
     ) { padding ->
         when {
-            state.loading -> LoadingContent(modifier = Modifier.padding(padding))
+            state.loading -> ForgeLoading(
+                label = stringResource(R.string.project_loading),
+                modifier = Modifier.padding(padding),
+            )
 
-            loadError != null -> CenteredError(
+            loadError != null -> ForgeError(
                 message = stringResource(R.string.project_load_error, loadError),
-                onRetry = onRetry,
                 modifier = Modifier.padding(padding),
+                onRetry = onRetry,
+                retryLabel = stringResource(R.string.action_retry),
             )
 
-            state.isMissing -> CenteredError(
+            state.isMissing -> ForgeError(
                 message = stringResource(R.string.project_missing_message),
-                onRetry = onRetry,
                 modifier = Modifier.padding(padding),
+                onRetry = onRetry,
+                retryLabel = stringResource(R.string.action_retry),
             )
 
-            state.isEmpty -> Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-                contentAlignment = Alignment.Center,
-            ) {
-                EmptyState(
-                    title = stringResource(R.string.project_empty_title),
-                    description = stringResource(R.string.project_empty_description),
-                    actionText = stringResource(R.string.project_empty_action),
-                    onAction = onBack,
-                )
-            }
+            state.isEmpty -> ForgeEmpty(
+                icon = ForgeIcons.BookOpen,
+                title = stringResource(R.string.ux2_project_empty_title),
+                description = stringResource(R.string.ux2_project_empty_description),
+                modifier = Modifier.padding(padding),
+                actionIcon = ForgeIcons.Back,
+                actionLabel = stringResource(R.string.project_empty_action),
+                onAction = onBack,
+            )
 
             else -> ProjectContent(
                 state = state,
                 contentPadding = padding,
-                batchRunnerAvailable = batchRunnerAvailable,
-                onStartBatch = onStartBatch,
-                onStopBatch = onStopBatch,
+                onOpenChapters = onOpenChapters,
+                onOpenCharacters = onOpenCharacters,
             )
         }
     }
 
     if (showRenameDialog && project != null) {
-        RenameDialog(
+        RenameProjectDialog(
             title = project.title,
             value = renameText,
             onValueChange = { renameText = it },
@@ -328,81 +308,79 @@ fun ProjectScreen(
     }
 
     if (showDeleteDialog && project != null) {
-        DeleteDialog(
-            title = project.title,
-            onDismiss = { showDeleteDialog = false },
+        ForgeDialog(
+            title = stringResource(R.string.project_delete_title),
+            message = stringResource(R.string.project_delete_message, project.title),
+            confirmLabel = stringResource(R.string.action_delete),
             onConfirm = {
                 showDeleteDialog = false
                 onDelete()
             },
+            onDismiss = { showDeleteDialog = false },
+            icon = ForgeIcons.Trash,
+            danger = true,
         )
     }
 }
 
 @Composable
-private fun LoadingContent(modifier: Modifier = Modifier) {
-    Column(
-        modifier = modifier.fillMaxSize(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        CircularProgressIndicator()
-        Spacer(Modifier.height(14.dp))
-        Text(
-            text = stringResource(R.string.project_loading),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
-}
-
-@Composable
-private fun CenteredError(
-    message: String,
-    onRetry: () -> Unit,
-    modifier: Modifier = Modifier,
+private fun ProjectMenuItem(
+    @DrawableRes icon: Int,
+    label: String,
+    danger: Boolean = false,
+    onClick: () -> Unit,
 ) {
-    Box(
-        modifier = modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center,
-    ) {
-        ErrorState(message = message, onRetry = onRetry)
-    }
+    DropdownMenuItem(
+        text = {
+            Text(
+                text = label,
+                color = if (danger) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
+            )
+        },
+        onClick = onClick,
+        leadingIcon = {
+            ForgeIcon(
+                icon = icon,
+                contentDescription = null,
+                tint = if (danger) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        },
+    )
 }
 
 @Composable
 private fun ProjectContent(
     state: ProjectUiState,
     contentPadding: PaddingValues,
-    batchRunnerAvailable: Boolean,
-    onStartBatch: () -> Unit,
-    onStopBatch: () -> Unit,
+    onOpenChapters: () -> Unit,
+    onOpenCharacters: () -> Unit,
 ) {
+    val project = state.project ?: return
     val stats = state.chapterStats
+    val characterCount = state.characters.size + state.hiddenCharacterCount
+
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
             .padding(contentPadding),
-        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
+        contentPadding = PaddingValues(
+            horizontal = MaterialTheme.spacing.lg,
+            vertical = MaterialTheme.spacing.md,
+        ),
+        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.md),
     ) {
-        item(key = "summary") {
-            SummaryRow(stats = stats)
+        item(key = "hero") {
+            ProjectHero(project = project, stats = stats, characterCount = characterCount)
         }
         item(key = "progress") {
-            ProgressCard(stats = stats)
-        }
-        item(key = "control") {
-            ControlCard(
-                batchRunnerAvailable = batchRunnerAvailable,
-                running = stats.running > 0,
-                onStartBatch = onStartBatch,
-                onStopBatch = onStopBatch,
-            )
+            ProgressCard(stats = stats, characterCount = characterCount)
         }
         if (state.warnings.hasWarnings || stats.error > 0) {
-            item(key = "warnings") {
-                WarningBanner(warnings = state.warnings, errorCount = stats.error)
+            item(key = "warning") {
+                WarningCard(
+                    warnings = state.warnings,
+                    errorCount = stats.error,
+                )
             }
         }
         if (state.characters.isNotEmpty()) {
@@ -410,110 +388,86 @@ private fun ProjectContent(
                 CharacterStrip(
                     characters = state.characters,
                     hiddenCount = state.hiddenCharacterCount,
+                    onOpenCharacters = onOpenCharacters,
                 )
             }
+        }
+        item(key = "chapters") {
+            ChapterEntry(
+                stats = stats,
+                onOpenChapters = onOpenChapters,
+            )
+        }
+        item(key = "bottom-space") {
+            Spacer(Modifier.height(MaterialTheme.spacing.sm))
         }
     }
 }
 
 @Composable
-private fun SummaryRow(stats: ChapterStatsUi) {
-    Row(
-        modifier = Modifier.horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        StatusPill(
-            text = stringResource(R.string.project_chapter_total, stats.total),
-            tone = StatusTone.Neutral,
-        )
-        StatusPill(
-            kind = StatusKind.Parse,
-            status = stats.parseAggregateStatus(),
-        )
-        StatusPill(
-            kind = StatusKind.Audio,
-            status = stats.audioAggregateStatus(),
-        )
-    }
-}
-
-@Composable
-private fun ProgressCard(stats: ChapterStatsUi) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-    ) {
-        Column(
-            modifier = Modifier.padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+private fun ProjectHero(
+    project: ProjectHeaderUi,
+    stats: ChapterStatsUi,
+    characterCount: Int,
+) {
+    ForgeCard(contentPadding = PaddingValues(MaterialTheme.spacing.md)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.md),
+            verticalAlignment = Alignment.Top,
         ) {
-            SectionHeader(title = stringResource(R.string.project_progress_title))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                ProgressRing(
-                    progress = stats.progress,
-                    label = stringResource(R.string.project_progress_ring_label),
-                    diameter = 104.dp,
-                    strokeWidth = 9.dp,
+            ProjectCover(title = project.title)
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.xs),
+            ) {
+                ProjectStatusPill(stats = stats)
+                Text(
+                    text = project.title,
+                    style = MaterialTheme.typography.headlineSmallEmphasized,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
                 )
-                Spacer(Modifier.width(18.dp))
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.xs),
                 ) {
-                    Text(
-                        text = stringResource(
-                            R.string.project_progress_chapters,
-                            stats.done,
-                            stats.total,
-                        ),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
+                    ForgeIcon(
+                        icon = ForgeIcons.FileText,
+                        contentDescription = null,
+                        modifier = Modifier.size(14.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Text(
                         text = stringResource(
-                            R.string.project_progress_segments,
-                            stats.segmentsDone,
-                            stats.segmentsTotal,
+                            R.string.ux2_project_hero_source,
+                            project.sourceName,
+                            project.charCount,
                         ),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
-                    Row(
-                        modifier = Modifier.horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        StatusPill(
-                            text = stringResource(
-                                R.string.project_chapter_stat_done,
-                                stats.done,
-                            ),
-                            tone = StatusTone.Success,
-                        )
-                        StatusPill(
-                            text = stringResource(
-                                R.string.project_chapter_stat_running,
-                                stats.running,
-                            ),
-                            tone = StatusTone.Running,
-                        )
-                        StatusPill(
-                            text = stringResource(
-                                R.string.project_chapter_stat_error,
-                                stats.error,
-                            ),
-                            tone = StatusTone.Danger,
-                        )
-                        if (stats.pending > 0) {
-                            StatusPill(
-                                text = stringResource(
-                                    R.string.project_chapter_stat_pending,
-                                    stats.pending,
-                                ),
-                                tone = StatusTone.Neutral,
-                            )
-                        }
-                    }
+                }
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.xs),
+                ) {
+                    HeroTag(
+                        icon = ForgeIcons.BookOpen,
+                        label = stringResource(R.string.ux2_project_tag_chapters, stats.total),
+                    )
+                    HeroTag(
+                        icon = ForgeIcons.Users,
+                        label = stringResource(R.string.ux2_project_tag_characters, characterCount),
+                    )
+                    HeroTag(
+                        icon = ForgeIcons.Sparkles,
+                        label = stringResource(R.string.ux2_project_tag_multi_voice),
+                    )
                 }
             }
         }
@@ -521,97 +475,236 @@ private fun ProgressCard(stats: ChapterStatsUi) {
 }
 
 @Composable
-private fun ControlCard(
-    batchRunnerAvailable: Boolean,
-    running: Boolean,
-    onStartBatch: () -> Unit,
-    onStopBatch: () -> Unit,
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+private fun ProjectCover(title: String) {
+    val colors = listOf(
+        MaterialTheme.colorScheme.primary,
+        MaterialTheme.colorScheme.secondary,
+    )
+    Box(
+        modifier = Modifier
+            .size(width = 84.dp, height = 112.dp)
+            .clip(MaterialTheme.shapes.large)
+            .background(Brush.linearGradient(colors)),
+        contentAlignment = Alignment.Center,
     ) {
-        Column(
-            modifier = Modifier.padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ForgeIcon(
+            icon = ForgeIcons.BookOpen,
+            contentDescription = null,
+            modifier = Modifier.size(32.dp),
+            tint = MaterialTheme.colorScheme.onPrimary,
+        )
+        Text(
+            text = title.take(1),
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .padding(MaterialTheme.spacing.sm),
+            style = MaterialTheme.typography.displaySmallEmphasized,
+            color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.28f),
+        )
+    }
+}
+
+@Composable
+private fun HeroTag(
+    @DrawableRes icon: Int,
+    label: String,
+) {
+    Surface(
+        shape = CircleShape,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = MaterialTheme.spacing.sm, vertical = 3.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.xs),
         ) {
-            SectionHeader(title = stringResource(R.string.project_control_title))
-            Text(
-                text = stringResource(R.string.project_control_description),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            ForgeIcon(
+                icon = icon,
+                contentDescription = null,
+                modifier = Modifier.size(12.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                FilledTonalButton(
-                    onClick = onStartBatch,
-                    enabled = batchRunnerAvailable && !running,
-                    modifier = Modifier.heightIn(min = 48.dp),
-                ) {
-                    Text(stringResource(R.string.project_action_start))
-                }
-                OutlinedButton(
-                    onClick = onStopBatch,
-                    enabled = batchRunnerAvailable && running,
-                    modifier = Modifier.heightIn(min = 48.dp),
-                ) {
-                    Text(stringResource(R.string.project_action_stop))
-                }
-            }
-            if (!batchRunnerAvailable) {
-                Text(
-                    text = stringResource(R.string.project_control_unavailable),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            } else if (running) {
-                Text(
-                    text = stringResource(R.string.project_control_running),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
+            Text(text = label, style = MaterialTheme.typography.labelSmall)
         }
     }
 }
 
 @Composable
-private fun WarningBanner(
+private fun ProjectStatusPill(stats: ChapterStatsUi) {
+    val visual = when {
+        stats.running > 0 -> ProjectStatusVisual(
+            icon = ForgeIcons.Loader,
+            labelRes = R.string.ux2_project_status_running,
+            container = MaterialTheme.colorScheme.secondaryContainer,
+            content = MaterialTheme.colorScheme.onSecondaryContainer,
+        )
+
+        stats.error > 0 -> ProjectStatusVisual(
+            icon = ForgeIcons.AlertCircle,
+            labelRes = R.string.ux2_project_status_error,
+            container = MaterialTheme.colorScheme.errorContainer,
+            content = MaterialTheme.colorScheme.onErrorContainer,
+        )
+
+        stats.total > 0 && stats.done >= stats.total -> ProjectStatusVisual(
+            icon = ForgeIcons.CheckCircle,
+            labelRes = R.string.ux2_project_status_done,
+            container = MaterialTheme.colorScheme.primaryContainer,
+            content = MaterialTheme.colorScheme.onPrimaryContainer,
+        )
+
+        else -> ProjectStatusVisual(
+            icon = ForgeIcons.Clock,
+            labelRes = R.string.ux2_project_status_pending,
+            container = MaterialTheme.colorScheme.surfaceContainerHigh,
+            content = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+    Surface(
+        shape = CircleShape,
+        color = visual.container,
+        contentColor = visual.content,
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = MaterialTheme.spacing.sm, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.xs),
+        ) {
+            ForgeIcon(
+                icon = visual.icon,
+                contentDescription = null,
+                modifier = Modifier.size(14.dp),
+                tint = visual.content,
+            )
+            Text(
+                text = stringResource(visual.labelRes),
+                style = MaterialTheme.typography.labelMediumEmphasized,
+            )
+        }
+    }
+}
+
+private data class ProjectStatusVisual(
+    @DrawableRes val icon: Int,
+    @StringRes val labelRes: Int,
+    val container: Color,
+    val content: Color,
+)
+
+@Composable
+private fun ProgressCard(
+    stats: ChapterStatsUi,
+    characterCount: Int,
+) {
+    ForgeCard {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm),
+        ) {
+            Text(
+                text = stringResource(R.string.ux2_project_progress_title),
+                modifier = Modifier.weight(1f),
+                style = MaterialTheme.typography.titleMediumEmphasized,
+            )
+            Text(
+                text = stringResource(R.string.ux2_project_progress_percent, stats.percent),
+                style = MaterialTheme.typography.headlineSmallEmphasized,
+                color = MaterialTheme.colorScheme.primary,
+            )
+        }
+        ForgeWavyProgress(progress = stats.progress)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.md),
+        ) {
+            StatCell(
+                value = stringResource(
+                    R.string.ux2_project_stat_ratio,
+                    stats.done,
+                    stats.total,
+                ),
+                label = stringResource(R.string.ux2_project_stat_chapters),
+                modifier = Modifier.weight(1f),
+            )
+            StatCell(
+                value = stringResource(
+                    R.string.ux2_project_stat_ratio,
+                    stats.segmentsDone,
+                    stats.segmentsTotal,
+                ),
+                label = stringResource(R.string.ux2_project_stat_segments),
+                modifier = Modifier.weight(1f),
+            )
+            StatCell(
+                value = stringResource(R.string.ux2_project_stat_value, characterCount),
+                label = stringResource(R.string.ux2_project_stat_characters),
+                modifier = Modifier.weight(1f),
+            )
+        }
+    }
+}
+
+@Composable
+private fun StatCell(
+    value: String,
+    label: String,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Text(text = value, style = MaterialTheme.typography.titleMediumEmphasized)
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+@Composable
+private fun WarningCard(
     warnings: WarningSummaryUi,
     errorCount: Int,
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.secondaryContainer,
-        ),
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
+    ForgeCard(containerColor = MaterialTheme.colorScheme.errorContainer) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm),
+            verticalAlignment = Alignment.Top,
         ) {
-            Text(
-                text = stringResource(R.string.project_warning_title),
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSecondaryContainer,
+            ForgeIcon(
+                icon = ForgeIcons.AlertCircle,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onErrorContainer,
             )
-            if (warnings.hasWarnings) {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
                 Text(
-                    text = stringResource(
-                        R.string.project_warning_summary,
-                        warnings.warningCount,
-                        warnings.summary,
-                    ),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                    text = stringResource(R.string.project_warning_title),
+                    style = MaterialTheme.typography.titleSmallEmphasized,
+                    color = MaterialTheme.colorScheme.onErrorContainer,
                 )
-            }
-            if (errorCount > 0) {
-                Text(
-                    text = stringResource(R.string.project_error_summary, errorCount),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer,
-                )
+                if (warnings.hasWarnings) {
+                    Text(
+                        text = stringResource(
+                            R.string.project_warning_summary,
+                            warnings.warningCount,
+                            warnings.summary,
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                    )
+                }
+                if (errorCount > 0) {
+                    Text(
+                        text = stringResource(R.string.project_error_summary, errorCount),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                    )
+                }
             }
         }
     }
@@ -621,25 +714,29 @@ private fun WarningBanner(
 private fun CharacterStrip(
     characters: List<CharacterUi>,
     hiddenCount: Int,
+    onOpenCharacters: () -> Unit,
 ) {
-    Column {
-        SectionHeader(
+    Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm)) {
+        ForgeSectionHeader(
             title = stringResource(R.string.project_characters_title),
             subtitle = stringResource(
                 R.string.project_characters_subtitle,
                 characters.size + hiddenCount,
             ),
+            actionIcon = ForgeIcons.ChevronRight,
+            actionDescription = stringResource(R.string.ux2_project_characters_manage),
+            onAction = onOpenCharacters,
         )
         LazyRow(
-            horizontalArrangement = Arrangement.spacedBy(14.dp),
-            contentPadding = PaddingValues(vertical = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm),
+            contentPadding = PaddingValues(vertical = MaterialTheme.spacing.xs),
         ) {
             items(items = characters, key = { it.roleId }) { character ->
-                CharacterItem(character = character)
+                CharacterCard(name = character.name, onClick = onOpenCharacters)
             }
             if (hiddenCount > 0) {
                 item(key = "hidden-characters") {
-                    MoreCharactersBadge(count = hiddenCount)
+                    CharacterMoreCard(count = hiddenCount, onClick = onOpenCharacters)
                 }
             }
         }
@@ -647,53 +744,36 @@ private fun CharacterStrip(
 }
 
 @Composable
-private fun CharacterItem(character: CharacterUi) {
-    Column(
-        modifier = Modifier
-            .widthIn(min = 64.dp, max = 88.dp)
-            .semantics(mergeDescendants = true) {},
-        horizontalAlignment = Alignment.CenterHorizontally,
+private fun CharacterCard(
+    name: String,
+    onClick: () -> Unit,
+) {
+    ForgeCard(
+        modifier = Modifier.width(92.dp),
+        onClick = onClick,
+        contentPadding = PaddingValues(MaterialTheme.spacing.md),
     ) {
-        // 头像旁已有可见名字，装饰化以避免同一个人物被读两遍。
-        RoleAvatar(name = character.name, decorative = true)
-        Spacer(Modifier.height(4.dp))
-        Text(
-            text = character.name,
-            style = MaterialTheme.typography.labelMedium,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-        )
-    }
-}
-
-@Composable
-private fun MoreCharactersBadge(count: Int) {
-    val description = stringResource(R.string.project_characters_more_content_description, count)
-    Column(
-        modifier = Modifier.widthIn(min = 64.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Box(
+        Surface(
+            shape = CircleShape,
+            color = MaterialTheme.colorScheme.primaryContainer,
             modifier = Modifier
-                .size(48.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.surfaceVariant)
-                .clearAndSetSemantics { contentDescription = description },
-            contentAlignment = Alignment.Center,
+                .size(44.dp)
+                .align(Alignment.CenterHorizontally),
         ) {
-            Text(
-                text = stringResource(R.string.project_characters_more_badge, count),
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-            )
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                ForgeIcon(
+                    icon = ForgeIcons.UserRound,
+                    contentDescription = null,
+                    modifier = Modifier.size(22.dp),
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                )
+            }
         }
-        Spacer(Modifier.height(4.dp))
         Text(
-            text = stringResource(R.string.project_characters_more, count),
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            text = name,
+            modifier = Modifier.fillMaxWidth(),
+            style = MaterialTheme.typography.labelMediumEmphasized,
+            textAlign = TextAlign.Center,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
@@ -701,7 +781,133 @@ private fun MoreCharactersBadge(count: Int) {
 }
 
 @Composable
-private fun RenameDialog(
+private fun CharacterMoreCard(
+    count: Int,
+    onClick: () -> Unit,
+) {
+    ForgeCard(
+        modifier = Modifier.width(92.dp),
+        onClick = onClick,
+        contentPadding = PaddingValues(MaterialTheme.spacing.md),
+    ) {
+        Surface(
+            shape = CircleShape,
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            modifier = Modifier
+                .size(44.dp)
+                .align(Alignment.CenterHorizontally),
+        ) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                ForgeIcon(
+                    icon = ForgeIcons.More,
+                    contentDescription = null,
+                    modifier = Modifier.size(22.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+        Text(
+            text = stringResource(R.string.project_characters_more, count),
+            modifier = Modifier.fillMaxWidth(),
+            style = MaterialTheme.typography.labelSmall,
+            textAlign = TextAlign.Center,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+@Composable
+private fun ChapterEntry(
+    stats: ChapterStatsUi,
+    onOpenChapters: () -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm)) {
+        ForgeSectionHeader(
+            title = stringResource(R.string.project_more_chapters),
+            subtitle = stringResource(
+                R.string.ux2_project_chapters_subtitle,
+                stats.total,
+                stats.pending,
+            ),
+            actionIcon = ForgeIcons.ChevronRight,
+            actionDescription = stringResource(R.string.ux2_project_chapters_manage),
+            onAction = onOpenChapters,
+        )
+        ForgeListRow(
+            icon = ForgeIcons.List,
+            title = stringResource(R.string.ux2_project_chapter_row_title),
+            subtitle = stringResource(
+                R.string.ux2_project_chapter_row_summary,
+                stats.done,
+                stats.running,
+                stats.pending,
+            ),
+            onClick = onOpenChapters,
+            trailingIcon = ForgeIcons.ChevronRight,
+            trailingDescription = stringResource(R.string.ux2_project_chapters_manage),
+            onTrailingClick = onOpenChapters,
+        )
+    }
+}
+
+@Composable
+private fun ContinueDock(
+    stats: ChapterStatsUi,
+    batchRunnerAvailable: Boolean,
+    onStartBatch: () -> Unit,
+    onStopBatch: () -> Unit,
+) {
+    val hint = when {
+        !batchRunnerAvailable -> stringResource(R.string.project_control_unavailable)
+        stats.running > 0 -> stringResource(R.string.ux2_project_continue_running)
+        stats.pending <= 0 && stats.total > 0 -> {
+            stringResource(R.string.ux2_project_continue_hint_done)
+        }
+        else -> stringResource(R.string.ux2_project_continue_hint, stats.pending)
+    }
+
+    Surface(color = MaterialTheme.colorScheme.surface) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(
+                    horizontal = MaterialTheme.spacing.lg,
+                    vertical = MaterialTheme.spacing.sm,
+                ),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.xs),
+        ) {
+            ForgePrimaryAction(
+                icon = ForgeIcons.Wand,
+                label = stringResource(R.string.ux2_project_continue),
+                onClick = onStartBatch,
+                modifier = Modifier.fillMaxWidth(),
+                enabled = batchRunnerAvailable && stats.running == 0,
+            )
+            if (stats.running > 0) {
+                ForgeSecondaryAction(
+                    icon = ForgeIcons.Square,
+                    label = stringResource(R.string.ux2_project_stop),
+                    onClick = onStopBatch,
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = batchRunnerAvailable,
+                    danger = true,
+                )
+            }
+            Text(
+                text = hint,
+                modifier = Modifier.fillMaxWidth(),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+            )
+        }
+    }
+}
+
+@Composable
+private fun RenameProjectDialog(
     title: String,
     value: String,
     onValueChange: (String) -> Unit,
@@ -711,9 +917,21 @@ private fun RenameDialog(
     val trimmed = value.trim()
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.project_rename_title)) },
+        icon = {
+            ForgeIcon(
+                icon = ForgeIcons.Edit,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+            )
+        },
+        title = {
+            Text(
+                text = stringResource(R.string.project_rename_title),
+                style = MaterialTheme.typography.titleLargeEmphasized,
+            )
+        },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm)) {
                 OutlinedTextField(
                     value = value,
                     onValueChange = onValueChange,
@@ -722,14 +940,14 @@ private fun RenameDialog(
                     isError = trimmed.isEmpty(),
                     modifier = Modifier.fillMaxWidth(),
                 )
-                if (trimmed.isEmpty()) {
-                    Text(
+                when {
+                    trimmed.isEmpty() -> Text(
                         text = stringResource(R.string.project_rename_empty_error),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.error,
                     )
-                } else if (trimmed != title) {
-                    Text(
+
+                    trimmed != title -> Text(
                         text = stringResource(R.string.project_rename_hint),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -738,49 +956,25 @@ private fun RenameDialog(
             }
         },
         confirmButton = {
-            TextButton(
+            ForgePrimaryAction(
+                icon = ForgeIcons.Check,
+                label = stringResource(R.string.action_save),
                 onClick = { onConfirm(trimmed) },
                 enabled = trimmed.isNotEmpty(),
-            ) {
-                Text(stringResource(R.string.action_save))
-            }
+            )
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.action_cancel))
-            }
-        },
-    )
-}
-
-@Composable
-private fun DeleteDialog(
-    title: String,
-    onDismiss: () -> Unit,
-    onConfirm: () -> Unit,
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.project_delete_title)) },
-        text = { Text(stringResource(R.string.project_delete_message, title)) },
-        confirmButton = {
-            TextButton(onClick = onConfirm) {
-                Text(
-                    text = stringResource(R.string.action_delete),
-                    color = MaterialTheme.colorScheme.error,
-                )
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.action_cancel))
-            }
+            ForgeSecondaryAction(
+                icon = ForgeIcons.Close,
+                label = stringResource(R.string.action_cancel),
+                onClick = onDismiss,
+            )
         },
     )
 }
 
 // ---------------------------------------------------------------------------
-// Preview：正常 / 空项目 / 错误态。所有文案来自 strings.xml。
+// Preview：正常 / 空项目 / 错误态。示例数据只在 Preview 区使用。
 // ---------------------------------------------------------------------------
 
 private fun previewProject(
@@ -794,10 +988,10 @@ private fun previewProject(
     charCount = charCount,
     createdAt = 0L,
     lastOpenedAt = null,
-    chapterCount = 0,
-    chapterDoneCount = 0,
-    segmentCount = 0,
-    segmentDoneCount = 0,
+    chapterCount = 8,
+    chapterDoneCount = 5,
+    segmentCount = 150,
+    segmentDoneCount = 96,
 )
 
 private fun previewChapter(
@@ -820,8 +1014,9 @@ private fun previewChapter(
 
 private fun previewCharacters(): List<CharacterEntity> = listOf(
     CharacterEntity(id = 1, novelId = 1, roleId = "narrator", name = "旁白"),
-    CharacterEntity(id = 2, novelId = 1, roleId = "role_0002", name = "林黛玉"),
-    CharacterEntity(id = 3, novelId = 1, roleId = "role_0003", name = "贾宝玉"),
+    CharacterEntity(id = 2, novelId = 1, roleId = "role_0002", name = "沈砚"),
+    CharacterEntity(id = 3, novelId = 1, roleId = "role_0003", name = "苏晚"),
+    CharacterEntity(id = 4, novelId = 1, roleId = "role_0004", name = "老船夫"),
 )
 
 private fun previewNormalState(): ProjectUiState = buildProjectUiState(
