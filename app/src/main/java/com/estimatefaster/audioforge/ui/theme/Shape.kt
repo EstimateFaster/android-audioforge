@@ -11,12 +11,12 @@ import androidx.compose.ui.unit.dp
 val ForgeShapes: Shapes = Shapes(
     extraSmall = RoundedCornerShape(6.dp),
     small = RoundedCornerShape(10.dp),
-    medium = RoundedCornerShape(16.dp),
-    large = RoundedCornerShape(22.dp),
-    extraLarge = RoundedCornerShape(30.dp),
-    largeIncreased = RoundedCornerShape(26.dp),
-    extraLargeIncreased = RoundedCornerShape(36.dp),
-    extraExtraLarge = RoundedCornerShape(42.dp),
+    medium = RoundedCornerShape(14.dp),
+    large = RoundedCornerShape(18.dp),
+    extraLarge = RoundedCornerShape(24.dp),
+    largeIncreased = RoundedCornerShape(21.dp),
+    extraLargeIncreased = RoundedCornerShape(28.dp),
+    extraExtraLarge = RoundedCornerShape(32.dp),
 )
 
 /** 项目内统一间距，禁止屏幕里散落裸 dp。 */
