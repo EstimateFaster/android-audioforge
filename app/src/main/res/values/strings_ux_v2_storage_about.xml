@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Forge Framework v1（docs/prototype/forge-framework.html）：存储 Storage / 关于 About 的新文案。
+    只放本分支新增的 UX v2 文案；其余可复用 key 仍在 strings.xml，避免与并行分支冲突。
+-->
+<resources>
+
+    <!-- ============================== 存储 Storage ============================== -->
+    <string name="storage_v2_topbar_subtitle">%1$s / %2$s · 本地</string>
+    <string name="storage_v2_refresh_action">刷新存储</string>
+    <string name="storage_v2_empty_description">导入并生成音频后，这里会显示音频、导入与导出的分区明细。</string>
+
+    <string name="storage_v2_hero_caption">音频占大头 · 清理不会删除项目文本</string>
+    <string name="storage_v2_used_percent">%1$d%% 已用</string>
+    <string name="storage_v2_partition_bar_description">存储分区占比：音频 %1$d%%，导入 %2$d%%，导出 %3$d%%</string>
+    <string name="storage_v2_partition_size_share">%1$s · %2$d%%</string>
+
+    <string name="storage_v2_projects_refresh">重新计算占用</string>
+
+    <string name="storage_v2_retention_section_subtitle">自动清理阈值</string>
+    <string name="storage_v2_retention_day_option">%1$d 天</string>
+    <string name="storage_v2_retention_hint">输入 7–365 之间的整数；点「应用保留期」重新统计，并作为过期清理的依据。</string>
+    <string name="storage_v2_retention_apply">应用保留期</string>
+
+    <string name="storage_v2_cleanup_section_subtitle">危险操作需二次确认</string>
+
+    <!-- ============================== 关于 About ============================== -->
+    <string name="about_v2_topbar_subtitle">版本、诊断与许可</string>
+    <string name="about_v2_tagline">把小说变成多人演播的有声书</string>
+    <string name="about_v2_version_pill">%1$s · %2$s</string>
+    <string name="about_v2_rerun_diagnostics">重新运行诊断</string>
+    <string name="about_v2_diag_hint">本地 · 不含密钥或正文</string>
+    <string name="about_v2_storage_status_ok">可读取</string>
+    <string name="about_v2_workmanager_active">进行中 %1$d 个任务</string>
+    <string name="about_v2_license_toggle">展开或收起 %1$s 的许可</string>
+    <string name="about_v2_share_hint">诊断文本只含版本、计数与错误摘要；复制或导出前会自动掩码密钥。</string>
+    <string name="about_v2_footer">AudioForge · Android 原生重构\nMIT License · 上游 StoryForge · 本地优先，不含遥测</string>
+
+</resources>
