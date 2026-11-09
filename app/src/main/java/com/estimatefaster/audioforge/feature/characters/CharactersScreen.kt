@@ -174,26 +174,13 @@ fun CharactersScreen(
                     }
                 },
                 title = {
-                    Column {
-                        Text(
-                            text = stringResource(R.string.characters_title),
-                            modifier = Modifier.semantics { heading() },
-                            style = MaterialTheme.typography.titleLargeEmphasized,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                        if (state.totalCount > 0) {
-                            Text(
-                                text = stringResource(
-                                    R.string.characters_count,
-                                    state.usedCount,
-                                    state.totalCount,
-                                ),
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                    }
+                    Text(
+                        text = stringResource(R.string.characters_title),
+                        modifier = Modifier.semantics { heading() },
+                        style = MaterialTheme.typography.titleLargeEmphasized,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background,
@@ -207,6 +194,22 @@ fun CharactersScreen(
                 .padding(padding),
         ) {
             if (state.allCharacters.isNotEmpty()) {
+                if (state.totalCount > 0) {
+                    Text(
+                        text = stringResource(
+                            R.string.characters_count,
+                            state.usedCount,
+                            state.totalCount,
+                        ),
+                        modifier = Modifier.padding(
+                            start = MaterialTheme.spacing.lg,
+                            end = MaterialTheme.spacing.lg,
+                            top = MaterialTheme.spacing.sm,
+                        ),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
                 OutlinedTextField(
                     value = state.query,
                     onValueChange = onQueryChange,
