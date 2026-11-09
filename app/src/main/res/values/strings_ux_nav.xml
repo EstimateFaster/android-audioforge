@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- UX 导航外壳 + Home 重设计（feat/ux-nav-home）；主 strings.xml 保持不变。 -->
+    <string name="ux_home_checklist_subtitle">Phase 0 基础链路已就绪</string>
+    <string name="ux_home_diagnostics_title">冒烟检测</string>
+    <string name="ux_home_diagnostics_subtitle">仅 Debug 构建显示，用于验证 Room 与 FFmpeg</string>
+    <string name="ux_home_collapse">收起</string>
+</resources>
