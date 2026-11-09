@@ -98,7 +98,7 @@ fun TasksScreen(
  * - 确认框打开期间任务自己结束会自动收起；
  * - [taskRunnerAvailable] 为 false 时停止按钮禁用并显示说明。
  *
- * 视觉全部走 `ui/forge/*`：ForgeTopBar / ForgeCard / ForgeListRow /
+ * 视觉全部走 `ui/forge/`：ForgeTopBar / ForgeCard / ForgeListRow /
  * ForgeSecondaryAction / ForgeIconAction / ForgeEmpty / ForgeError / ForgeLoading。
  */
 @Composable
