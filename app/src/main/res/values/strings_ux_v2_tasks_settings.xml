@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      UX v2：任务 / 设置页专用文案。
+      与主 strings.xml 分文件维护，避免两条改版线互相覆盖；键统一使用 ux_ 前缀。
+    -->
+
+    <!-- 任务页：顶栏与状态 -->
+    <string name="ux_tasks_subtitle">长任务进度与历史记录 · 退到后台也会继续</string>
+    <string name="ux_tasks_refresh">刷新任务</string>
+    <string name="ux_tasks_refresh_list">刷新任务列表</string>
+    <string name="ux_tasks_kicker_running">正在生成 · 第 %1$d/%2$d 章</string>
+    <string name="ux_tasks_kicker_running_plain">正在生成</string>
+    <string name="ux_tasks_kicker_stopping">任务停止中</string>
+    <string name="ux_tasks_title_mode">%1$s · %2$s</string>
+    <string name="ux_tasks_eta">剩余 %1$s</string>
+    <string name="ux_tasks_stop">停止生成</string>
+    <string name="ux_tasks_stopping_body">已生成 %1$d/%2$d 章，将在当前片段收尾后停止。</string>
+    <string name="ux_tasks_stopping_body_plain">已请求停止，将在当前片段收尾后停下。</string>
+    <string name="ux_tasks_progress_desc">当前任务进度</string>
+    <string name="ux_tasks_elapsed">已运行 %1$s</string>
+
+    <!-- 任务页：空态 / 队列 / 历史 -->
+    <string name="ux_tasks_empty_title">没有正在运行的任务</string>
+    <string name="ux_tasks_empty_desc">导入小说或开始批量生成后，任务进度会出现在这里。</string>
+    <string name="ux_tasks_queue_title">队列</string>
+    <string name="ux_tasks_queue_count">还有 %1$d 个任务等待或进行中</string>
+    <string name="ux_tasks_history_title">历史任务</string>
+    <string name="ux_tasks_history_count">%1$d 条</string>
+    <string name="ux_tasks_result_done">完成 %1$d 章 · %2$d 段</string>
+    <string name="ux_tasks_result_cancelled">完成 %1$d/%2$d 章</string>
+    <string name="ux_tasks_result_error">任务失败</string>
+    <string name="ux_tasks_duration">耗时 %1$s</string>
+    <string name="ux_tasks_open_project">打开项目《%1$s》</string>
+    <string name="ux_tasks_action_failed">任务操作失败：%1$s</string>
+
+    <!-- 设置页：顶栏 / 概览 -->
+    <string name="ux_settings_subtitle">7 组 · 本地优先</string>
+    <string name="ux_settings_hero_ready_title">API 已配置 · 本机保存</string>
+    <string name="ux_settings_hero_missing_title">API 待配置 · 本机保存</string>
+    <string name="ux_settings_hero_ready_desc">LLM 与 Fish Audio 均已设置 · 仅显示末 4 位</string>
+    <string name="ux_settings_hero_missing_desc">补全 LLM 与 Fish Audio 的 Key 后才能开始生成</string>
+    <string name="ux_settings_hero_ready_status">正常</string>
+    <string name="ux_settings_hero_missing_status">待配置</string>
+
+    <!-- 设置页：7 组标题旁注 -->
+    <string name="ux_settings_group_api_hint">BYOK</string>
+    <string name="ux_settings_group_generation_hint">默认参数</string>
+    <string name="ux_settings_group_network_hint">长任务条件</string>
+    <string name="ux_settings_group_device_hint">通知与温控</string>
+    <string name="ux_settings_group_appearance_hint">主题与取色</string>
+    <string name="ux_settings_group_storage_hint">占用与保留</string>
+    <string name="ux_settings_group_about_hint">版本与引导</string>
+
+    <!-- 设置页：行说明（API） -->
+    <string name="ux_settings_desc_llm_base_url">OpenAI 兼容接口地址</string>
+    <string name="ux_settings_desc_llm_model">默认使用的文本模型</string>
+    <string name="ux_settings_desc_fish_base_url">Fish Audio 服务地址</string>
+    <string name="ux_settings_desc_fish_model">默认语音合成模型</string>
+    <string name="ux_settings_key_ready">已设置 · %1$s</string>
+
+    <!-- 设置页：行说明（生成） -->
+    <string name="ux_settings_desc_llm_concurrency">同时请求的章节数</string>
+    <string name="ux_settings_desc_tts_concurrency">同时合成的片段数</string>
+    <string name="ux_settings_desc_segment_max">超出后自动切分</string>
+    <string name="ux_settings_desc_min_coverage">低于阈值时任务判为失败</string>
+    <string name="ux_settings_desc_batch_size">每次批量生成包含的章节数</string>
+    <string name="ux_settings_desc_narrator_silence">旁白段之间的静音</string>
+    <string name="ux_settings_desc_paragraph_silence">段落之间的静音</string>
+    <string name="ux_settings_desc_default_voice">内置音色池的类别 ID</string>
+    <string name="ux_settings_desc_default_speed">应用到未单独调参的角色</string>
+    <string name="ux_settings_desc_default_volume">应用到未单独调参的角色</string>
+    <string name="ux_settings_desc_default_pitch">半音，0 为原声</string>
+
+    <!-- 设置页：行说明（网络 / 设备 / 外观 / 存储 / 关于） -->
+    <string name="ux_settings_desc_wifi">移动网络下暂停任务</string>
+    <string name="ux_settings_desc_charging">省电策略，未充电时暂停</string>
+    <string name="ux_settings_desc_battery_threshold">低于该电量时暂停任务</string>
+    <string name="ux_settings_desc_notifications">前台服务与完成通知</string>
+    <string name="ux_settings_desc_thermal">过热时降低并发</string>
+    <string name="ux_settings_desc_dynamic_color">Android 12+ 跟随壁纸</string>
+    <string name="ux_settings_desc_storage_open">查看占用与清理缓存</string>
+    <string name="ux_settings_desc_retention">超过后在存储页清理</string>
+    <string name="ux_settings_desc_about_open">版本、许可与引导</string>
+    <string name="ux_settings_desc_restart_onboarding">重看 Key 与权限说明</string>
+    <string name="ux_settings_version_title">版本</string>
+    <string name="ux_settings_version_build">构建版本</string>
+
+    <!-- 设置页：保存与编辑 -->
+    <string name="ux_settings_save">保存设置</string>
+    <string name="ux_settings_save_hint">修改只保存在本页，点击保存后写入设置</string>
+    <string name="ux_settings_saved_hint">已保存到本机</string>
+    <string name="ux_settings_edit_title">编辑 %1$s</string>
+    <string name="ux_settings_value_empty">未填写</string>
+    <string name="ux_settings_value_chars">%1$s 字</string>
+    <string name="ux_settings_value_chapters">%1$s 章</string>
+    <string name="ux_settings_value_ms">%1$s 毫秒</string>
+    <string name="ux_settings_value_days">%1$s 天</string>
+    <string name="ux_settings_value_percent">%1$s%%</string>
+</resources>
