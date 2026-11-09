@@ -1,45 +1,33 @@
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class)
+
 package com.estimatefaster.audioforge.feature.project
 
 import android.content.res.Configuration
+import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
-import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.sizeIn
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -49,29 +37,30 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.LiveRegionMode
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.liveRegion
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.estimatefaster.audioforge.R
-import com.estimatefaster.audioforge.ui.components.EmptyState
-import com.estimatefaster.audioforge.ui.components.ErrorBanner
-import com.estimatefaster.audioforge.ui.components.ErrorState
-import com.estimatefaster.audioforge.ui.components.StatusKind
-import com.estimatefaster.audioforge.ui.components.StatusPill
+import com.estimatefaster.audioforge.ui.forge.ForgeCard
+import com.estimatefaster.audioforge.ui.forge.ForgeChip
+import com.estimatefaster.audioforge.ui.forge.ForgeEmpty
+import com.estimatefaster.audioforge.ui.forge.ForgeError
+import com.estimatefaster.audioforge.ui.forge.ForgeIcon
+import com.estimatefaster.audioforge.ui.forge.ForgeIconAction
+import com.estimatefaster.audioforge.ui.forge.ForgeIcons
+import com.estimatefaster.audioforge.ui.forge.ForgeLoading
+import com.estimatefaster.audioforge.ui.forge.ForgeSecondaryAction
+import com.estimatefaster.audioforge.ui.forge.ForgeSectionHeader
+import com.estimatefaster.audioforge.ui.forge.ForgeTopBar
+import com.estimatefaster.audioforge.ui.forge.ForgeWavyProgress
 import com.estimatefaster.audioforge.ui.theme.AudioForgeTheme
+import com.estimatefaster.audioforge.ui.theme.spacing
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlin.math.roundToInt
 
 /**
  * 章节列表（P4-07 / 执行计划 §12.4 S04 的章节区）。
@@ -108,12 +97,13 @@ fun ChapterListScreen(
 /**
  * 无状态章节列表。
  *
- * - 顶部：返回 + 标题“章节”；
- * - 搜索框（标题）+ 状态筛选（全部/解析中/解析失败/音频完成/未完成）；
- * - `LazyColumn` 稳定 key（章节主键），接近底部由 `LaunchedEffect` 触发加载更多；
- * - 空态/首屏错误/加载态复用 P4-02 的 [EmptyState]/[ErrorState]。
+ * 结构对齐 Forge Framework 的 Chapters 部分：
+ * ForgeTopBar（刷新）→ 搜索框 → 状态筛选 chips → 分区标题 → 章节行（数字、状态、
+ * 分段进度、打开剧本 / 更多两个图标操作）→ 分页 footer。
+ *
+ * 行内标题文字不可点击；进入剧本走行内明确的图标入口或「更多 → 打开剧本」。
+ * 分页仍是接近底部自动加载，失败后改为手动重试，行为与旧实现一致。
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChapterListScreen(
     state: ChapterListUiState,
@@ -130,30 +120,25 @@ fun ChapterListScreen(
     onRerender: (Long) -> Unit = {},
 ) {
     val loadError = state.loadError
+
     Scaffold(
         modifier = modifier,
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
-            TopAppBar(
-                navigationIcon = {
-                    TextButton(
-                        onClick = onBack,
-                        modifier = Modifier.heightIn(min = 48.dp),
-                    ) {
-                        Text(stringResource(R.string.action_back))
-                    }
-                },
-                title = {
-                    Text(
-                        text = stringResource(R.string.chapter_list_title),
-                        modifier = Modifier.semantics { heading() },
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.SemiBold,
+            ForgeTopBar(
+                title = stringResource(R.string.ux2_chapter_title),
+                subtitle = stringResource(R.string.ux2_chapter_section_loaded, state.loadedCount),
+                navigationIcon = ForgeIcons.Back,
+                navigationDescription = stringResource(R.string.action_back),
+                onNavigation = onBack,
+                actions = {
+                    ForgeIconAction(
+                        icon = ForgeIcons.Refresh,
+                        contentDescription = stringResource(R.string.action_refresh),
+                        onClick = onRetry,
+                        container = false,
                     )
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
-                ),
             )
         },
     ) { padding ->
@@ -167,23 +152,35 @@ fun ChapterListScreen(
                 onValueChange = onQueryChange,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 20.dp, end = 20.dp, top = 8.dp),
+                    .padding(
+                        start = MaterialTheme.spacing.lg,
+                        end = MaterialTheme.spacing.lg,
+                        top = MaterialTheme.spacing.sm,
+                    ),
                 label = { Text(stringResource(R.string.chapter_list_search_label)) },
                 placeholder = { Text(stringResource(R.string.chapter_list_search_placeholder)) },
-                singleLine = true,
+                leadingIcon = {
+                    ForgeIcon(
+                        icon = ForgeIcons.Search,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                },
                 trailingIcon = {
                     if (state.query.isNotEmpty()) {
-                        TextButton(
+                        ForgeIconAction(
+                            icon = ForgeIcons.Close,
+                            contentDescription = stringResource(R.string.chapter_list_search_clear),
                             onClick = { onQueryChange("") },
-                            modifier = Modifier.heightIn(min = 48.dp),
-                        ) {
-                            Text(stringResource(R.string.chapter_list_search_clear))
-                        }
+                            container = false,
+                        )
                     }
                 },
+                singleLine = true,
+                shape = MaterialTheme.shapes.large,
             )
             ChapterFilterRow(
-                selected = state.filter,
+                state = state,
                 onFilterChange = onFilterChange,
             )
             Box(
@@ -192,25 +189,17 @@ fun ChapterListScreen(
                     .weight(1f),
             ) {
                 when {
-                    state.isInitialLoading -> ChapterListLoading(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 24.dp),
+                    state.isInitialLoading -> ForgeLoading(
+                        label = stringResource(R.string.chapter_list_loading),
                     )
 
-                    loadError != null -> Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 12.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        ErrorState(
-                            message = stringResource(R.string.chapter_list_load_error, loadError),
-                            onRetry = onRetry,
-                        )
-                    }
+                    loadError != null -> ForgeError(
+                        message = stringResource(R.string.chapter_list_load_error, loadError),
+                        onRetry = onRetry,
+                        retryLabel = stringResource(R.string.action_retry),
+                    )
 
-                    state.isEmpty -> ChapterListEmpty(
+                    state.isEmpty -> ChapterEmptyState(
                         filtered = state.hasActiveFilters,
                         onBack = onBack,
                         onClearFilters = onClearFilters,
@@ -230,80 +219,69 @@ fun ChapterListScreen(
     }
 }
 
+private val chapterFilterOrder: List<ChapterFilter> = listOf(
+    ChapterFilter.All,
+    ChapterFilter.AudioDone,
+    ChapterFilter.Parsing,
+    ChapterFilter.Incomplete,
+    ChapterFilter.ParseFailed,
+)
+
 @Composable
 private fun ChapterFilterRow(
-    selected: ChapterFilter,
+    state: ChapterListUiState,
     onFilterChange: (ChapterFilter) -> Unit,
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .horizontalScroll(rememberScrollState())
-            .padding(horizontal = 20.dp, vertical = 4.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+            .padding(
+                horizontal = MaterialTheme.spacing.lg,
+                vertical = MaterialTheme.spacing.sm,
+            ),
+        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        ChapterFilter.entries.forEach { filter ->
-            FilterChip(
-                selected = filter == selected,
+        chapterFilterOrder.forEach { filter ->
+            val count = state.chapters.count { chapter -> chapter.matchesFilter(filter) }
+            ForgeChip(
+                label = stringResource(
+                    R.string.ux2_chapter_filter_count,
+                    stringResource(filter.labelRes()),
+                    count,
+                ),
+                selected = state.filter == filter,
                 onClick = { onFilterChange(filter) },
-                label = { Text(stringResource(filter.labelRes())) },
+                icon = filter.iconRes(),
             )
         }
     }
 }
 
 @Composable
-private fun ChapterListEmpty(
+private fun ChapterEmptyState(
     filtered: Boolean,
     onBack: () -> Unit,
     onClearFilters: () -> Unit,
 ) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 12.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        EmptyState(
-            title = stringResource(
-                if (filtered) {
-                    R.string.chapter_list_filtered_empty_title
-                } else {
-                    R.string.chapter_list_empty_title
-                },
-            ),
-            description = stringResource(
-                if (filtered) {
-                    R.string.chapter_list_filtered_empty_description
-                } else {
-                    R.string.chapter_list_empty_description
-                },
-            ),
-            actionText = stringResource(
-                if (filtered) {
-                    R.string.chapter_list_filtered_empty_action
-                } else {
-                    R.string.chapter_list_empty_action
-                },
-            ),
-            onAction = if (filtered) onClearFilters else onBack,
+    if (filtered) {
+        ForgeEmpty(
+            icon = ForgeIcons.Search,
+            title = stringResource(R.string.chapter_list_filtered_empty_title),
+            description = stringResource(R.string.chapter_list_filtered_empty_description),
+            actionIcon = ForgeIcons.Refresh,
+            actionLabel = stringResource(R.string.chapter_list_filtered_empty_action),
+            onAction = onClearFilters,
         )
-    }
-}
-
-@Composable
-private fun ChapterListLoading(modifier: Modifier = Modifier) {
-    Column(
-        modifier = modifier,
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        CircularProgressIndicator()
-        Spacer(Modifier.height(14.dp))
-        Text(
-            text = stringResource(R.string.chapter_list_loading),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+    } else {
+        ForgeEmpty(
+            icon = ForgeIcons.List,
+            title = stringResource(R.string.chapter_list_empty_title),
+            description = stringResource(R.string.chapter_list_empty_description),
+            actionIcon = ForgeIcons.Back,
+            actionLabel = stringResource(R.string.chapter_list_empty_action),
+            onAction = onBack,
         )
     }
 }
@@ -344,28 +322,47 @@ private fun ChapterList(
             }
     }
 
-    LazyColumn(
-        state = listState,
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(top = 4.dp),
-        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        items(
-            items = state.chapters,
-            key = { chapter -> chapter.key },
-            contentType = { "chapter" },
-        ) { chapter ->
-            ChapterRow(
-                chapter = chapter,
-                onOpenScript = onOpenScript,
-                onQuickParse = onQuickParse,
-                onRerender = onRerender,
-            )
-        }
-        item(key = "footer", contentType = "footer") {
-            ChapterListFooter(state = state, onRetryLoadMore = onRetryLoadMore)
+    Column(modifier = Modifier.fillMaxSize()) {
+        ForgeSectionHeader(
+            title = stringResource(
+                if (state.hasActiveFilters) {
+                    R.string.ux2_chapter_section_filtered
+                } else {
+                    R.string.ux2_chapter_section_all
+                },
+            ),
+            subtitle = stringResource(R.string.ux2_chapter_section_loaded, state.loadedCount),
+            modifier = Modifier.padding(
+                horizontal = MaterialTheme.spacing.lg,
+                vertical = MaterialTheme.spacing.sm,
+            ),
+        )
+        LazyColumn(
+            state = listState,
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f),
+            contentPadding = PaddingValues(
+                horizontal = MaterialTheme.spacing.lg,
+                vertical = MaterialTheme.spacing.xs,
+            ),
+            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm),
+        ) {
+            items(
+                items = state.chapters,
+                key = { chapter -> chapter.key },
+                contentType = { "chapter" },
+            ) { chapter ->
+                ChapterRow(
+                    chapter = chapter,
+                    onOpenScript = onOpenScript,
+                    onQuickParse = onQuickParse,
+                    onRerender = onRerender,
+                )
+            }
+            item(key = "footer", contentType = "footer") {
+                ChapterListFooter(state = state, onRetryLoadMore = onRetryLoadMore)
+            }
         }
     }
 }
@@ -378,169 +375,234 @@ private fun ChapterRow(
     onRerender: (Long) -> Unit,
 ) {
     var menuExpanded by rememberSaveable(chapter.id) { mutableStateOf(false) }
-    val cardShape = MaterialTheme.shapes.medium
-    val openScriptLabel = stringResource(R.string.chapter_list_action_open_script)
-    val moreLabel = stringResource(R.string.action_more)
-    val moreDescription = stringResource(
-        R.string.chapter_list_item_more_content_description,
-        chapter.number,
-    )
+    val percentage = (chapter.segmentProgress * 100f).roundToInt()
 
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(cardShape)
-            .combinedClickable(
-                onClickLabel = openScriptLabel,
-                onLongClickLabel = moreLabel,
-                onLongClick = { menuExpanded = true },
-                onClick = { onOpenScript(chapter.id) },
-            ),
-        shape = cardShape,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-    ) {
+    ForgeCard(contentPadding = PaddingValues(MaterialTheme.spacing.md)) {
         Row(
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.md),
             verticalAlignment = Alignment.Top,
         ) {
             ChapterNumberBadge(number = chapter.number)
-            Spacer(Modifier.width(12.dp))
             Column(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm),
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.xs),
+                ) {
                     Text(
                         text = chapter.title,
                         modifier = Modifier.weight(1f),
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 3,
+                        style = MaterialTheme.typography.titleSmallEmphasized,
+                        maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                     )
                     if (chapter.hasWarning) {
-                        Spacer(Modifier.width(6.dp))
-                        WarningIcon()
+                        ForgeIcon(
+                            icon = ForgeIcons.AlertCircle,
+                            contentDescription = stringResource(R.string.chapter_list_item_warning),
+                            modifier = Modifier.size(16.dp),
+                            tint = MaterialTheme.colorScheme.tertiary,
+                        )
                     }
                 }
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm),
                 ) {
-                    StatusPill(kind = StatusKind.Parse, status = chapter.parseStatus)
-                    StatusPill(kind = StatusKind.Audio, status = chapter.audioStatus)
-                }
-                if (chapter.hasSegments) {
+                    ChapterStatusPill(chapter = chapter)
                     Text(
-                        text = stringResource(
-                            R.string.chapter_list_item_segments,
-                            chapter.segmentDone,
-                            chapter.segmentTotal,
-                        ),
+                        text = if (chapter.hasSegments) {
+                            stringResource(
+                                R.string.ux2_chapter_segments,
+                                chapter.segmentDone,
+                                chapter.segmentTotal,
+                            )
+                        } else {
+                            stringResource(R.string.ux2_chapter_no_segments)
+                        },
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
-                    LinearProgressIndicator(
-                        progress = { chapter.segmentProgress },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(4.dp),
-                    )
+                }
+                if (chapter.hasSegments) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm),
+                    ) {
+                        ForgeWavyProgress(
+                            progress = chapter.segmentProgress,
+                            modifier = Modifier.weight(1f),
+                        )
+                        Text(
+                            text = stringResource(
+                                R.string.ux2_chapter_progress_percent,
+                                percentage,
+                            ),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
             }
-            Box {
-                TextButton(
-                    onClick = { menuExpanded = true },
-                    modifier = Modifier
-                        .heightIn(min = 48.dp)
-                        .semantics { contentDescription = moreDescription },
-                ) {
-                    Text(moreLabel)
-                }
-                DropdownMenu(
-                    expanded = menuExpanded,
-                    onDismissRequest = { menuExpanded = false },
-                ) {
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.chapter_list_action_quick_parse)) },
-                        onClick = {
+            Row(verticalAlignment = Alignment.Top) {
+                ForgeIconAction(
+                    icon = ForgeIcons.FileText,
+                    contentDescription = stringResource(R.string.chapter_list_action_open_script),
+                    onClick = { onOpenScript(chapter.id) },
+                    container = false,
+                )
+                Box {
+                    ForgeIconAction(
+                        icon = ForgeIcons.More,
+                        contentDescription = stringResource(
+                            R.string.chapter_list_item_more_content_description,
+                            chapter.number,
+                        ),
+                        onClick = { menuExpanded = true },
+                        container = false,
+                    )
+                    DropdownMenu(
+                        expanded = menuExpanded,
+                        onDismissRequest = { menuExpanded = false },
+                    ) {
+                        ChapterMenuItem(
+                            icon = ForgeIcons.Sparkles,
+                            label = stringResource(R.string.chapter_list_action_quick_parse),
+                        ) {
                             menuExpanded = false
                             onQuickParse(chapter.id)
-                        },
-                    )
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.chapter_list_action_rerender)) },
-                        onClick = {
+                        }
+                        ChapterMenuItem(
+                            icon = ForgeIcons.Refresh,
+                            label = stringResource(R.string.chapter_list_action_rerender),
+                        ) {
                             menuExpanded = false
                             onRerender(chapter.id)
-                        },
-                    )
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.chapter_list_action_open_script)) },
-                        onClick = {
+                        }
+                        ChapterMenuItem(
+                            icon = ForgeIcons.FileText,
+                            label = stringResource(R.string.chapter_list_action_open_script),
+                        ) {
                             menuExpanded = false
                             onOpenScript(chapter.id)
-                        },
-                    )
+                        }
+                    }
                 }
             }
         }
     }
+}
+
+@Composable
+private fun ChapterMenuItem(
+    @DrawableRes icon: Int,
+    label: String,
+    onClick: () -> Unit,
+) {
+    DropdownMenuItem(
+        text = { Text(label) },
+        onClick = onClick,
+        leadingIcon = {
+            ForgeIcon(
+                icon = icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        },
+    )
 }
 
 @Composable
 private fun ChapterNumberBadge(number: Int) {
-    Box(
-        modifier = Modifier
-            .sizeIn(minWidth = 36.dp, minHeight = 36.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant)
-            .padding(horizontal = 6.dp, vertical = 4.dp),
-        contentAlignment = Alignment.Center,
+    Surface(
+        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        modifier = Modifier.size(40.dp),
     ) {
-        Text(
-            text = number.toString(),
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 1,
-        )
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text(
+                text = number.toString().padStart(2, '0'),
+                style = MaterialTheme.typography.labelMediumEmphasized,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+            )
+        }
     }
 }
 
-/** 解析告警图标：琥珀三角 + 感叹号，不依赖 material-icons-extended。 */
 @Composable
-private fun WarningIcon() {
-    val description = stringResource(R.string.chapter_list_item_warning)
-    val fill = MaterialTheme.colorScheme.secondary
-    val mark = MaterialTheme.colorScheme.onSecondary
-    Canvas(
-        modifier = Modifier
-            .size(18.dp)
-            .semantics { contentDescription = description },
-    ) {
-        val path = Path().apply {
-            moveTo(size.width / 2f, size.height * 0.06f)
-            lineTo(size.width * 0.98f, size.height * 0.92f)
-            lineTo(size.width * 0.02f, size.height * 0.92f)
-            close()
-        }
-        drawPath(path = path, color = fill)
-        val stroke = size.width * 0.075f
-        drawLine(
-            color = mark,
-            start = Offset(size.width / 2f, size.height * 0.36f),
-            end = Offset(size.width / 2f, size.height * 0.66f),
-            strokeWidth = stroke,
-            cap = StrokeCap.Round,
+private fun ChapterStatusPill(chapter: ChapterListItemUi) {
+    val audioFailed = chapter.audioStatus.isWireStatus("error")
+    val audioRunning = chapter.audioStatus.isWireStatus("running")
+
+    val visual = when {
+        chapter.isAudioDone -> ChapterStatusVisual(
+            icon = ForgeIcons.CheckCircle,
+            labelRes = R.string.ux2_status_done,
+            container = MaterialTheme.colorScheme.primaryContainer,
+            content = MaterialTheme.colorScheme.onPrimaryContainer,
         )
-        drawCircle(
-            color = mark,
-            radius = stroke * 0.7f,
-            center = Offset(size.width / 2f, size.height * 0.79f),
+
+        chapter.isParseFailed || audioFailed -> ChapterStatusVisual(
+            icon = ForgeIcons.AlertCircle,
+            labelRes = R.string.ux2_status_error,
+            container = MaterialTheme.colorScheme.errorContainer,
+            content = MaterialTheme.colorScheme.onErrorContainer,
+        )
+
+        chapter.isParseRunning || audioRunning -> ChapterStatusVisual(
+            icon = ForgeIcons.Loader,
+            labelRes = R.string.ux2_status_running,
+            container = MaterialTheme.colorScheme.secondaryContainer,
+            content = MaterialTheme.colorScheme.onSecondaryContainer,
+        )
+
+        else -> ChapterStatusVisual(
+            icon = ForgeIcons.Clock,
+            labelRes = R.string.ux2_status_pending,
+            container = MaterialTheme.colorScheme.surfaceContainerHigh,
+            content = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
+
+    Surface(
+        shape = CircleShape,
+        color = visual.container,
+        contentColor = visual.content,
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = MaterialTheme.spacing.sm, vertical = 3.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.xs),
+        ) {
+            ForgeIcon(
+                icon = visual.icon,
+                contentDescription = null,
+                modifier = Modifier.size(14.dp),
+                tint = visual.content,
+            )
+            Text(
+                text = stringResource(visual.labelRes),
+                style = MaterialTheme.typography.labelSmallEmphasized,
+            )
+        }
+    }
 }
+
+private data class ChapterStatusVisual(
+    @DrawableRes val icon: Int,
+    @StringRes val labelRes: Int,
+    val container: Color,
+    val content: Color,
+)
 
 @Composable
 private fun ChapterListFooter(
@@ -551,41 +613,61 @@ private fun ChapterListFooter(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp),
+            .padding(vertical = MaterialTheme.spacing.sm),
         contentAlignment = Alignment.Center,
     ) {
-        if (loadMoreError != null) {
-            ErrorBanner(
-                message = stringResource(R.string.chapter_list_load_more_error, loadMoreError),
-                onRetry = onRetryLoadMore,
-            )
-        } else if (state.loadingMore) {
-            Row(
-                modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+        when {
+            loadMoreError != null -> ForgeCard(
+                containerColor = MaterialTheme.colorScheme.errorContainer,
             ) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(18.dp),
-                    strokeWidth = 2.dp,
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm),
+                ) {
+                    ForgeIcon(
+                        icon = ForgeIcons.AlertCircle,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onErrorContainer,
+                    )
+                    Text(
+                        text = stringResource(R.string.chapter_list_load_more_error, loadMoreError),
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                    )
+                }
+                ForgeSecondaryAction(
+                    icon = ForgeIcons.Refresh,
+                    label = stringResource(R.string.action_retry),
+                    onClick = onRetryLoadMore,
+                    modifier = Modifier.fillMaxWidth(),
                 )
+            }
+
+            state.loadingMore -> Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm),
+            ) {
+                LoadingIndicator(modifier = Modifier.size(20.dp))
                 Text(
                     text = stringResource(R.string.chapter_list_loading_more),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-        } else if (state.isComplete) {
-            Text(
+
+            state.isComplete -> Text(
                 text = stringResource(R.string.chapter_list_all_loaded, state.loadedCount),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-        } else if (state.hasMore) {
-            Text(
+
+            state.hasMore -> Text(
                 text = stringResource(R.string.chapter_list_load_more_hint),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
             )
         }
     }
@@ -595,13 +677,25 @@ private fun ChapterListFooter(
 private fun ChapterFilter.labelRes(): Int = when (this) {
     ChapterFilter.All -> R.string.chapter_list_filter_all
     ChapterFilter.Parsing -> R.string.chapter_list_filter_parsing
-    ChapterFilter.ParseFailed -> R.string.chapter_list_filter_parse_failed
-    ChapterFilter.AudioDone -> R.string.chapter_list_filter_audio_done
+    ChapterFilter.ParseFailed -> R.string.ux2_chapter_filter_failed
+    ChapterFilter.AudioDone -> R.string.ux2_chapter_filter_done
     ChapterFilter.Incomplete -> R.string.chapter_list_filter_incomplete
 }
 
+@DrawableRes
+private fun ChapterFilter.iconRes(): Int = when (this) {
+    ChapterFilter.All -> ForgeIcons.List
+    ChapterFilter.Parsing -> ForgeIcons.Loader
+    ChapterFilter.ParseFailed -> ForgeIcons.AlertCircle
+    ChapterFilter.AudioDone -> ForgeIcons.CheckCircle
+    ChapterFilter.Incomplete -> ForgeIcons.Clock
+}
+
+private fun String.isWireStatus(expected: String): Boolean =
+    trim().equals(expected, ignoreCase = true)
+
 // ---------------------------------------------------------------------------
-// Preview：正常列表 / 筛选空结果 / 加载 / 错误。所有文案来自 strings.xml。
+// Preview：正常列表 / 筛选空结果 / 加载 / 错误。示例数据只在 Preview 区使用。
 // ---------------------------------------------------------------------------
 
 private fun previewChapter(

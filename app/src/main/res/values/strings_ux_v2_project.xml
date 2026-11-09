@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Forge Framework v1 项目链路新增文案：项目详情 / 章节 / 批次 Sheet / 调参 Sheet。
+    通用动作（返回、取消、保存、重试等）继续复用 strings.xml；这里只放本轮新文案。
+-->
+<resources>
+    <!-- 章节状态 -->
+    <string name="ux2_status_done">已生成</string>
+    <string name="ux2_status_running">生成中</string>
+    <string name="ux2_status_pending">待生成</string>
+    <string name="ux2_status_error">失败</string>
+
+    <!-- 项目详情 -->
+    <string name="ux2_project_title">项目</string>
+    <string name="ux2_project_topbar_subtitle">%1$s · %2$d 章</string>
+    <string name="ux2_project_status_running">生成中</string>
+    <string name="ux2_project_status_error">有失败</string>
+    <string name="ux2_project_status_done">已完成</string>
+    <string name="ux2_project_status_pending">待开始</string>
+    <string name="ux2_project_hero_source">%1$s · %2$d 字</string>
+    <string name="ux2_project_tag_chapters">%1$d 章</string>
+    <string name="ux2_project_tag_characters">%1$d 位角色</string>
+    <string name="ux2_project_tag_multi_voice">多人演播</string>
+    <string name="ux2_project_play_all">播放全书</string>
+    <string name="ux2_project_more">项目更多操作</string>
+    <string name="ux2_project_progress_title">整体进度</string>
+    <string name="ux2_project_progress_percent">%1$d%%</string>
+    <string name="ux2_project_stat_chapters">章节</string>
+    <string name="ux2_project_stat_segments">分段</string>
+    <string name="ux2_project_stat_characters">角色</string>
+    <string name="ux2_project_stat_ratio">%1$d/%2$d</string>
+    <string name="ux2_project_stat_value">%1$d</string>
+    <string name="ux2_project_characters_manage">管理人物音色</string>
+    <string name="ux2_project_chapters_subtitle">共 %1$d 章 · %2$d 章待生成</string>
+    <string name="ux2_project_chapters_manage">查看全部章节</string>
+    <string name="ux2_project_chapter_row_title">章节列表</string>
+    <string name="ux2_project_chapter_row_summary">%1$d 已完成 · %2$d 生成中 · %3$d 待生成</string>
+    <string name="ux2_project_continue">继续生成</string>
+    <string name="ux2_project_continue_hint">还有 %1$d 章待生成 · 开始后可后台运行</string>
+    <string name="ux2_project_continue_hint_done">全部章节已生成 · 可重新生成或调参</string>
+    <string name="ux2_project_continue_running">已有章节在处理 · 停止后会收尾当前片段</string>
+    <string name="ux2_project_stop">停止生成</string>
+    <string name="ux2_project_empty_title">项目里还没有章节</string>
+    <string name="ux2_project_empty_description">导入后先解析章节，再开始生成。项目封面与元信息会保留。</string>
+
+    <!-- 章节列表 -->
+    <string name="ux2_chapter_title">章节</string>
+    <string name="ux2_chapter_section_loaded">已加载 %1$d 章</string>
+    <string name="ux2_chapter_section_all">全部章节</string>
+    <string name="ux2_chapter_section_filtered">筛选结果</string>
+    <string name="ux2_chapter_filter_count">%1$s %2$d</string>
+    <string name="ux2_chapter_filter_done">已生成</string>
+    <string name="ux2_chapter_filter_failed">失败</string>
+    <string name="ux2_chapter_segments">%1$d/%2$d 段</string>
+    <string name="ux2_chapter_no_segments">尚未分段</string>
+    <string name="ux2_chapter_progress_percent">%1$d%%</string>
+
+    <!-- 批次 Sheet -->
+    <string name="ux2_batch_title">批量生成</string>
+    <string name="ux2_batch_subtitle">长任务 · 可后台运行</string>
+    <string name="ux2_batch_section_range">生成范围</string>
+    <string name="ux2_batch_range_all">全部章节</string>
+    <string name="ux2_batch_range_unfinished">未完成章节</string>
+    <string name="ux2_batch_selected_count">已选 %1$d 章</string>
+    <string name="ux2_batch_section_mode">处理模式</string>
+    <string name="ux2_batch_mode_full">解析 + 生成</string>
+    <string name="ux2_batch_mode_parse">仅解析</string>
+    <string name="ux2_batch_mode_render">仅渲染</string>
+    <string name="ux2_batch_mode_full_hint">解析剧本并生成音频</string>
+    <string name="ux2_batch_mode_parse_hint">只解析剧本，不生成音频</string>
+    <string name="ux2_batch_mode_render_hint">只生成音频，跳过解析</string>
+    <string name="ux2_batch_section_options">选项</string>
+    <string name="ux2_batch_force_title">强制重做已完成章节</string>
+    <string name="ux2_batch_force_description">会覆盖已有音频与分段</string>
+    <string name="ux2_batch_concurrency_title">并发数</string>
+    <string name="ux2_batch_concurrency_description">同时请求的章节数 · 受设置页限制</string>
+    <string name="ux2_batch_concurrency_decrease">减少并发</string>
+    <string name="ux2_batch_concurrency_increase">增加并发</string>
+    <string name="ux2_batch_missing_keys_separator">、</string>
+    <string name="ux2_batch_estimate_note">可在后台继续；进度在任务页查看。</string>
+    <string name="ux2_batch_action_start">开始批量生成</string>
+    <string name="ux2_batch_note">开始后可随时在任务页停止。</string>
+
+    <!-- 调参 Sheet -->
+    <string name="ux2_tuning_title">调参</string>
+    <string name="ux2_tuning_subtitle">角色级参数 · 保存后生效</string>
+    <string name="ux2_tuning_section_title">角色参数</string>
+    <string name="ux2_tuning_section_hint">角色级覆盖优先于全局默认</string>
+    <string name="ux2_tuning_speed_low">慢</string>
+    <string name="ux2_tuning_speed_high">快</string>
+    <string name="ux2_tuning_volume_low">轻</string>
+    <string name="ux2_tuning_volume_high">响</string>
+    <string name="ux2_tuning_pitch_low">低</string>
+    <string name="ux2_tuning_pitch_high">高</string>
+    <string name="ux2_tuning_range_hint">%1$s – %2$s</string>
+    <string name="ux2_tuning_status_dirty">有改动</string>
+    <string name="ux2_tuning_status_global">跟随全局</string>
+    <string name="ux2_tuning_status_clean">未改动</string>
+    <string name="ux2_tuning_status_unknown">未知角色</string>
+    <string name="ux2_tuning_save">保存参数</string>
+    <string name="ux2_tuning_save_hint">保存后立即应用到该角色的后续生成。</string>
+</resources>
