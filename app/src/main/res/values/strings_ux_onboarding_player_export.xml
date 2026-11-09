@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Expressive 引导 / 播放器 / 导出：只放本轮新增文案，旧 key 继续复用。 -->
+    <string name="onboarding_hero_tagline_welcome">让文字开口</string>
+    <string name="onboarding_hero_tagline_keys">连接你的模型</string>
+    <string name="onboarding_hero_tagline_permissions">把后台说明白</string>
+
+    <string name="player_segment_indicator">第 %1$d / %2$d 句</string>
+
+    <string name="export_chapter_selected_badge">已选</string>
+    <string name="export_progress_percent">%1$d%%</string>
+</resources>

@@ -1,39 +1,35 @@
+@file:OptIn(
+    androidx.compose.foundation.layout.ExperimentalLayoutApi::class,
+    androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class,
+)
+
 package com.estimatefaster.audioforge.feature.export
 
 import android.net.Uri
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SheetValue
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.toShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -47,7 +43,6 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -57,8 +52,19 @@ import com.estimatefaster.audioforge.R
 import com.estimatefaster.audioforge.ui.components.AdaptiveFieldRow
 import com.estimatefaster.audioforge.ui.components.EmptyState
 import com.estimatefaster.audioforge.ui.components.ErrorState
-import com.estimatefaster.audioforge.ui.components.SectionHeader
+import com.estimatefaster.audioforge.ui.components.ExpressiveCard
+import com.estimatefaster.audioforge.ui.components.ExpressiveChip
+import com.estimatefaster.audioforge.ui.components.ExpressiveLoading
+import com.estimatefaster.audioforge.ui.components.ExpressiveOutlinedButton
+import com.estimatefaster.audioforge.ui.components.ExpressivePrimaryButton
+import com.estimatefaster.audioforge.ui.components.ExpressiveSectionHeader
+import com.estimatefaster.audioforge.ui.components.ExpressiveTextButton
+import com.estimatefaster.audioforge.ui.components.ExpressiveWavyProgress
+import com.estimatefaster.audioforge.ui.components.StatusPill
+import com.estimatefaster.audioforge.ui.components.StatusTone
 import com.estimatefaster.audioforge.ui.theme.AudioForgeTheme
+import com.estimatefaster.audioforge.ui.theme.spacing
+import kotlin.math.roundToInt
 
 /**
  * 导出/分享 Sheet（P5-11 / 执行计划 §12.4 S13、§15 P5-11）。
@@ -118,9 +124,9 @@ fun ExportSheet(
  * 无状态 Sheet 内容；Preview 与 UI 测试直接渲染它。
  *
  * 布局按阶段切换：
- * - 选择：范围控件 → 起止章输入（仅起止范围）→ 章节列表（时长/体积）→ 汇总 → 开始；
- * - 导出中：进度条 x/y → 当前章名 → 成功/失败计数 → 取消；
- * - 结果：成功列表 → 失败列表与重试 → 分享/完成。
+ * - 选择：范围 chips → 起止章输入（仅起止范围）→ 章节卡片（时长/体积）→ 汇总 → 开始；
+ * - 导出中：Wavy 进度 x/y → 当前章名 → 成功/失败胶囊 → 取消；
+ * - 结果：成功文件卡 → 失败卡与重试 → 分享/完成。
  *
  * 加载、加载失败与“无已完成章节”空态优先于阶段内容；文案全部来自 `strings.xml`。
  */
@@ -144,14 +150,21 @@ fun ExportSheetContent(
             .fillMaxWidth()
             .navigationBarsPadding()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 24.dp)
-            .padding(top = 8.dp, bottom = 24.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+            .padding(horizontal = MaterialTheme.spacing.xl)
+            .padding(
+                top = MaterialTheme.spacing.sm,
+                bottom = MaterialTheme.spacing.xl,
+            ),
+        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.lg),
     ) {
         ExportHeader()
 
         when {
-            state.loading -> ExportLoading()
+            state.loading -> ExpressiveLoading(
+                label = stringResource(R.string.export_loading),
+                modifier = Modifier.fillMaxWidth(),
+            )
+
             loadError != null -> ErrorState(
                 message = stringResource(R.string.export_load_error, loadError),
                 retryText = stringResource(R.string.export_action_retry_load),
@@ -193,37 +206,10 @@ fun ExportSheetContent(
 
 @Composable
 private fun ExportHeader() {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text(
-            text = stringResource(R.string.export_sheet_title),
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.SemiBold,
-        )
-        Text(
-            text = stringResource(R.string.export_sheet_subtitle),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
-}
-
-@Composable
-private fun ExportLoading() {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 24.dp),
-        horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        CircularProgressIndicator()
-        Spacer(Modifier.width(12.dp))
-        Text(
-            text = stringResource(R.string.export_loading),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
+    ExpressiveSectionHeader(
+        title = stringResource(R.string.export_sheet_title),
+        subtitle = stringResource(R.string.export_sheet_subtitle),
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -236,101 +222,77 @@ private fun SelectionSection(
     onStart: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    SectionHeader(
-        title = stringResource(R.string.export_range_title),
-        subtitle = stringResource(R.string.export_range_subtitle),
-    )
-    RangeSelector(range = state.range, onRangeChange = onRangeChange)
-
-    if (state.range == ExportRange.ChapterRange) {
-        RangeFields(
-            state = state,
-            onStartTextChange = onStartTextChange,
-            onEndTextChange = onEndTextChange,
+    Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.lg)) {
+        ExpressiveSectionHeader(
+            title = stringResource(R.string.export_range_title),
+            subtitle = stringResource(R.string.export_range_subtitle),
         )
-    }
+        RangeChips(range = state.range, onRangeChange = onRangeChange)
 
-    val selectionError = state.selectionError
-    if (
-        selectionError != null &&
-        selectionError != ExportValidationError.NoChapters &&
-        selectionError != ExportValidationError.NoCompleted
-    ) {
-        ValidationCard(
-            message = selectionMessage(selectionError, state.chapters.size),
-        )
-    }
+        if (state.range == ExportRange.ChapterRange) {
+            RangeFields(
+                state = state,
+                onStartTextChange = onStartTextChange,
+                onEndTextChange = onEndTextChange,
+            )
+        }
 
-    SectionHeader(
-        title = stringResource(R.string.export_list_title),
-        subtitle = stringResource(
-            R.string.export_list_subtitle,
-            state.chapters.size,
-            state.completedChapters.size,
-        ),
-    )
-    val selectedIds = state.selectedChapters.map { it.chapterIdx }.toSet()
-    state.chapters.take(MAX_LIST_ROWS).forEach { chapter ->
-        ChapterRow(
-            chapter = chapter,
-            selected = chapter.chapterIdx in selectedIds,
-        )
-    }
-    if (state.chapters.size > MAX_LIST_ROWS) {
-        Text(
-            text = stringResource(
-                R.string.export_list_truncated,
-                MAX_LIST_ROWS,
+        val selectionError = state.selectionError
+        if (
+            selectionError != null &&
+            selectionError != ExportValidationError.NoChapters &&
+            selectionError != ExportValidationError.NoCompleted
+        ) {
+            ValidationCard(
+                message = selectionMessage(selectionError, state.chapters.size),
+            )
+        }
+
+        ExpressiveSectionHeader(
+            title = stringResource(R.string.export_list_title),
+            subtitle = stringResource(
+                R.string.export_list_subtitle,
                 state.chapters.size,
+                state.completedChapters.size,
             ),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-    }
+        ChapterListCard(state = state)
 
-    ExportSummaryCard(state)
+        ExportSummaryCard(state)
 
-    Button(
-        onClick = onStart,
-        enabled = state.canStart,
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(min = 48.dp),
-    ) {
-        Text(
+        ExpressivePrimaryButton(
             text = if (state.selectedCount > 0) {
                 stringResource(R.string.export_action_start_count, state.selectedCount)
             } else {
                 stringResource(R.string.export_action_start)
             },
+            onClick = onStart,
+            enabled = state.canStart,
+            modifier = Modifier.fillMaxWidth(),
         )
-    }
-    TextButton(
-        onClick = onDismiss,
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(min = 48.dp),
-    ) {
-        Text(stringResource(R.string.export_action_close))
+        ExpressiveTextButton(
+            text = stringResource(R.string.export_action_close),
+            onClick = onDismiss,
+            modifier = Modifier.fillMaxWidth(),
+        )
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun RangeSelector(
+private fun RangeChips(
     range: ExportRange,
     onRangeChange: (ExportRange) -> Unit,
 ) {
-    SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-        ExportRange.entries.forEachIndexed { index, candidate ->
-            SegmentedButton(
+    FlowRow(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm),
+        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm),
+    ) {
+        ExportRange.entries.forEach { candidate ->
+            ExpressiveChip(
+                label = stringResource(candidate.labelRes()),
                 selected = range == candidate,
                 onClick = { onRangeChange(candidate) },
-                shape = SegmentedButtonDefaults.itemShape(
-                    index = index,
-                    count = ExportRange.entries.size,
-                ),
-                label = { Text(stringResource(candidate.labelRes())) },
             )
         }
     }
@@ -348,7 +310,7 @@ private fun RangeFields(
     val endInvalid = error == ExportValidationError.InvalidEnd ||
         error == ExportValidationError.StartAfterEnd
 
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm)) {
         AdaptiveFieldRow(
             {
                 OutlinedTextField(
@@ -356,6 +318,7 @@ private fun RangeFields(
                     onValueChange = onStartTextChange,
                     label = { Text(stringResource(R.string.export_range_start)) },
                     singleLine = true,
+                    shape = MaterialTheme.shapes.large,
                     isError = startInvalid,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
@@ -367,6 +330,7 @@ private fun RangeFields(
                     onValueChange = onEndTextChange,
                     label = { Text(stringResource(R.string.export_range_end)) },
                     singleLine = true,
+                    shape = MaterialTheme.shapes.large,
                     isError = endInvalid,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
@@ -378,6 +342,30 @@ private fun RangeFields(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+    }
+}
+
+@Composable
+private fun ChapterListCard(state: ExportUiState) {
+    val selectedIds = state.selectedChapters.map { it.chapterIdx }.toSet()
+    ExpressiveCard(contentPadding = PaddingValues(MaterialTheme.spacing.sm)) {
+        state.chapters.take(MAX_LIST_ROWS).forEach { chapter ->
+            ChapterRow(
+                chapter = chapter,
+                selected = chapter.chapterIdx in selectedIds,
+            )
+        }
+        if (state.chapters.size > MAX_LIST_ROWS) {
+            Text(
+                text = stringResource(
+                    R.string.export_list_truncated,
+                    MAX_LIST_ROWS,
+                    state.chapters.size,
+                ),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
     }
 }
 
@@ -397,95 +385,138 @@ private fun ChapterRow(
         stringResource(R.string.export_value_unknown)
     }
     val notReadyLabel = stringResource(R.string.export_chapter_not_ready)
+    val container = if (selected) {
+        MaterialTheme.colorScheme.secondaryContainer
+    } else {
+        MaterialTheme.colorScheme.surfaceContainerHigh
+    }
+    val content = if (selected) {
+        MaterialTheme.colorScheme.onSecondaryContainer
+    } else {
+        MaterialTheme.colorScheme.onSurface
+    }
 
-    Row(
+    Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp)
             .semantics(mergeDescendants = true) {
                 this.selected = selected
                 if (!chapter.audioDone) {
                     stateDescription = notReadyLabel
                 }
             },
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        shape = MaterialTheme.shapes.large,
+        color = container,
+        contentColor = content,
     ) {
-        Checkbox(
-            checked = selected,
-            onCheckedChange = null,
-            modifier = Modifier.clearAndSetSemantics { },
-        )
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = chapter.title,
-                style = MaterialTheme.typography.bodyLarge,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
+        Row(
+            modifier = Modifier.padding(
+                horizontal = MaterialTheme.spacing.md,
+                vertical = MaterialTheme.spacing.sm,
+            ),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm),
+        ) {
+            Checkbox(
+                checked = selected,
+                onCheckedChange = null,
+                modifier = Modifier.clearAndSetSemantics { },
             )
-            Text(
-                text = stringResource(R.string.export_chapter_meta, chapter.number, duration, size),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        if (!chapter.audioDone) {
-            Text(
-                text = notReadyLabel,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.error,
-            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = chapter.title,
+                    style = MaterialTheme.typography.bodyLarge,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    text = stringResource(
+                        R.string.export_chapter_meta,
+                        chapter.number,
+                        duration,
+                        size,
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = content.copy(alpha = 0.75f),
+                )
+            }
+            if (!chapter.audioDone) {
+                Text(
+                    text = notReadyLabel,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.error,
+                )
+            } else if (selected) {
+                Text(
+                    text = stringResource(R.string.export_chapter_selected_badge),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = content,
+                )
+            }
         }
     }
 }
 
 @Composable
 private fun ExportSummaryCard(state: ExportUiState) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface,
-        ),
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
+    val countShape = MaterialShapes.Cookie6Sided.toShape()
+    ExpressiveCard(contentPadding = PaddingValues(MaterialTheme.spacing.lg)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.md),
         ) {
-            Text(
-                text = stringResource(R.string.export_summary_title),
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-            )
-            Text(
-                text = if (state.selectedCount > 0) {
-                    stringResource(
-                        R.string.export_summary,
-                        state.selectedCount,
-                        formatExportDuration(state.selectedDurationMs),
-                        formatExportFileSize(state.selectedSizeBytes),
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.xxs),
+            ) {
+                Text(
+                    text = stringResource(R.string.export_summary_title),
+                    style = MaterialTheme.typography.titleSmallEmphasized,
+                )
+                Text(
+                    text = if (state.selectedCount > 0) {
+                        stringResource(
+                            R.string.export_summary,
+                            state.selectedCount,
+                            formatExportDuration(state.selectedDurationMs),
+                            formatExportFileSize(state.selectedSizeBytes),
+                        )
+                    } else {
+                        stringResource(R.string.export_summary_empty)
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
+            Surface(
+                modifier = Modifier.size(72.dp),
+                shape = countShape,
+                color = MaterialTheme.colorScheme.primaryContainer,
+                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Text(
+                        text = state.selectedCount.toString(),
+                        style = MaterialTheme.typography.titleLargeEmphasized,
                     )
-                } else {
-                    stringResource(R.string.export_summary_empty)
-                },
-                style = MaterialTheme.typography.bodyMedium,
-            )
+                }
+            }
         }
     }
 }
 
 @Composable
 private fun ValidationCard(message: String) {
-    Card(
+    Surface(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.errorContainer,
-        ),
+        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.errorContainer,
+        contentColor = MaterialTheme.colorScheme.onErrorContainer,
     ) {
         Text(
             text = message,
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier.padding(MaterialTheme.spacing.lg),
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onErrorContainer,
         )
     }
 }
@@ -495,54 +526,66 @@ private fun ExportingSection(
     state: ExportUiState,
     onCancel: () -> Unit,
 ) {
-    SectionHeader(
-        title = stringResource(R.string.export_progress_title),
-        subtitle = stringResource(
-            R.string.export_progress_count,
-            state.completed,
-            state.total,
-        ),
-    )
-    LinearProgressIndicator(
-        progress = { state.progress },
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(6.dp)
-            .semantics { liveRegion = LiveRegionMode.Polite },
-    )
-    val currentTitle = state.currentChapterTitle
-    if (currentTitle != null) {
-        Text(
-            text = stringResource(R.string.export_progress_current, currentTitle),
-            style = MaterialTheme.typography.bodyMedium,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
+    Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.lg)) {
+        ExpressiveSectionHeader(
+            title = stringResource(R.string.export_progress_title),
+            subtitle = stringResource(
+                R.string.export_progress_count,
+                state.completed,
+                state.total,
+            ),
         )
-    }
-    Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.md),
+        ) {
+            ExpressiveWavyProgress(
+                progress = state.progress,
+                modifier = Modifier
+                    .weight(1f)
+                    .semantics { liveRegion = LiveRegionMode.Polite },
+            )
+            Text(
+                text = stringResource(
+                    R.string.export_progress_percent,
+                    (state.progress * 100f).roundToInt(),
+                ),
+                style = MaterialTheme.typography.labelLargeEmphasized,
+            )
+        }
+        val currentTitle = state.currentChapterTitle
+        if (currentTitle != null) {
+            Text(
+                text = stringResource(R.string.export_progress_current, currentTitle),
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm),
+            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm),
+        ) {
+            StatusPill(
+                text = stringResource(R.string.export_progress_succeeded, state.succeeded.size),
+                tone = if (state.succeeded.isEmpty()) StatusTone.Neutral else StatusTone.Success,
+            )
+            StatusPill(
+                text = stringResource(R.string.export_progress_failed, state.failures.size),
+                tone = if (state.failures.isEmpty()) StatusTone.Neutral else StatusTone.Danger,
+            )
+        }
         Text(
-            text = stringResource(R.string.export_progress_succeeded, state.succeeded.size),
+            text = stringResource(R.string.export_cancel_note),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        Text(
-            text = stringResource(R.string.export_progress_failed, state.failures.size),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        ExpressiveOutlinedButton(
+            text = stringResource(R.string.export_action_cancel_export),
+            onClick = onCancel,
+            modifier = Modifier.fillMaxWidth(),
         )
-    }
-    Text(
-        text = stringResource(R.string.export_cancel_note),
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
-    OutlinedButton(
-        onClick = onCancel,
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(min = 48.dp),
-    ) {
-        Text(stringResource(R.string.export_action_cancel_export))
     }
 }
 
@@ -553,112 +596,112 @@ private fun ResultSection(
     onShare: (List<Uri>) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    SectionHeader(
-        title = stringResource(R.string.export_result_title),
-        subtitle = stringResource(
-            R.string.export_result_summary,
-            state.succeeded.size,
-            state.failures.size,
-        ),
-    )
-
-    if (state.cancelled) {
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+    Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.lg)) {
+        ExpressiveSectionHeader(
+            title = stringResource(R.string.export_result_title),
+            subtitle = stringResource(
+                R.string.export_result_summary,
+                state.succeeded.size,
+                state.failures.size,
             ),
-        ) {
-            Text(
-                text = stringResource(R.string.export_result_cancelled),
-                modifier = Modifier.padding(16.dp),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSecondaryContainer,
-            )
-        }
-    }
-
-    Text(
-        text = stringResource(R.string.export_result_success_title),
-        style = MaterialTheme.typography.titleSmall,
-        fontWeight = FontWeight.SemiBold,
-    )
-    if (state.succeeded.isEmpty()) {
-        Text(
-            text = stringResource(R.string.export_result_no_success),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-    } else {
-        state.succeeded.take(MAX_LIST_ROWS).forEach { file ->
-            ExportedFileRow(file)
+
+        if (state.cancelled) {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = MaterialTheme.shapes.large,
+                color = MaterialTheme.colorScheme.secondaryContainer,
+                contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+            ) {
+                Text(
+                    text = stringResource(R.string.export_result_cancelled),
+                    modifier = Modifier.padding(MaterialTheme.spacing.lg),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
         }
-        if (state.succeeded.size > MAX_LIST_ROWS) {
+
+        ExpressiveCard(contentPadding = PaddingValues(MaterialTheme.spacing.lg)) {
             Text(
-                text = stringResource(
-                    R.string.export_list_truncated,
-                    MAX_LIST_ROWS,
-                    state.succeeded.size,
-                ),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                text = stringResource(R.string.export_result_success_title),
+                style = MaterialTheme.typography.titleSmallEmphasized,
+            )
+            if (state.succeeded.isEmpty()) {
+                Text(
+                    text = stringResource(R.string.export_result_no_success),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            } else {
+                state.succeeded.take(MAX_LIST_ROWS).forEach { file ->
+                    ExportedFileRow(file)
+                }
+                if (state.succeeded.size > MAX_LIST_ROWS) {
+                    Text(
+                        text = stringResource(
+                            R.string.export_list_truncated,
+                            MAX_LIST_ROWS,
+                            state.succeeded.size,
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+
+        if (state.failures.isNotEmpty()) {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = MaterialTheme.shapes.large,
+                color = MaterialTheme.colorScheme.errorContainer,
+                contentColor = MaterialTheme.colorScheme.onErrorContainer,
+            ) {
+                Column(
+                    modifier = Modifier.padding(MaterialTheme.spacing.lg),
+                    verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm),
+                ) {
+                    Text(
+                        text = stringResource(R.string.export_result_failure_title),
+                        style = MaterialTheme.typography.titleSmallEmphasized,
+                    )
+                    state.failures.take(MAX_LIST_ROWS).forEach { failure ->
+                        Text(
+                            text = stringResource(
+                                R.string.export_result_failure_line,
+                                failure.title,
+                                failure.message,
+                            ),
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+                }
+            }
+            ExpressiveOutlinedButton(
+                text = stringResource(R.string.export_action_retry_failed),
+                onClick = onRetryFailed,
+                enabled = state.canRetryFailed,
+                modifier = Modifier.fillMaxWidth(),
             )
         }
-    }
 
-    if (state.failures.isNotEmpty()) {
-        HorizontalDivider()
-        Text(
-            text = stringResource(R.string.export_result_failure_title),
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.SemiBold,
-        )
-        state.failures.take(MAX_LIST_ROWS).forEach { failure ->
-            Text(
-                text = stringResource(
-                    R.string.export_result_failure_line,
-                    failure.title,
-                    failure.message,
-                ),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.error,
-            )
-        }
-        OutlinedButton(
-            onClick = onRetryFailed,
-            enabled = state.canRetryFailed,
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = 48.dp),
-        ) {
-            Text(stringResource(R.string.export_action_retry_failed))
-        }
-    }
-
-    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        OutlinedButton(
-            onClick = onDismiss,
-            modifier = Modifier
-                .weight(1f)
-                .heightIn(min = 48.dp),
-        ) {
-            Text(stringResource(R.string.export_action_done))
-        }
-        Button(
+        ExpressivePrimaryButton(
+            text = stringResource(R.string.export_action_share),
             onClick = { onShare(state.shareUris.map { uri -> Uri.parse(uri) }) },
             enabled = state.canShare,
-            modifier = Modifier
-                .weight(1f)
-                .heightIn(min = 48.dp),
-        ) {
-            Text(stringResource(R.string.export_action_share))
-        }
+            modifier = Modifier.fillMaxWidth(),
+        )
+        ExpressiveTextButton(
+            text = stringResource(R.string.export_action_done),
+            onClick = onDismiss,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Text(
+            text = stringResource(R.string.export_result_share_hint),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
-    Text(
-        text = stringResource(R.string.export_result_share_hint),
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
 }
 
 @Composable
@@ -666,7 +709,7 @@ private fun ExportedFileRow(file: ExportedFile) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp),
+            .padding(vertical = MaterialTheme.spacing.xxs),
     ) {
         Text(
             text = file.displayName,
@@ -818,6 +861,7 @@ private fun ExportSheetExportingPreview() {
     name = "ExportSheet Result",
     showBackground = true,
     backgroundColor = 0xFFF7F8FC,
+    fontScale = 2f,
 )
 @Composable
 private fun ExportSheetResultPreview() {
