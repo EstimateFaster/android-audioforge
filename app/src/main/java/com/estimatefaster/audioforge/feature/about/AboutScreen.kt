@@ -1,6 +1,13 @@
+@file:OptIn(
+    androidx.compose.material3.ExperimentalMaterial3Api::class,
+    androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class,
+)
+
 package com.estimatefaster.audioforge.feature.about
 
 import android.content.res.Configuration
+import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -9,19 +16,16 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalButton
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -30,11 +34,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -43,9 +48,15 @@ import com.estimatefaster.audioforge.feature.storage.formatByteSize
 import com.estimatefaster.audioforge.ui.components.EmptyState
 import com.estimatefaster.audioforge.ui.components.ErrorBanner
 import com.estimatefaster.audioforge.ui.components.ErrorState
+import com.estimatefaster.audioforge.ui.components.ExpressiveCard
+import com.estimatefaster.audioforge.ui.components.ExpressivePrimaryButton
+import com.estimatefaster.audioforge.ui.components.ExpressiveTonalButton
 import com.estimatefaster.audioforge.ui.components.LoadingState
 import com.estimatefaster.audioforge.ui.components.SectionHeader
+import com.estimatefaster.audioforge.ui.components.StatusPill
+import com.estimatefaster.audioforge.ui.components.StatusTone
 import com.estimatefaster.audioforge.ui.theme.AudioForgeTheme
+import com.estimatefaster.audioforge.ui.theme.spacing
 
 /**
  * 关于页（P5-10 / 执行计划 §12.4 S15、§15 P5-10）。
@@ -77,19 +88,18 @@ fun AboutScreen(
 }
 
 /**
- * 无状态关于页。
+ * 无状态关于页（Expressive 布局）。
  *
  * 布局：
- * - 应用卡：名称、版本（`VERSION_NAME (VERSION_CODE)`）、构建类型、包名、
- *   开源声明与 GitHub 入口（点击回调）；
- * - 诊断卡：Room（库版本/schema/表数/探针）、FFmpeg（探针版本）、
- *   WorkManager（可用性与进行中任务数）、存储占用、最近错误；
- *   「复制诊断信息」「导出日志」只回调文本；
- * - 许可卡：FFmpegKit / OkHttp / Room / Media3 / Compose / Serialization /
- *   WorkManager，顺序固定，可展开全文占位；
- * - 加载、错误、空态复用 P4-02 组件。
+ * - 应用信息 hero：primaryContainer 大圆角容器，名称与版本、构建类型/包名、
+ *   开源声明与 GitHub 入口；
+ * - 诊断卡：Room、FFmpeg、WorkManager、存储占用、最近错误，各自一张 tonal 行卡，
+ *   状态用 [StatusPill] 表达，失败原因就地显示；
+ * - 许可证列表：每个依赖一张可展开卡片，展开内容为许可证占位说明；
+ * - 复制/导出按钮只回调文本；加载、错误、空态复用共享组件。
+ *
+ * 页面不改变任何诊断/许可状态，所有数据来自 [AboutUiState]。
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AboutScreen(
     state: AboutUiState,
@@ -118,8 +128,7 @@ fun AboutScreen(
                     Text(
                         text = stringResource(R.string.about_title),
                         modifier = Modifier.semantics { heading() },
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.SemiBold,
+                        style = MaterialTheme.typography.titleLargeEmphasized,
                     )
                 },
                 actions = {
@@ -182,17 +191,22 @@ private fun AboutContent(
     onExportLogs: (String) -> Unit,
 ) {
     val report = state.report
+    val spacing = MaterialTheme.spacing
 
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
             .padding(contentPadding),
-        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
+        contentPadding = PaddingValues(horizontal = spacing.lg, vertical = spacing.md),
+        verticalArrangement = Arrangement.spacedBy(spacing.md),
     ) {
         if (state.isRefreshing) {
             item(key = "refreshing") {
-                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                LinearWavyProgressIndicator(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = spacing.xs),
+                )
             }
         }
         if (state.loadError != null) {
@@ -217,7 +231,7 @@ private fun AboutContent(
             }
         } else {
             item(key = "app") {
-                AboutAppCard(
+                AboutHero(
                     buildInfo = report.buildInfo,
                     onOpenGitHub = onOpenGitHub,
                 )
@@ -232,92 +246,108 @@ private fun AboutContent(
                 )
             }
         }
-        item(key = "licenses") {
-            LicensesCard(
-                licenses = state.licenses,
-                expandedLicenseId = state.expandedLicenseId,
-                onToggleLicense = onToggleLicense,
+        item(key = "licenses-header") {
+            SectionHeader(
+                title = stringResource(R.string.about_licenses_title),
+                subtitle = stringResource(
+                    R.string.about_licenses_subtitle,
+                    state.licenses.size,
+                ),
+            )
+        }
+        items(
+            items = state.licenses,
+            key = { entry -> entry.id },
+        ) { entry ->
+            LicenseCard(
+                entry = entry,
+                expanded = entry.id == state.expandedLicenseId,
+                onToggle = { onToggleLicense(entry.id) },
             )
         }
     }
 }
 
 @Composable
-private fun AboutAppCard(
+private fun AboutHero(
     buildInfo: AppBuildInfo?,
     onOpenGitHub: (String) -> Unit,
 ) {
-    Card(
+    val spacing = MaterialTheme.spacing
+    Surface(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape = MaterialTheme.shapes.extraExtraLarge,
+        color = MaterialTheme.colorScheme.primaryContainer,
+        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+                .padding(spacing.xl),
+            verticalArrangement = Arrangement.spacedBy(spacing.sm),
         ) {
-            SectionHeader(
-                title = stringResource(R.string.about_app_card_title),
-                subtitle = stringResource(R.string.about_app_card_subtitle),
+            Text(
+                text = stringResource(R.string.about_app_card_title),
+                style = MaterialTheme.typography.labelLarge,
             )
             Text(
                 text = stringResource(R.string.app_name),
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.headlineSmallEmphasized,
             )
             if (buildInfo == null) {
                 Text(
                     text = stringResource(R.string.about_build_info_missing),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodyMediumEmphasized,
                 )
             } else {
-                InfoLine(
-                    label = stringResource(R.string.about_version_label),
-                    value = buildInfo.versionLabel,
+                Text(
+                    text = buildInfo.versionLabel,
+                    style = MaterialTheme.typography.titleMediumEmphasized,
                 )
-                InfoLine(
+                HeroInfoLine(
                     label = stringResource(R.string.about_build_type_label),
                     value = buildInfo.buildTypeLabel,
                 )
-                InfoLine(
+                HeroInfoLine(
                     label = stringResource(R.string.about_package_label),
                     value = buildInfo.packageLabel,
                 )
             }
-            HorizontalDivider()
+            HorizontalDivider(
+                modifier = Modifier.padding(vertical = spacing.xs),
+                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.24f),
+            )
             Text(
                 text = stringResource(R.string.about_license_statement),
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Text(
                 text = stringResource(R.string.about_github_url, ABOUT_GITHUB_URL),
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.primary,
             )
-            TextButton(
+            ExpressiveTonalButton(
+                text = stringResource(R.string.about_github_open),
                 onClick = { onOpenGitHub(ABOUT_GITHUB_URL) },
-                modifier = Modifier.heightIn(min = 48.dp),
-            ) {
-                Text(stringResource(R.string.about_github_open))
-            }
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = spacing.xs),
+            )
         }
     }
 }
 
 @Composable
-private fun InfoLine(label: String, value: String) {
+private fun HeroInfoLine(label: String, value: String) {
+    val spacing = MaterialTheme.spacing
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(spacing.md),
     ) {
         Text(
             text = label,
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.weight(0.35f),
+            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.72f),
         )
         Text(
             text = value,
@@ -335,280 +365,323 @@ private fun DiagnosticsCard(
     onExportLogs: (String) -> Unit,
     diagnosticText: String,
 ) {
-    Card(
+    val spacing = MaterialTheme.spacing
+    val database = report.database
+    val roomValue = if (database.tableCount == null && database.schemaVersion == null) {
+        stringResource(R.string.about_database_unavailable)
+    } else {
+        val schema = database.schemaVersion
+            ?.let { stringResource(R.string.about_room_schema_value, it) }
+            ?: stringResource(R.string.about_value_unknown)
+        val tables = database.tableCount
+            ?.let { stringResource(R.string.about_room_table_value, it) }
+            ?: stringResource(R.string.about_value_unknown)
+        stringResource(
+            R.string.about_room_line,
+            database.libraryVersion,
+            schema,
+            tables,
+        )
+    }
+    val roomDetail = if (report.room.state == ProbeState.FAILED) {
+        report.room.detail?.let { detail ->
+            stringResource(R.string.about_probe_error, detail)
+        }
+    } else {
+        listOfNotNull(report.room.summary, report.room.detail)
+            .joinToString(" · ")
+            .takeIf { text -> text.isNotBlank() }
+    }
+    val ffmpegDetail = if (report.ffmpeg.state == ProbeState.FAILED) {
+        report.ffmpeg.detail?.let { detail ->
+            stringResource(R.string.about_probe_error, detail)
+        }
+    } else {
+        report.ffmpeg.detail
+    }
+
+    val workManager = report.workManager
+    val workManagerLabel = workManagerStatusLabel(workManager.state)
+    val storage = report.storage
+
+    ExpressiveCard(modifier = Modifier.fillMaxWidth()) {
+        SectionHeader(
+            title = stringResource(R.string.about_diagnostics_title),
+            subtitle = stringResource(R.string.about_diagnostics_subtitle),
+        )
+        DiagnosticTonalRow(
+            label = stringResource(R.string.about_room_label),
+            statusText = probeStatusLabel(report.room.state),
+            tone = probeTone(report.room.state),
+            value = roomValue,
+            detail = roomDetail,
+            detailIsError = report.room.state == ProbeState.FAILED,
+        )
+        DiagnosticTonalRow(
+            label = stringResource(R.string.about_ffmpeg_label),
+            statusText = probeStatusLabel(report.ffmpeg.state),
+            tone = probeTone(report.ffmpeg.state),
+            value = report.ffmpeg.summary,
+            detail = ffmpegDetail,
+            detailIsError = report.ffmpeg.state == ProbeState.FAILED,
+        )
+        DiagnosticTonalRow(
+            label = stringResource(R.string.about_workmanager_label),
+            statusText = workManagerLabel,
+            tone = workManagerTone(workManager.state),
+            value = stringResource(
+                R.string.about_workmanager_line,
+                workManagerLabel,
+                workManager.activeWorkCount,
+            ),
+            detail = workManager.detail,
+            detailIsError = false,
+        )
+        DiagnosticTonalRow(
+            label = stringResource(R.string.about_storage_label),
+            statusText = if (storage == null) {
+                stringResource(R.string.about_storage_unavailable)
+            } else {
+                stringResource(R.string.about_storage_status_ok)
+            },
+            tone = if (storage == null) StatusTone.Danger else StatusTone.Success,
+            value = if (storage == null) {
+                stringResource(R.string.about_storage_unavailable)
+            } else {
+                stringResource(
+                    R.string.about_storage_line,
+                    formatByteSize(storage.totalBytes),
+                    storage.fileCount,
+                )
+            },
+            detail = storage?.let { snapshot ->
+                stringResource(R.string.about_storage_usable, formatByteSize(snapshot.usableBytes))
+            },
+            detailIsError = false,
+        )
+        Text(
+            text = stringResource(R.string.about_recent_errors_title),
+            style = MaterialTheme.typography.titleSmallEmphasized,
+            modifier = Modifier
+                .padding(top = spacing.xs)
+                .semantics { heading() },
+        )
+        if (report.recentErrors.isEmpty()) {
+            RecentErrorsEmptyRow()
+        } else {
+            report.recentErrors.forEach { error ->
+                RecentErrorRow(error = error)
+            }
+        }
+        ExpressivePrimaryButton(
+            text = stringResource(R.string.about_copy_diagnostics),
+            onClick = { onCopyDiagnostics(diagnosticText) },
+            enabled = canShare,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        ExpressiveTonalButton(
+            text = stringResource(R.string.about_export_logs),
+            onClick = { onExportLogs(diagnosticText) },
+            enabled = canShare,
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
+}
+
+@Composable
+private fun DiagnosticTonalRow(
+    label: String,
+    statusText: String,
+    tone: StatusTone,
+    value: String?,
+    detail: String?,
+    detailIsError: Boolean,
+) {
+    val spacing = MaterialTheme.spacing
+    Surface(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+                .padding(spacing.md),
+            verticalArrangement = Arrangement.spacedBy(spacing.xs),
         ) {
-            SectionHeader(
-                title = stringResource(R.string.about_diagnostics_title),
-                subtitle = stringResource(R.string.about_diagnostics_subtitle),
-            )
-
-            val database = report.database
-            val roomValue = if (database.tableCount == null && database.schemaVersion == null) {
-                stringResource(R.string.about_database_unavailable)
-            } else {
-                val schema = database.schemaVersion
-                    ?.let { stringResource(R.string.about_room_schema_value, it) }
-                    ?: stringResource(R.string.about_value_unknown)
-                val tables = database.tableCount
-                    ?.let { stringResource(R.string.about_room_table_value, it) }
-                    ?: stringResource(R.string.about_value_unknown)
-                stringResource(
-                    R.string.about_room_line,
-                    database.libraryVersion,
-                    schema,
-                    tables,
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(spacing.sm),
+            ) {
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.titleSmallEmphasized,
+                    modifier = Modifier.weight(1f),
+                )
+                StatusPill(text = statusText, tone = tone)
+            }
+            if (value != null) {
+                Text(
+                    text = value,
+                    style = MaterialTheme.typography.bodyMedium,
                 )
             }
-            DiagnosticRow(
-                label = stringResource(R.string.about_room_label),
-                probe = report.room,
-                value = roomValue,
-                extra = listOfNotNull(report.room.summary, report.room.detail)
-                    .joinToString(" · ")
-                    .takeIf { it.isNotBlank() },
-            )
-            HorizontalDivider()
-
-            DiagnosticRow(
-                label = stringResource(R.string.about_ffmpeg_label),
-                probe = report.ffmpeg,
-                value = report.ffmpeg.summary,
-                extra = report.ffmpeg.detail,
-            )
-            HorizontalDivider()
-
-            val workManager = report.workManager
-            val workManagerLabel = workManagerStatusLabel(workManager.state)
-            DiagnosticRow(
-                label = stringResource(R.string.about_workmanager_label),
-                probe = null,
-                value = stringResource(
-                    R.string.about_workmanager_line,
-                    workManagerLabel,
-                    workManager.activeWorkCount,
-                ),
-                extra = workManager.detail,
-                statusText = workManagerLabel,
-                statusColor = workManagerStatusColor(workManager.state),
-            )
-            HorizontalDivider()
-
-            val storage = report.storage
-            DiagnosticRow(
-                label = stringResource(R.string.about_storage_label),
-                probe = null,
-                value = if (storage == null) {
-                    stringResource(R.string.about_storage_unavailable)
-                } else {
-                    stringResource(
-                        R.string.about_storage_line,
-                        formatByteSize(storage.totalBytes),
-                        storage.fileCount,
-                    )
-                },
-                extra = storage?.let {
-                    stringResource(R.string.about_storage_usable, formatByteSize(it.usableBytes))
-                },
-            )
-            HorizontalDivider()
-
-            Text(
-                text = stringResource(R.string.about_recent_errors_title),
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-            )
-            if (report.recentErrors.isEmpty()) {
+            if (detail != null) {
                 Text(
-                    text = stringResource(R.string.about_recent_errors_empty),
+                    text = detail,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (detailIsError) {
+                        MaterialTheme.colorScheme.error
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun RecentErrorsEmptyRow() {
+    val spacing = MaterialTheme.spacing
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+    ) {
+        Text(
+            text = stringResource(R.string.about_recent_errors_empty),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(spacing.md),
+        )
+    }
+}
+
+@Composable
+private fun RecentErrorRow(error: RecentError) {
+    val spacing = MaterialTheme.spacing
+    val project = error.projectTitle
+        ?: stringResource(R.string.about_recent_error_unknown_project)
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .semantics(mergeDescendants = true) {},
+        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(spacing.md),
+            verticalAlignment = Alignment.Top,
+            horizontalArrangement = Arrangement.spacedBy(spacing.sm),
+        ) {
+            StatusPill(
+                text = stringResource(R.string.about_probe_status_failed),
+                tone = StatusTone.Danger,
+            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = project,
+                    style = MaterialTheme.typography.titleSmallEmphasized,
+                )
+                Text(
+                    text = error.message,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-            } else {
-                report.recentErrors.forEach { error ->
-                    Text(
-                        text = stringResource(
-                            R.string.about_recent_error_line,
-                            error.projectTitle
-                                ?: stringResource(R.string.about_recent_error_unknown_project),
-                            error.message,
-                        ),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                FilledTonalButton(
-                    onClick = { onCopyDiagnostics(diagnosticText) },
-                    enabled = canShare,
-                    modifier = Modifier
-                        .weight(1f)
-                        .heightIn(min = 48.dp),
-                ) {
-                    Text(stringResource(R.string.about_copy_diagnostics))
-                }
-                FilledTonalButton(
-                    onClick = { onExportLogs(diagnosticText) },
-                    enabled = canShare,
-                    modifier = Modifier
-                        .weight(1f)
-                        .heightIn(min = 48.dp),
-                ) {
-                    Text(stringResource(R.string.about_export_logs))
-                }
             }
         }
     }
 }
 
 @Composable
-private fun DiagnosticRow(
-    label: String,
-    probe: ProbeDiagnostic?,
-    value: String?,
-    extra: String? = null,
-    statusText: String? = null,
-    statusColor: Color? = null,
-) {
-    val resolvedStatus = statusText ?: probeStatusLabel(probe?.state)
-    val resolvedColor = statusColor ?: probeStatusColor(probe?.state)
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.weight(1f),
-            )
-            Spacer(Modifier.width(8.dp))
-            Text(
-                text = resolvedStatus,
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = resolvedColor,
-            )
-        }
-        if (value != null) {
-            Text(text = value, style = MaterialTheme.typography.bodyMedium)
-        }
-        val failedDetail = probe?.detail
-        if (probe?.state == ProbeState.FAILED && failedDetail != null) {
-            Text(
-                text = stringResource(R.string.about_probe_error, failedDetail),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.error,
-            )
-        } else if (extra != null) {
-            Text(
-                text = extra,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
-}
-
-@Composable
-private fun LicensesCard(
-    licenses: List<LicenseEntry>,
-    expandedLicenseId: String?,
-    onToggleLicense: (String) -> Unit,
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            SectionHeader(
-                title = stringResource(R.string.about_licenses_title),
-                subtitle = stringResource(R.string.about_licenses_subtitle, licenses.size),
-            )
-            licenses.forEachIndexed { index, entry ->
-                if (index > 0) HorizontalDivider()
-                LicenseRow(
-                    entry = entry,
-                    expanded = entry.id == expandedLicenseId,
-                    onToggle = { onToggleLicense(entry.id) },
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun LicenseRow(
+private fun LicenseCard(
     entry: LicenseEntry,
     expanded: Boolean,
     onToggle: () -> Unit,
 ) {
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(2.dp),
+    val spacing = MaterialTheme.spacing
+    val shape = MaterialTheme.shapes.large
+    val actionLabel = stringResource(
+        if (expanded) {
+            R.string.about_license_collapse
+        } else {
+            R.string.about_license_expand
+        },
+    )
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 72.dp)
+            .clip(shape)
+            .clickable(role = Role.Button, onClick = onToggle)
+            .semantics(mergeDescendants = true) { stateDescription = actionLabel },
+        shape = shape,
+        color = if (expanded) {
+            MaterialTheme.colorScheme.secondaryContainer
+        } else {
+            MaterialTheme.colorScheme.surfaceContainerHigh
+        },
+        contentColor = if (expanded) {
+            MaterialTheme.colorScheme.onSecondaryContainer
+        } else {
+            MaterialTheme.colorScheme.onSurface
+        },
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
+        Column(
+            modifier = Modifier
+                .animateContentSize()
+                .fillMaxWidth()
+                .padding(spacing.lg),
+            verticalArrangement = Arrangement.spacedBy(spacing.xs),
         ) {
-            Column(modifier = Modifier.weight(1f)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(spacing.sm),
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(
+                            R.string.about_license_line,
+                            entry.name,
+                            entry.version,
+                        ),
+                        style = MaterialTheme.typography.titleSmallEmphasized,
+                    )
+                    Text(
+                        text = stringResource(R.string.about_license_type, entry.license),
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+                Spacer(Modifier.width(spacing.xs))
                 Text(
-                    text = stringResource(R.string.about_license_line, entry.name, entry.version),
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                )
-                Text(
-                    text = stringResource(R.string.about_license_type, entry.license),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    text = actionLabel,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = if (expanded) {
+                        MaterialTheme.colorScheme.onSecondaryContainer
+                    } else {
+                        MaterialTheme.colorScheme.primary
+                    },
                 )
             }
-            TextButton(
-                onClick = onToggle,
-                modifier = Modifier.heightIn(min = 48.dp),
-            ) {
+            if (expanded) {
+                HorizontalDivider(
+                    modifier = Modifier.padding(vertical = spacing.xs),
+                    color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.24f),
+                )
                 Text(
                     text = stringResource(
-                        if (expanded) {
-                            R.string.about_license_collapse
-                        } else {
-                            R.string.about_license_expand
-                        },
+                        R.string.about_license_placeholder,
+                        entry.name,
+                        entry.license,
                     ),
+                    style = MaterialTheme.typography.bodySmall,
                 )
             }
-        }
-        if (expanded) {
-            Text(
-                text = stringResource(
-                    R.string.about_license_placeholder,
-                    entry.name,
-                    entry.license,
-                ),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
         }
     }
 }
@@ -623,11 +696,11 @@ private fun probeStatusLabel(state: ProbeState?): String = when (state) {
     ProbeState.TIMED_OUT -> stringResource(R.string.about_probe_status_timed_out)
 }
 
-@Composable
-private fun probeStatusColor(state: ProbeState?): Color = when (state) {
-    ProbeState.PASSED -> MaterialTheme.colorScheme.primary
-    ProbeState.FAILED, ProbeState.TIMED_OUT -> MaterialTheme.colorScheme.error
-    else -> MaterialTheme.colorScheme.onSurfaceVariant
+private fun probeTone(state: ProbeState?): StatusTone = when (state) {
+    ProbeState.PASSED -> StatusTone.Success
+    ProbeState.FAILED, ProbeState.TIMED_OUT -> StatusTone.Danger
+    ProbeState.RUNNING -> StatusTone.Running
+    ProbeState.IDLE, null -> StatusTone.Neutral
 }
 
 @Composable
@@ -637,11 +710,10 @@ private fun workManagerStatusLabel(state: WorkManagerState): String = when (stat
     WorkManagerState.DEGRADED -> stringResource(R.string.about_workmanager_degraded)
 }
 
-@Composable
-private fun workManagerStatusColor(state: WorkManagerState): Color = when (state) {
-    WorkManagerState.AVAILABLE -> MaterialTheme.colorScheme.primary
-    WorkManagerState.DEGRADED -> MaterialTheme.colorScheme.error
-    WorkManagerState.UNAVAILABLE -> MaterialTheme.colorScheme.onSurfaceVariant
+private fun workManagerTone(state: WorkManagerState): StatusTone = when (state) {
+    WorkManagerState.AVAILABLE -> StatusTone.Success
+    WorkManagerState.DEGRADED -> StatusTone.Warning
+    WorkManagerState.UNAVAILABLE -> StatusTone.Neutral
 }
 
 // ---------------------------------------------------------------------------
@@ -690,7 +762,7 @@ private fun previewReport(): DiagnosticsReport = DiagnosticsReport(
 
 private fun previewState(): AboutUiState = AboutUiState().withReport(previewReport())
 
-@Preview(name = "About Normal", showBackground = true, backgroundColor = 0xFFF7F8FC)
+@Preview(name = "About Normal", showBackground = true)
 @Composable
 private fun AboutNormalPreview() {
     AudioForgeTheme(darkTheme = false, dynamicColor = false) {
@@ -698,7 +770,17 @@ private fun AboutNormalPreview() {
     }
 }
 
-@Preview(name = "About Loading", showBackground = true, backgroundColor = 0xFFF7F8FC)
+@Preview(name = "About License Expanded", showBackground = true)
+@Composable
+private fun AboutLicenseExpandedPreview() {
+    AudioForgeTheme(darkTheme = false, dynamicColor = false) {
+        AboutScreen(
+            state = previewState().copy(expandedLicenseId = "ffmpeg-kit"),
+        )
+    }
+}
+
+@Preview(name = "About Loading", showBackground = true)
 @Composable
 private fun AboutLoadingPreview() {
     AudioForgeTheme(darkTheme = false, dynamicColor = false) {
@@ -706,7 +788,7 @@ private fun AboutLoadingPreview() {
     }
 }
 
-@Preview(name = "About Error", showBackground = true, backgroundColor = 0xFFF7F8FC)
+@Preview(name = "About Error", showBackground = true)
 @Composable
 private fun AboutErrorPreview() {
     AudioForgeTheme(darkTheme = false, dynamicColor = false) {

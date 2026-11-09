@@ -1,6 +1,13 @@
+@file:OptIn(
+    androidx.compose.material3.ExperimentalMaterial3Api::class,
+    androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class,
+)
+
 package com.estimatefaster.audioforge.feature.storage
 
 import android.content.res.Configuration
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,20 +19,22 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -34,14 +43,19 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -49,9 +63,15 @@ import com.estimatefaster.audioforge.R
 import com.estimatefaster.audioforge.ui.components.EmptyState
 import com.estimatefaster.audioforge.ui.components.ErrorBanner
 import com.estimatefaster.audioforge.ui.components.ErrorState
+import com.estimatefaster.audioforge.ui.components.ExpressiveCard
+import com.estimatefaster.audioforge.ui.components.ExpressiveTextButton
+import com.estimatefaster.audioforge.ui.components.ExpressiveTonalButton
 import com.estimatefaster.audioforge.ui.components.LoadingState
 import com.estimatefaster.audioforge.ui.components.SectionHeader
+import com.estimatefaster.audioforge.ui.components.StatusPill
+import com.estimatefaster.audioforge.ui.components.StatusTone
 import com.estimatefaster.audioforge.ui.theme.AudioForgeTheme
+import com.estimatefaster.audioforge.ui.theme.spacing
 import kotlin.math.roundToInt
 
 /**
@@ -84,17 +104,19 @@ fun StorageScreen(
 }
 
 /**
- * 无状态存储页。
+ * 无状态存储页（Expressive 布局）。
  *
  * 布局：
  * - 顶部：返回、标题、刷新；
- * - 空间概览卡：总占用、可用空间、音频/导入/导出分区、文件数；
- * - 按项目卡：项目名、占用、章节数；已删除项目的残留以「未关联项目」展示；
- * - 保留期卡：7..365 天滑块 + 数字输入，非法输入就地提示；
- * - 清理卡：清理孤儿 / 清理过期，确认后显示进度与释放字节/删除数/失败数；
- * - 空态、加载、错误复用 P4-02 组件。
+ * - Hero：primaryContainer 大圆角容器，总占用 displaySmall、可用空间/文件数、
+ *   音频/导入/导出三色 Wavy 分区条与图例；
+ * - 按项目：每个项目一张 tonal 卡片，已删除项目的残留显示为「未关联项目」；
+ * - 保留期：7..365 天滑块 + 数字输入，非法输入就地提示；
+ * - 清理：孤儿/过期两个 tonal 行动区，确认弹窗与结果卡沿用同一状态机；
+ * - 空态、加载、错误复用共享组件。
+ *
+ * 所有数字与文案来自 [StorageUiState] 和 `strings.xml`，本文件不做统计或清理。
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StorageScreen(
     state: StorageUiState,
@@ -127,8 +149,7 @@ fun StorageScreen(
                     Text(
                         text = stringResource(R.string.storage_title),
                         modifier = Modifier.semantics { heading() },
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.SemiBold,
+                        style = MaterialTheme.typography.titleLargeEmphasized,
                     )
                 },
                 actions = {
@@ -202,17 +223,22 @@ private fun StorageContent(
     onDismissResult: () -> Unit,
 ) {
     val overview = state.overview
+    val spacing = MaterialTheme.spacing
 
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
             .padding(contentPadding),
-        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
+        contentPadding = PaddingValues(horizontal = spacing.lg, vertical = spacing.md),
+        verticalArrangement = Arrangement.spacedBy(spacing.md),
     ) {
         if (state.isLoading) {
             item(key = "refreshing") {
-                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                LinearWavyProgressIndicator(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = spacing.xs),
+                )
             }
         }
         if (state.loadError != null) {
@@ -238,10 +264,28 @@ private fun StorageContent(
                 }
             } else {
                 item(key = "overview") {
-                    OverviewCard(overview = overview)
+                    StorageHero(overview = overview)
                 }
-                item(key = "projects") {
-                    ProjectsCard(projects = overview.projects)
+                item(key = "projects-header") {
+                    SectionHeader(
+                        title = stringResource(R.string.storage_projects_title),
+                        subtitle = stringResource(
+                            R.string.storage_projects_subtitle,
+                            overview.projects.size,
+                        ),
+                    )
+                }
+                if (overview.projects.isEmpty()) {
+                    item(key = "projects-empty") {
+                        EmptyProjectsCard()
+                    }
+                } else {
+                    items(
+                        items = overview.projects,
+                        key = { project -> project.novelId },
+                    ) { project ->
+                        ProjectUsageCard(project = project)
+                    }
                 }
             }
         }
@@ -267,145 +311,250 @@ private fun StorageContent(
 }
 
 @Composable
-private fun OverviewCard(overview: StorageOverview) {
-    Card(
+private fun StorageHero(overview: StorageOverview) {
+    val spacing = MaterialTheme.spacing
+    Surface(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape = MaterialTheme.shapes.extraExtraLarge,
+        color = MaterialTheme.colorScheme.primaryContainer,
+        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+                .padding(spacing.xl),
+            verticalArrangement = Arrangement.spacedBy(spacing.md),
         ) {
-            SectionHeader(
-                title = stringResource(R.string.storage_overview_title),
-                subtitle = stringResource(R.string.storage_overview_subtitle),
-            )
             Row(
                 modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = stringResource(R.string.storage_overview_title),
+                    style = MaterialTheme.typography.titleSmallEmphasized,
+                    modifier = Modifier
+                        .weight(1f)
+                        .semantics { heading() },
+                )
+                Text(
+                    text = stringResource(R.string.storage_file_count, overview.fileCount),
+                    style = MaterialTheme.typography.labelMedium,
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(start = spacing.sm),
+                    textAlign = TextAlign.End,
+                )
+            }
+            Column(verticalArrangement = Arrangement.spacedBy(spacing.xxs)) {
+                Text(
+                    text = stringResource(R.string.storage_total_used),
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                Text(
+                    text = formatByteSize(overview.totalBytes),
+                    style = MaterialTheme.typography.displaySmall,
+                )
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(spacing.xl),
                 verticalAlignment = Alignment.Bottom,
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = stringResource(R.string.storage_total_used),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Text(
-                        text = formatByteSize(overview.totalBytes),
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold,
-                    )
-                }
-                Column(horizontalAlignment = Alignment.End) {
-                    Text(
                         text = stringResource(R.string.storage_free_space),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.labelMedium,
                     )
                     Text(
                         text = formatByteSize(overview.usableBytes),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
+                        style = MaterialTheme.typography.titleMediumEmphasized,
+                    )
+                }
+                Text(
+                    text = stringResource(R.string.storage_overview_subtitle),
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+            SegmentedUsageBar(overview = overview, modifier = Modifier.fillMaxWidth())
+            OverviewLegend(overview = overview)
+            if (overview.scanFailureCount > 0) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 48.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(spacing.sm),
+                ) {
+                    StatusPill(
+                        text = stringResource(R.string.storage_scan_failures_pill),
+                        tone = StatusTone.Danger,
+                    )
+                    Text(
+                        text = stringResource(
+                            R.string.storage_scan_failures,
+                            overview.scanFailureCount,
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.weight(1f),
                     )
                 }
             }
-            HorizontalDivider()
-            overview.areas.forEach { usage ->
-                AreaRow(
-                    label = areaLabel(usage.area),
-                    bytes = usage.bytes,
-                    share = overview.shareOf(usage.area),
-                )
-            }
-            Text(
-                text = stringResource(R.string.storage_file_count, overview.fileCount),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            if (overview.scanFailureCount > 0) {
-                Text(
-                    text = stringResource(
-                        R.string.storage_scan_failures,
-                        overview.scanFailureCount,
-                    ),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error,
-                )
-            }
         }
     }
 }
 
 @Composable
-private fun AreaRow(
-    label: String,
-    bytes: Long,
-    share: Float,
+private fun SegmentedUsageBar(
+    overview: StorageOverview,
+    modifier: Modifier = Modifier,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Row(modifier = Modifier.fillMaxWidth()) {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.weight(1f),
-            )
-            Text(
-                text = formatByteSize(bytes),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+    val shares = overview.areas.map { usage -> overview.shareOf(usage.area) }
+    val percents = shares.map { share -> (share * 100f).roundToInt() }
+    val description = stringResource(
+        R.string.storage_segment_bar_description,
+        percents.getOrElse(0) { 0 },
+        percents.getOrElse(1) { 0 },
+        percents.getOrElse(2) { 0 },
+    )
+    val scheme = MaterialTheme.colorScheme
+    val segmentColors = listOf(
+        scheme.primary,
+        scheme.secondary,
+        scheme.tertiary,
+    )
+    val trackColor = scheme.onPrimaryContainer.copy(alpha = 0.18f)
+
+    Canvas(
+        modifier = modifier
+            .height(20.dp)
+            .semantics { contentDescription = description },
+    ) {
+        val stroke = 8.dp.toPx()
+        val gap = 4.dp.toPx()
+        val centerY = size.height / 2f
+        drawLine(
+            color = trackColor,
+            start = Offset(0f, centerY),
+            end = Offset(size.width, centerY),
+            strokeWidth = stroke,
+            cap = StrokeCap.Round,
+        )
+        val visibleSegments = shares.count { share -> share > 0f }
+        val total = shares.sum()
+        if (total <= 0f || visibleSegments == 0) return@Canvas
+
+        val available = (size.width - gap * (visibleSegments - 1)).coerceAtLeast(0f)
+        var startX = 0f
+        shares.forEachIndexed { index, share ->
+            if (share <= 0f) return@forEachIndexed
+            val width = available * (share / total)
+            if (width > 1f) {
+                val path = wavyLinePath(
+                    startX = startX,
+                    endX = startX + width,
+                    centerY = centerY,
+                    amplitude = 3.dp.toPx(),
+                    wavelength = 18.dp.toPx(),
+                )
+                drawPath(
+                    path = path,
+                    color = segmentColors.getOrElse(index) { segmentColors.last() },
+                    style = Stroke(width = stroke, cap = StrokeCap.Round),
+                )
+            }
+            startX += width + gap
         }
-        val shareDescription = stringResource(
-            R.string.storage_area_progress_content_description,
-            label,
-            (share.coerceIn(0f, 1f) * 100f).roundToInt(),
-        )
-        LinearProgressIndicator(
-            progress = { share },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(4.dp)
-                .semantics { contentDescription = shareDescription },
-        )
     }
 }
 
+private fun wavyLinePath(
+    startX: Float,
+    endX: Float,
+    centerY: Float,
+    amplitude: Float,
+    wavelength: Float,
+): Path {
+    val path = Path()
+    path.moveTo(startX, centerY)
+    var x = startX
+    var controlAbove = true
+    val halfWave = (wavelength / 2f).coerceAtLeast(1f)
+    while (x < endX) {
+        val next = (x + halfWave).coerceAtMost(endX)
+        path.quadraticBezierTo(
+            (x + next) / 2f,
+            if (controlAbove) centerY - amplitude else centerY + amplitude,
+            next,
+            centerY,
+        )
+        x = next
+        controlAbove = !controlAbove
+    }
+    return path
+}
+
 @Composable
-private fun ProjectsCard(projects: List<StorageProjectUsage>) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            SectionHeader(
-                title = stringResource(R.string.storage_projects_title),
-                subtitle = stringResource(R.string.storage_projects_subtitle, projects.size),
-            )
-            if (projects.isEmpty()) {
-                Text(
-                    text = stringResource(R.string.storage_projects_empty),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+private fun OverviewLegend(overview: StorageOverview) {
+    val spacing = MaterialTheme.spacing
+    val scheme = MaterialTheme.colorScheme
+    val colors = listOf(scheme.primary, scheme.secondary, scheme.tertiary)
+    Column(verticalArrangement = Arrangement.spacedBy(spacing.xs)) {
+        overview.areas.forEachIndexed { index, usage ->
+            val percent = (overview.shareOf(usage.area) * 100f).roundToInt()
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 24.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(spacing.sm),
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(10.dp)
+                        .clip(CircleShape)
+                        .background(colors.getOrElse(index) { colors.last() }),
                 )
-            } else {
-                projects.forEachIndexed { index, project ->
-                    if (index > 0) HorizontalDivider()
-                    ProjectRow(project = project)
-                }
+                Text(
+                    text = areaLabel(usage.area),
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.weight(1f),
+                )
+                Text(
+                    text = formatByteSize(usage.bytes),
+                    style = MaterialTheme.typography.labelMedium,
+                )
+                Text(
+                    text = stringResource(R.string.storage_share_percent, percent),
+                    style = MaterialTheme.typography.labelMedium,
+                    modifier = Modifier.widthIn(min = 44.dp),
+                    textAlign = TextAlign.End,
+                )
             }
         }
     }
 }
 
 @Composable
-private fun ProjectRow(project: StorageProjectUsage) {
+private fun EmptyProjectsCard() {
+    val spacing = MaterialTheme.spacing
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.surfaceContainer,
+    ) {
+        Text(
+            text = stringResource(R.string.storage_projects_empty),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(spacing.lg),
+        )
+    }
+}
+
+@Composable
+private fun ProjectUsageCard(project: StorageProjectUsage) {
+    val spacing = MaterialTheme.spacing
     val title = project.title
         ?: stringResource(R.string.storage_project_unknown, project.novelId)
     val meta = if (project.chapterCount > 0) {
@@ -413,31 +562,53 @@ private fun ProjectRow(project: StorageProjectUsage) {
     } else {
         stringResource(R.string.storage_project_no_chapters)
     }
-    Row(
+    val badge = title.take(1)
+
+    Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .heightIn(min = 48.dp)
             .semantics(mergeDescendants = true) {},
-        verticalAlignment = Alignment.CenterVertically,
+        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.surfaceContainer,
     ) {
-        Column(modifier = Modifier.weight(1f)) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 72.dp)
+                .padding(spacing.lg),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(spacing.md),
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.secondaryContainer),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = badge,
+                    style = MaterialTheme.typography.titleMediumEmphasized,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                )
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleSmallEmphasized,
+                )
+                Text(
+                    text = meta,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
             Text(
-                text = title,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-            )
-            Text(
-                text = meta,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                text = formatByteSize(project.bytes),
+                style = MaterialTheme.typography.titleMediumEmphasized,
+                color = MaterialTheme.colorScheme.primary,
             )
         }
-        Spacer(Modifier.width(12.dp))
-        Text(
-            text = formatByteSize(project.bytes),
-            style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.primary,
-        )
     }
 }
 
@@ -448,72 +619,70 @@ private fun RetentionCard(
     onSliderChange: (Int) -> Unit,
     onCommit: () -> Unit,
 ) {
+    val spacing = MaterialTheme.spacing
     val errorText = retentionErrorText(state.retentionError)
     val sliderDescription = stringResource(
         R.string.storage_retention_slider_description,
         state.retentionDays,
     )
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+    ExpressiveCard(modifier = Modifier.fillMaxWidth()) {
+        SectionHeader(
+            title = stringResource(R.string.storage_retention_title),
+            subtitle = stringResource(R.string.storage_retention_subtitle),
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(spacing.sm),
         ) {
-            SectionHeader(
-                title = stringResource(R.string.storage_retention_title),
-                subtitle = stringResource(R.string.storage_retention_subtitle),
+            Text(
+                text = stringResource(R.string.storage_retention_value, state.retentionDays),
+                style = MaterialTheme.typography.titleMediumEmphasized,
+                modifier = Modifier.weight(1f),
             )
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = stringResource(
-                        R.string.storage_retention_value,
-                        state.retentionDays,
-                    ),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.weight(1f),
-                )
+            Surface(
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.secondaryContainer,
+                contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+            ) {
                 Text(
                     text = stringResource(R.string.storage_retention_range),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.labelMedium,
+                    modifier = Modifier.padding(horizontal = spacing.md, vertical = spacing.xs),
                 )
             }
-            Slider(
-                value = state.retentionDays.toFloat(),
-                onValueChange = { value -> onSliderChange(value.roundToInt()) },
-                onValueChangeFinished = onCommit,
-                valueRange = MIN_RETENTION_DAYS.toFloat()..MAX_RETENTION_DAYS.toFloat(),
-                enabled = !state.isBusy,
-                modifier = Modifier.semantics {
-                    contentDescription = sliderDescription
-                },
-            )
-            OutlinedTextField(
-                value = state.retentionInput,
-                onValueChange = onInputChange,
-                modifier = Modifier.fillMaxWidth(),
-                enabled = !state.isBusy,
-                label = { Text(stringResource(R.string.storage_retention_label)) },
-                singleLine = true,
-                isError = errorText != null,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                supportingText = {
-                    Text(
-                        text = errorText ?: stringResource(R.string.storage_retention_hint),
-                        color = if (errorText != null) {
-                            MaterialTheme.colorScheme.error
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        },
-                    )
-                },
-            )
         }
+        Slider(
+            value = state.retentionDays.toFloat(),
+            onValueChange = { value -> onSliderChange(value.roundToInt()) },
+            onValueChangeFinished = onCommit,
+            valueRange = MIN_RETENTION_DAYS.toFloat()..MAX_RETENTION_DAYS.toFloat(),
+            enabled = !state.isBusy,
+            modifier = Modifier.semantics {
+                contentDescription = sliderDescription
+            },
+        )
+        OutlinedTextField(
+            value = state.retentionInput,
+            onValueChange = onInputChange,
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !state.isBusy,
+            shape = MaterialTheme.shapes.large,
+            label = { Text(stringResource(R.string.storage_retention_label)) },
+            singleLine = true,
+            isError = errorText != null,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            supportingText = {
+                Text(
+                    text = errorText ?: stringResource(R.string.storage_retention_hint),
+                    color = if (errorText != null) {
+                        MaterialTheme.colorScheme.error
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                )
+            },
+        )
     }
 }
 
@@ -524,90 +693,86 @@ private fun CleanupCard(
     onRetryCleanup: () -> Unit,
     onDismissResult: () -> Unit,
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            SectionHeader(
-                title = stringResource(R.string.storage_cleanup_title),
-                subtitle = stringResource(R.string.storage_cleanup_subtitle),
-            )
-            CleanupActionRow(
-                title = stringResource(R.string.storage_cleanup_orphans_title),
-                description = stringResource(R.string.storage_cleanup_orphans_desc),
-                meta = stringResource(
-                    R.string.storage_cleanup_meta,
-                    state.overview?.orphanCount ?: 0,
-                    formatByteSize(state.overview?.orphanBytes ?: 0L),
-                ),
-                actionText = stringResource(R.string.storage_action_clean_orphans),
-                enabled = state.canCleanOrphans && !state.isBusy,
-                onClick = { onRequestCleanup(StorageCleanupKind.ORPHANS) },
-            )
-            HorizontalDivider()
-            CleanupActionRow(
-                title = stringResource(R.string.storage_cleanup_expired_title),
-                description = stringResource(
-                    R.string.storage_cleanup_expired_desc,
-                    state.retentionDays,
-                ),
-                meta = stringResource(
-                    R.string.storage_cleanup_meta,
-                    state.overview?.expiredCount ?: 0,
-                    formatByteSize(state.overview?.expiredBytes ?: 0L),
-                ),
-                actionText = stringResource(R.string.storage_action_clean_expired),
-                enabled = state.canCleanExpired && !state.isBusy,
-                onClick = { onRequestCleanup(StorageCleanupKind.EXPIRED) },
-            )
-            Text(
-                text = stringResource(R.string.storage_expired_protected),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+    val spacing = MaterialTheme.spacing
+    ExpressiveCard(modifier = Modifier.fillMaxWidth()) {
+        SectionHeader(
+            title = stringResource(R.string.storage_cleanup_title),
+            subtitle = stringResource(R.string.storage_cleanup_subtitle),
+        )
+        CleanupActionCard(
+            title = stringResource(R.string.storage_cleanup_orphans_title),
+            description = stringResource(R.string.storage_cleanup_orphans_desc),
+            meta = stringResource(
+                R.string.storage_cleanup_meta,
+                state.overview?.orphanCount ?: 0,
+                formatByteSize(state.overview?.orphanBytes ?: 0L),
+            ),
+            actionText = stringResource(R.string.storage_action_clean_orphans),
+            enabled = state.canCleanOrphans && !state.isBusy,
+            onClick = { onRequestCleanup(StorageCleanupKind.ORPHANS) },
+        )
+        CleanupActionCard(
+            title = stringResource(R.string.storage_cleanup_expired_title),
+            description = stringResource(
+                R.string.storage_cleanup_expired_desc,
+                state.retentionDays,
+            ),
+            meta = stringResource(
+                R.string.storage_cleanup_meta,
+                state.overview?.expiredCount ?: 0,
+                formatByteSize(state.overview?.expiredBytes ?: 0L),
+            ),
+            actionText = stringResource(R.string.storage_action_clean_expired),
+            enabled = state.canCleanExpired && !state.isBusy,
+            onClick = { onRequestCleanup(StorageCleanupKind.EXPIRED) },
+        )
+        Text(
+            text = stringResource(R.string.storage_expired_protected),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
 
-            val cleaning = state.cleaning
-            if (cleaning != null) {
+        val cleaning = state.cleaning
+        if (cleaning != null) {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = MaterialTheme.shapes.large,
+                color = MaterialTheme.colorScheme.secondaryContainer,
+                contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+            ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .padding(spacing.md)
                         .semantics { liveRegion = LiveRegionMode.Polite },
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(spacing.md),
                 ) {
-                    LinearProgressIndicator(modifier = Modifier.weight(1f))
+                    LinearWavyProgressIndicator(modifier = Modifier.weight(1f))
                     Text(
                         text = cleaningLabel(cleaning),
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-            } else if (state.hasResult) {
-                HorizontalDivider()
-                CleanupResultSection(
-                    state = state,
-                    onRetryCleanup = onRetryCleanup,
-                    onDismissResult = onDismissResult,
-                )
-            } else {
-                Text(
-                    text = stringResource(R.string.storage_cleanup_hint),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
             }
+        } else if (state.hasResult) {
+            CleanupResultSection(
+                state = state,
+                onRetryCleanup = onRetryCleanup,
+                onDismissResult = onDismissResult,
+            )
+        } else {
+            Text(
+                text = stringResource(R.string.storage_cleanup_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }
 
 @Composable
-private fun CleanupActionRow(
+private fun CleanupActionCard(
     title: String,
     description: String,
     meta: String,
@@ -615,36 +780,46 @@ private fun CleanupActionRow(
     enabled: Boolean,
     onClick: () -> Unit,
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(min = 48.dp),
-        verticalAlignment = Alignment.CenterVertically,
+    val spacing = MaterialTheme.spacing
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
     ) {
-        Column(modifier = Modifier.weight(1f)) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(spacing.md),
+            verticalArrangement = Arrangement.spacedBy(spacing.sm),
+        ) {
             Text(
                 text = title,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
+                style = MaterialTheme.typography.titleSmallEmphasized,
             )
             Text(
                 text = description,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Text(
-                text = meta,
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.primary,
-            )
-        }
-        Spacer(Modifier.width(12.dp))
-        FilledTonalButton(
-            onClick = onClick,
-            enabled = enabled,
-            modifier = Modifier.heightIn(min = 48.dp),
-        ) {
-            Text(actionText)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 48.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(spacing.sm),
+            ) {
+                Text(
+                    text = meta,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.weight(1f),
+                )
+                ExpressiveTonalButton(
+                    text = actionText,
+                    onClick = onClick,
+                    enabled = enabled,
+                )
+            }
         }
     }
 }
@@ -655,104 +830,112 @@ private fun CleanupResultSection(
     onRetryCleanup: () -> Unit,
     onDismissResult: () -> Unit,
 ) {
+    val spacing = MaterialTheme.spacing
     val result = state.lastCleanup
     val cleanupError = state.cleanupError
     val failed = result?.hasFailures == true || cleanupError != null
-    Text(
-        text = stringResource(
-            if (failed) {
-                R.string.storage_cleanup_result_failed_title
-            } else {
-                R.string.storage_cleanup_result_title
-            },
-        ),
-        modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
-        style = MaterialTheme.typography.titleSmall,
-        fontWeight = FontWeight.SemiBold,
-        color = if (failed) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
-    )
-    if (result != null) {
-        Text(
-            text = stringResource(
-                R.string.storage_cleanup_result_summary,
-                formatByteSize(result.freedBytes),
-                result.deletedCount,
-            ),
-            style = MaterialTheme.typography.bodyMedium,
-        )
-        if (result.deletedNothing) {
-            Text(
-                text = stringResource(R.string.storage_cleanup_result_none_deleted),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        if (result.failureCount > 0) {
-            Text(
-                text = stringResource(
-                    R.string.storage_cleanup_result_failures,
-                    result.failureCount,
-                ),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.error,
-            )
-        }
-        if (result.skippedReferencedCount > 0) {
-            Text(
-                text = stringResource(
-                    R.string.storage_cleanup_result_skipped_referenced,
-                    result.skippedReferencedCount,
-                ),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        if (result.skippedTooRecentCount > 0) {
-            Text(
-                text = stringResource(
-                    R.string.storage_cleanup_result_skipped_recent,
-                    result.skippedTooRecentCount,
-                ),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        if (result.skippedMissingCount > 0) {
-            Text(
-                text = stringResource(
-                    R.string.storage_cleanup_result_skipped_missing,
-                    result.skippedMissingCount,
-                ),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
-    if (cleanupError != null) {
-        Text(
-            text = stringResource(R.string.storage_cleanup_error, cleanupError),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.error,
-        )
-    }
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.End,
+
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .semantics { liveRegion = LiveRegionMode.Polite },
+        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
     ) {
-        if (state.canRetryCleanup) {
-            FilledTonalButton(
-                onClick = onRetryCleanup,
-                modifier = Modifier.heightIn(min = 48.dp),
-            ) {
-                Text(stringResource(R.string.storage_cleanup_action_retry))
-            }
-            Spacer(Modifier.width(8.dp))
-        }
-        TextButton(
-            onClick = onDismissResult,
-            modifier = Modifier.heightIn(min = 48.dp),
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(spacing.lg),
+            verticalArrangement = Arrangement.spacedBy(spacing.xs),
         ) {
-            Text(stringResource(R.string.storage_cleanup_action_dismiss))
+            StatusPill(
+                text = stringResource(
+                    if (failed) {
+                        R.string.storage_cleanup_result_failed_title
+                    } else {
+                        R.string.storage_cleanup_result_title
+                    },
+                ),
+                tone = if (failed) StatusTone.Danger else StatusTone.Success,
+            )
+            if (result != null) {
+                Text(
+                    text = stringResource(
+                        R.string.storage_cleanup_result_summary,
+                        formatByteSize(result.freedBytes),
+                        result.deletedCount,
+                    ),
+                    style = MaterialTheme.typography.titleMediumEmphasized,
+                )
+                if (result.deletedNothing) {
+                    Text(
+                        text = stringResource(R.string.storage_cleanup_result_none_deleted),
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+                if (result.failureCount > 0) {
+                    Text(
+                        text = stringResource(
+                            R.string.storage_cleanup_result_failures,
+                            result.failureCount,
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+                if (result.skippedReferencedCount > 0) {
+                    Text(
+                        text = stringResource(
+                            R.string.storage_cleanup_result_skipped_referenced,
+                            result.skippedReferencedCount,
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+                if (result.skippedTooRecentCount > 0) {
+                    Text(
+                        text = stringResource(
+                            R.string.storage_cleanup_result_skipped_recent,
+                            result.skippedTooRecentCount,
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+                if (result.skippedMissingCount > 0) {
+                    Text(
+                        text = stringResource(
+                            R.string.storage_cleanup_result_skipped_missing,
+                            result.skippedMissingCount,
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+            }
+            if (cleanupError != null) {
+                Text(
+                    text = stringResource(R.string.storage_cleanup_error, cleanupError),
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = spacing.xs),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                if (state.canRetryCleanup) {
+                    ExpressiveTonalButton(
+                        text = stringResource(R.string.storage_cleanup_action_retry),
+                        onClick = onRetryCleanup,
+                        enabled = !state.isBusy,
+                    )
+                    Spacer(Modifier.width(spacing.sm))
+                }
+                ExpressiveTextButton(
+                    text = stringResource(R.string.storage_cleanup_action_dismiss),
+                    onClick = onDismissResult,
+                )
+            }
         }
     }
 }
@@ -766,6 +949,8 @@ private fun CleanupConfirmDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
+        shape = MaterialTheme.shapes.extraLarge,
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
         title = {
             Text(
                 text = stringResource(
@@ -777,6 +962,7 @@ private fun CleanupConfirmDialog(
                             R.string.storage_cleanup_confirm_title_expired
                     },
                 ),
+                style = MaterialTheme.typography.titleLargeEmphasized,
             )
         },
         text = {
@@ -791,23 +977,30 @@ private fun CleanupConfirmDialog(
                         retentionDays,
                     )
                 },
+                style = MaterialTheme.typography.bodyMedium,
             )
         },
         confirmButton = {
-            TextButton(
+            Button(
                 onClick = onConfirm,
                 modifier = Modifier.heightIn(min = 48.dp),
+                shape = MaterialTheme.shapes.extraLarge,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.error,
+                    contentColor = MaterialTheme.colorScheme.onError,
+                ),
             ) {
-                Text(stringResource(R.string.storage_cleanup_confirm_action))
+                Text(
+                    text = stringResource(R.string.storage_cleanup_confirm_action),
+                    style = MaterialTheme.typography.labelLargeEmphasized,
+                )
             }
         },
         dismissButton = {
-            TextButton(
+            ExpressiveTextButton(
+                text = stringResource(R.string.action_cancel),
                 onClick = onDismiss,
-                modifier = Modifier.heightIn(min = 48.dp),
-            ) {
-                Text(stringResource(R.string.action_cancel))
-            }
+            )
         },
     )
 }
@@ -865,7 +1058,7 @@ private fun previewState(): StorageUiState = StorageUiState(
     retentionDays = 30,
 )
 
-@Preview(name = "Storage Normal", showBackground = true, backgroundColor = 0xFFF7F8FC)
+@Preview(name = "Storage Normal", showBackground = true)
 @Composable
 private fun StorageNormalPreview() {
     AudioForgeTheme(darkTheme = false, dynamicColor = false) {
@@ -873,17 +1066,34 @@ private fun StorageNormalPreview() {
     }
 }
 
-@Preview(
-    name = "Storage Cleanup Confirm",
-    showBackground = true,
-    backgroundColor = 0xFFF7F8FC,
-)
+@Preview(name = "Storage Cleanup Confirm", showBackground = true)
 @Composable
 private fun StorageCleanupConfirmPreview() {
     AudioForgeTheme(darkTheme = false, dynamicColor = false) {
         StorageScreen(
             state = previewState().copy(
                 pendingCleanup = StorageCleanupKind.EXPIRED,
+            ),
+        )
+    }
+}
+
+@Preview(name = "Storage Cleanup Result", showBackground = true)
+@Composable
+private fun StorageCleanupResultPreview() {
+    AudioForgeTheme(darkTheme = false, dynamicColor = false) {
+        StorageScreen(
+            state = previewState().copy(
+                lastCleanupKind = StorageCleanupKind.ORPHANS,
+                lastCleanup = StorageCleanupResult(
+                    kind = StorageCleanupKind.ORPHANS,
+                    freedBytes = 240_000_000L,
+                    deletedCount = 31,
+                    failureCount = 2,
+                    skippedReferencedCount = 4,
+                    skippedTooRecentCount = 6,
+                    skippedMissingCount = 0,
+                ),
             ),
         )
     }
@@ -915,27 +1125,6 @@ private fun StorageEmptyPreview() {
                     expiredBytes = 0L,
                     scanFailureCount = 0,
                     scannedAt = 1_760_000_000_000L,
-                ),
-            ),
-        )
-    }
-}
-
-@Preview(name = "Storage Cleanup Result", showBackground = true, backgroundColor = 0xFFF7F8FC)
-@Composable
-private fun StorageCleanupResultPreview() {
-    AudioForgeTheme(darkTheme = false, dynamicColor = false) {
-        StorageScreen(
-            state = previewState().copy(
-                lastCleanupKind = StorageCleanupKind.ORPHANS,
-                lastCleanup = StorageCleanupResult(
-                    kind = StorageCleanupKind.ORPHANS,
-                    freedBytes = 240_000_000L,
-                    deletedCount = 31,
-                    failureCount = 2,
-                    skippedReferencedCount = 4,
-                    skippedTooRecentCount = 6,
-                    skippedMissingCount = 0,
                 ),
             ),
         )
