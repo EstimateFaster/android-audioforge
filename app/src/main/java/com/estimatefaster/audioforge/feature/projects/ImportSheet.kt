@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class)
+
 package com.estimatefaster.audioforge.feature.projects
 
 import android.content.res.Configuration
@@ -8,20 +10,16 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -34,15 +32,21 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.estimatefaster.audioforge.R
+import com.estimatefaster.audioforge.ui.components.ExpressiveCard
+import com.estimatefaster.audioforge.ui.components.ExpressiveOutlinedButton
+import com.estimatefaster.audioforge.ui.components.ExpressivePrimaryButton
+import com.estimatefaster.audioforge.ui.components.ExpressiveTextButton
+import com.estimatefaster.audioforge.ui.components.ExpressiveTonalButton
+import com.estimatefaster.audioforge.ui.components.ExpressiveWavyProgress
 import com.estimatefaster.audioforge.ui.theme.AudioForgeTheme
+import com.estimatefaster.audioforge.ui.theme.spacing
 
 /**
  * 导入 Sheet 的有状态入口（P4-04 / 执行计划 §12.4 S03）。
@@ -53,10 +57,6 @@ import com.estimatefaster.audioforge.ui.theme.AudioForgeTheme
  * 2. 收集 [ImportViewModel.events]：成功 → `onImported(novelId)`；重名选「打开已有」
  *    → `onOpenExisting(id)`，两者都会关闭 Sheet；
  * 3. 关闭（下滑/取消/成功）时取消在途导入，用例负责清理半成品文件。
- *
- * 集成提示：`ProjectLibraryScreen` 的 FAB `onImport` 目前只是回调；接入时在该页
- * 用 `if (showImport) ImportSheet(viewModel, onDismiss = { showImport = false },
- * onImported = onOpenProject, onOpenExisting = onOpenProject)` 即可。
  *
  * @param onDismiss 关闭 Sheet（由调用方控制可见性）
  * @param onImported 导入成功后进入新项目
@@ -105,6 +105,10 @@ fun ImportSheet(
         onDismissRequest = closeSheet,
         modifier = modifier,
         sheetState = sheetState,
+        // Expressive 容器：超大圆角 + tonal 表面 + 默认拖拽条。
+        shape = MaterialTheme.shapes.extraExtraLarge,
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+        dragHandle = { BottomSheetDefaults.DragHandle() },
     ) {
         ImportSheetContent(
             state = state,
@@ -123,13 +127,15 @@ fun ImportSheet(
  * 无状态 Sheet 内容；Preview 与将来 UI 测试都直接渲染它。
  *
  * 状态 → 布局：
- * - `Idle`：选择文件入口；
- * - `Selected`：文件卡 + 导入；
- * - `Importing`：文件卡 + 进度条/百分比 + 取消；
- * - `NeedsEncoding`：候选编码按钮，选中后重开源流重试；
- * - `Duplicate`：AlertDialog「打开已有项目 / 取消」；
- * - `Error`：可读原因 + 重试（仅用例失败/源打不开）+ 重新选择；
- * - `Success`：成功占位（正常路径会立即通过事件关闭）。
+ * - `Idle`：说明 + 选择文件；
+ * - `Selected`：文件卡 + 导入 / 换文件；
+ * - `Importing`：进度卡 + 取消；
+ * - `NeedsEncoding`：候选编码卡片，选中后重开源流重试；
+ * - `Duplicate`：重名卡片，「打开已有项目」是唯一主行动；
+ * - `Error`：错误卡片 + 重试或重新选择；
+ * - `Success`：成功卡片（正常路径会立即通过事件关闭）。
+ *
+ * 内容可纵向滚动，200% 字体下所有状态和按钮都可达。
  */
 @Composable
 fun ImportSheetContent(
@@ -143,137 +149,120 @@ fun ImportSheetContent(
     onDismissDuplicate: () -> Unit = {},
     onCancel: () -> Unit = {},
 ) {
+    val spacing = MaterialTheme.spacing
     Column(
         modifier = modifier
             .fillMaxWidth()
             .navigationBarsPadding()
-            .padding(horizontal = 24.dp)
-            .padding(top = 8.dp, bottom = 24.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = spacing.xl)
+            .padding(top = spacing.sm, bottom = spacing.xl),
+        verticalArrangement = Arrangement.spacedBy(spacing.lg),
     ) {
-        Text(
-            text = stringResource(R.string.import_sheet_title),
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.SemiBold,
-        )
-        Text(
-            text = stringResource(R.string.import_sheet_subtitle),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        Column(verticalArrangement = Arrangement.spacedBy(spacing.xs)) {
+            Text(
+                text = stringResource(R.string.import_sheet_title),
+                modifier = Modifier.semantics { heading() },
+                style = MaterialTheme.typography.headlineSmallEmphasized,
+            )
+            Text(
+                text = stringResource(R.string.import_sheet_subtitle),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
 
         state.selection?.let { selection -> SelectedFileCard(selection = selection) }
 
         when (state.phase) {
-            ImportPhase.Idle -> {
-                Text(
-                    text = stringResource(R.string.import_file_type_hint),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Button(
-                    onClick = onPickFile,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = 48.dp),
-                ) {
-                    Text(stringResource(R.string.import_pick_file))
-                }
-            }
+            ImportPhase.Idle -> IdleStage(onPickFile = onPickFile)
 
-            ImportPhase.Selected -> {
-                Text(
-                    text = stringResource(R.string.import_file_type_hint),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Button(
-                    onClick = onStartImport,
-                    enabled = state.canStartImport,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = 48.dp),
-                ) {
-                    Text(stringResource(R.string.import_action_start))
-                }
-                TextButton(
-                    onClick = onPickFile,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = 48.dp),
-                ) {
-                    Text(stringResource(R.string.import_pick_again))
-                }
-            }
+            ImportPhase.Selected -> SelectedStage(
+                canStartImport = state.canStartImport,
+                onStartImport = onStartImport,
+                onPickFile = onPickFile,
+            )
 
             ImportPhase.Importing -> {
                 ImportProgress(state = state)
-                TextButton(
-                    onClick = onCancel,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = 48.dp),
-                ) {
-                    Text(stringResource(R.string.import_action_cancel))
-                }
+                CancelAction(onCancel = onCancel)
             }
 
             ImportPhase.NeedsEncoding -> {
-                EncodingChooser(state = state, onChooseEncoding = onChooseEncoding)
-                TextButton(
-                    onClick = onCancel,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = 48.dp),
-                ) {
-                    Text(stringResource(R.string.import_action_cancel))
-                }
-            }
-
-            ImportPhase.Duplicate -> {
-                // 具体动作在下方 AlertDialog 里；这里保留说明，避免用户只看到弹窗。
-                Text(
-                    text = stringResource(R.string.import_duplicate_note),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-
-            ImportPhase.Error -> {
-                ImportErrorPanel(
+                EncodingChooser(
                     state = state,
-                    onRetry = onRetry,
-                    onPickFile = onPickFile,
+                    onChooseEncoding = onChooseEncoding,
                 )
-                TextButton(
-                    onClick = onCancel,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = 48.dp),
-                ) {
-                    Text(stringResource(R.string.import_action_cancel))
-                }
+                CancelAction(onCancel = onCancel)
             }
 
-            ImportPhase.Success -> {
-                Text(
-                    text = stringResource(R.string.import_success),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                )
-            }
+            ImportPhase.Duplicate -> DuplicateStage(
+                duplicate = state.duplicate,
+                onOpenExisting = onOpenExisting,
+                onDismissDuplicate = onDismissDuplicate,
+            )
+
+            ImportPhase.Error -> ErrorStage(
+                state = state,
+                onRetry = onRetry,
+                onPickFile = onPickFile,
+                onCancel = onCancel,
+            )
+
+            ImportPhase.Success -> SuccessStage()
         }
     }
+}
 
-    if (state.phase == ImportPhase.Duplicate) {
-        DuplicateDialog(
-            duplicate = state.duplicate,
-            onOpenExisting = onOpenExisting,
-            onDismiss = onDismissDuplicate,
+/** Idle：说明 + 唯一主按钮。 */
+@Composable
+private fun IdleStage(
+    onPickFile: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    ExpressiveCard(modifier = modifier) {
+        Text(
+            text = stringResource(R.string.import_file_type_hint),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        ExpressivePrimaryButton(
+            text = stringResource(R.string.import_pick_file),
+            onClick = onPickFile,
+            modifier = Modifier.fillMaxWidth(),
         )
     }
 }
 
+/** Selected：确认前校验通过，主行动是「导入」，换文件降级为 tonal。 */
+@Composable
+private fun SelectedStage(
+    canStartImport: Boolean,
+    onStartImport: () -> Unit,
+    onPickFile: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    ExpressiveCard(modifier = modifier) {
+        Text(
+            text = stringResource(R.string.import_file_type_hint),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        ExpressivePrimaryButton(
+            text = stringResource(R.string.import_action_start),
+            onClick = onStartImport,
+            modifier = Modifier.fillMaxWidth(),
+            enabled = canStartImport,
+        )
+        ExpressiveTonalButton(
+            text = stringResource(R.string.import_pick_again),
+            onClick = onPickFile,
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
+}
+
+/** 已选文件摘要；大小未知时显示「未知」，不伪造数字。 */
 @Composable
 private fun SelectedFileCard(
     selection: ImportFileSelection,
@@ -285,53 +274,38 @@ private fun SelectedFileCard(
         ?.let { bytes -> Formatter.formatFileSize(context, bytes) }
         ?: stringResource(R.string.import_size_unknown)
 
-    Card(
-        modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-        ),
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            Text(
-                text = stringResource(R.string.import_selected_file),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Text(
-                text = selection.displayName,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 3,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Text(
-                text = stringResource(R.string.import_file_size, sizeText),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
+    ExpressiveCard(modifier = modifier) {
+        Text(
+            text = stringResource(R.string.import_selected_file),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            text = selection.displayName,
+            style = MaterialTheme.typography.titleLargeEmphasized,
+            maxLines = 3,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Text(
+            text = stringResource(R.string.import_file_size, sizeText),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 
+/** 导入中：百分比 + 波浪进度条；SAF 无大小时退回不确定进度。 */
 @Composable
 private fun ImportProgress(
     state: ImportUiState,
     modifier: Modifier = Modifier,
 ) {
-    Column(
-        modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
+    val progressDescription = stringResource(R.string.import_importing_title)
+    ExpressiveCard(modifier = modifier) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 text = stringResource(R.string.import_importing_title),
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
+                style = MaterialTheme.typography.titleMediumEmphasized,
                 modifier = Modifier.weight(1f),
             )
             if (state.isProgressDeterminate) {
@@ -344,41 +318,35 @@ private fun ImportProgress(
                 )
             }
         }
-        val progressDescription = stringResource(R.string.import_importing_title)
         if (state.isProgressDeterminate) {
-            LinearProgressIndicator(
-                progress = { state.safeProgress },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 4.dp)
-                    .semantics { contentDescription = progressDescription },
+            ExpressiveWavyProgress(
+                progress = state.safeProgress,
+                modifier = Modifier.semantics {
+                    contentDescription = progressDescription
+                },
             )
         } else {
             // SAF 未提供 SIZE：用不确定进度，绝不伪造百分比。
             LinearProgressIndicator(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(min = 4.dp)
                     .semantics { contentDescription = progressDescription },
             )
         }
     }
 }
 
+/** 编码候选：每个候选一个 tonal 按钮，主行动留给后续的「重试」。 */
 @Composable
 private fun EncodingChooser(
     state: ImportUiState,
     onChooseEncoding: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(
-        modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
+    ExpressiveCard(modifier = modifier) {
         Text(
             text = stringResource(R.string.import_encoding_title),
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
+            style = MaterialTheme.typography.titleMediumEmphasized,
         )
         Text(
             text = stringResource(R.string.import_encoding_description),
@@ -386,36 +354,69 @@ private fun EncodingChooser(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         state.encodingCandidates.forEach { encoding ->
-            OutlinedButton(
+            ExpressiveTonalButton(
+                text = stringResource(R.string.import_encoding_action, encoding),
                 onClick = { onChooseEncoding(encoding) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 48.dp),
-            ) {
-                Text(stringResource(R.string.import_encoding_action, encoding))
-            }
+                modifier = Modifier.fillMaxWidth(),
+            )
         }
     }
 }
 
+/** 重名：在 Sheet 内用卡片确认，避免叠一层 Dialog；「打开已有项目」唯一突出。 */
 @Composable
-private fun ImportErrorPanel(
+private fun DuplicateStage(
+    duplicate: ImportDuplicate?,
+    onOpenExisting: () -> Unit,
+    onDismissDuplicate: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    ExpressiveCard(modifier = modifier) {
+        Text(
+            text = stringResource(R.string.import_duplicate_title),
+            style = MaterialTheme.typography.titleMediumEmphasized,
+        )
+        Text(
+            text = stringResource(
+                R.string.import_duplicate_message,
+                duplicate?.title.orEmpty(),
+            ),
+            style = MaterialTheme.typography.bodyMedium,
+        )
+        Text(
+            text = stringResource(R.string.import_duplicate_note),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        ExpressivePrimaryButton(
+            text = stringResource(R.string.import_action_open_existing),
+            onClick = onOpenExisting,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        ExpressiveTextButton(
+            text = stringResource(R.string.action_cancel),
+            onClick = onDismissDuplicate,
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
+}
+
+/** 错误：原因卡片 + 一个主按钮（可重试时重试，否则重新选择）+ 取消。 */
+@Composable
+private fun ErrorStage(
     state: ImportUiState,
     onRetry: () -> Unit,
     onPickFile: () -> Unit,
+    onCancel: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(
-        modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
+    ExpressiveCard(modifier = modifier) {
         Text(
             text = stringResource(R.string.import_error_title),
             modifier = Modifier.semantics {
                 liveRegion = LiveRegionMode.Polite
             },
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
+            style = MaterialTheme.typography.titleMediumEmphasized,
             color = MaterialTheme.colorScheme.error,
         )
         Text(
@@ -423,61 +424,44 @@ private fun ImportErrorPanel(
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurface,
         )
-        if (state.canRetry) {
-            Button(
-                onClick = onRetry,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 48.dp),
-            ) {
-                Text(stringResource(R.string.action_retry))
-            }
-        }
-        OutlinedButton(
+    }
+    if (state.canRetry) {
+        ExpressivePrimaryButton(
+            text = stringResource(R.string.action_retry),
+            onClick = onRetry,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        ExpressiveOutlinedButton(
+            text = stringResource(R.string.import_action_reselect),
             onClick = onPickFile,
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = 48.dp),
-        ) {
-            Text(stringResource(R.string.import_action_reselect))
-        }
+            modifier = Modifier.fillMaxWidth(),
+        )
+    } else {
+        ExpressivePrimaryButton(
+            text = stringResource(R.string.import_action_reselect),
+            onClick = onPickFile,
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
+    CancelAction(onCancel = onCancel)
+}
+
+@Composable
+private fun SuccessStage(modifier: Modifier = Modifier) {
+    ExpressiveCard(modifier = modifier) {
+        Text(
+            text = stringResource(R.string.import_success),
+            style = MaterialTheme.typography.titleMediumEmphasized,
+        )
     }
 }
 
 @Composable
-private fun DuplicateDialog(
-    duplicate: ImportDuplicate?,
-    onOpenExisting: () -> Unit,
-    onDismiss: () -> Unit,
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.import_duplicate_title)) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(
-                    text = stringResource(
-                        R.string.import_duplicate_message,
-                        duplicate?.title.orEmpty(),
-                    ),
-                )
-                Text(
-                    text = stringResource(R.string.import_duplicate_note),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = onOpenExisting) {
-                Text(stringResource(R.string.import_action_open_existing))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.action_cancel))
-            }
-        },
+private fun CancelAction(onCancel: () -> Unit) {
+    ExpressiveTextButton(
+        text = stringResource(R.string.import_action_cancel),
+        onClick = onCancel,
+        modifier = Modifier.fillMaxWidth(),
     )
 }
 
@@ -498,7 +482,7 @@ private fun ImportValidationError.messageRes(): Int = when (this) {
 }
 
 // ---------------------------------------------------------------------------
-// Preview：已选择 / 导入中 / 错误 / 编码重试 / 重名（至少 3 个场景）。
+// Preview：Idle / Selected / Importing / NeedsEncoding / Error / Duplicate / 深色 200%。
 // ---------------------------------------------------------------------------
 
 private fun previewSelection(
@@ -510,118 +494,91 @@ private fun previewSelection(
     sizeBytes = sizeBytes,
 )
 
-@Preview(
-    name = "ImportSheet Idle",
-    showBackground = true,
-    backgroundColor = 0xFFF7F8FC,
-)
+@Composable
+private fun ImportSheetPreviewSurface(content: @Composable () -> Unit) {
+    AudioForgeTheme(dynamicColor = false) {
+        Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh) {
+            content()
+        }
+    }
+}
+
+@Preview(name = "ImportSheet Idle", showBackground = true)
 @Composable
 private fun ImportSheetIdlePreview() {
-    AudioForgeTheme(dynamicColor = false) {
-        Surface(color = MaterialTheme.colorScheme.surface) {
-            ImportSheetContent(state = ImportUiState())
-        }
+    ImportSheetPreviewSurface {
+        ImportSheetContent(state = ImportUiState())
     }
 }
 
-@Preview(
-    name = "ImportSheet Selected",
-    showBackground = true,
-    backgroundColor = 0xFFF7F8FC,
-)
+@Preview(name = "ImportSheet Selected", showBackground = true)
 @Composable
 private fun ImportSheetSelectedPreview() {
-    AudioForgeTheme(dynamicColor = false) {
-        Surface(color = MaterialTheme.colorScheme.surface) {
-            ImportSheetContent(
-                state = ImportUiState(
-                    phase = ImportPhase.Selected,
-                    selection = previewSelection(),
-                ),
-            )
-        }
+    ImportSheetPreviewSurface {
+        ImportSheetContent(
+            state = ImportUiState(
+                phase = ImportPhase.Selected,
+                selection = previewSelection(),
+            ),
+        )
     }
 }
 
-@Preview(
-    name = "ImportSheet Importing",
-    showBackground = true,
-    backgroundColor = 0xFFF7F8FC,
-)
+@Preview(name = "ImportSheet Importing", showBackground = true)
 @Composable
 private fun ImportSheetImportingPreview() {
-    AudioForgeTheme(dynamicColor = false) {
-        Surface(color = MaterialTheme.colorScheme.surface) {
-            ImportSheetContent(
-                state = ImportUiState(
-                    phase = ImportPhase.Importing,
-                    selection = previewSelection(),
-                    progress = 0.42f,
-                ),
-            )
-        }
+    ImportSheetPreviewSurface {
+        ImportSheetContent(
+            state = ImportUiState(
+                phase = ImportPhase.Importing,
+                selection = previewSelection(),
+                progress = 0.42f,
+            ),
+        )
     }
 }
 
-@Preview(
-    name = "ImportSheet NeedsEncoding",
-    showBackground = true,
-    backgroundColor = 0xFFF7F8FC,
-)
+@Preview(name = "ImportSheet NeedsEncoding", showBackground = true)
 @Composable
 private fun ImportSheetNeedsEncodingPreview() {
-    AudioForgeTheme(dynamicColor = false) {
-        Surface(color = MaterialTheme.colorScheme.surface) {
-            ImportSheetContent(
-                state = ImportUiState(
-                    phase = ImportPhase.NeedsEncoding,
-                    selection = previewSelection(displayName = "低中文.txt"),
-                    encodingCandidates = listOf("GB18030", "Big5", "UTF-8", "UTF-16LE"),
-                ),
-            )
-        }
+    ImportSheetPreviewSurface {
+        ImportSheetContent(
+            state = ImportUiState(
+                phase = ImportPhase.NeedsEncoding,
+                selection = previewSelection(displayName = "低中文.txt"),
+                encodingCandidates = listOf("GB18030", "Big5", "UTF-8", "UTF-16LE"),
+            ),
+        )
     }
 }
 
-@Preview(
-    name = "ImportSheet Error",
-    showBackground = true,
-    backgroundColor = 0xFFF7F8FC,
-)
+@Preview(name = "ImportSheet Error", showBackground = true)
 @Composable
 private fun ImportSheetErrorPreview() {
-    AudioForgeTheme(dynamicColor = false) {
-        Surface(color = MaterialTheme.colorScheme.surface) {
-            ImportSheetContent(
-                state = ImportUiState(
-                    phase = ImportPhase.Error,
-                    selection = previewSelection(),
-                    error = ImportError.ImportFailed(
-                        stringResource(R.string.import_error_preview),
-                    ),
+    ImportSheetPreviewSurface {
+        ImportSheetContent(
+            state = ImportUiState(
+                phase = ImportPhase.Error,
+                selection = previewSelection(),
+                error = ImportError.ImportFailed(
+                    stringResource(R.string.import_error_preview),
                 ),
-            )
-        }
+            ),
+        )
     }
 }
 
-@Preview(
-    name = "ImportSheet Duplicate",
-    showBackground = true,
-    backgroundColor = 0xFFF7F8FC,
-)
+@Preview(name = "ImportSheet Duplicate", showBackground = true)
 @Composable
 private fun ImportSheetDuplicatePreview() {
-    AudioForgeTheme(dynamicColor = false) {
-        Surface(color = MaterialTheme.colorScheme.surface) {
-            ImportSheetContent(
-                state = ImportUiState(
-                    phase = ImportPhase.Duplicate,
-                    selection = previewSelection(),
-                    duplicate = ImportDuplicate(existingNovelId = 42L, title = "长夜将明"),
-                ),
-            )
-        }
+    ImportSheetPreviewSurface {
+        ImportSheetContent(
+            state = ImportUiState(
+                phase = ImportPhase.Duplicate,
+                selection = previewSelection(),
+                duplicate = ImportDuplicate(existingNovelId = 42L, title = "长夜将明"),
+            ),
+        )
     }
 }
 
@@ -634,7 +591,7 @@ private fun ImportSheetDuplicatePreview() {
 @Composable
 private fun ImportSheetDarkPreview() {
     AudioForgeTheme(darkTheme = true, dynamicColor = false) {
-        Surface(color = MaterialTheme.colorScheme.surface) {
+        Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh) {
             ImportSheetContent(
                 state = ImportUiState(
                     phase = ImportPhase.Importing,

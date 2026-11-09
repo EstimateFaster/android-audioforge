@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- UX 项目库 hero 统计；新增文案单独成文件，避免改动主 strings.xml。 -->
+    <string name="ux_projects_hero_stat_projects">项目</string>
+    <string name="ux_projects_hero_stat_chapters_done">已完成章</string>
+    <string name="ux_projects_hero_stat_chapters_total">总章数</string>
+</resources>
