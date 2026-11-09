@@ -1,54 +1,41 @@
+@file:OptIn(
+    androidx.compose.material3.ExperimentalMaterial3Api::class,
+    androidx.compose.foundation.layout.ExperimentalLayoutApi::class,
+)
+
 package com.estimatefaster.audioforge.feature.script
 
 import androidx.annotation.StringRes
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -57,23 +44,30 @@ import com.estimatefaster.audioforge.core.model.Emotion
 import com.estimatefaster.audioforge.core.model.NARRATOR_ROLE_ID
 import com.estimatefaster.audioforge.core.model.SegmentType
 import com.estimatefaster.audioforge.data.db.SegmentEntity
+import com.estimatefaster.audioforge.ui.components.RoleAvatar
+import com.estimatefaster.audioforge.ui.forge.ForgeCard
+import com.estimatefaster.audioforge.ui.forge.ForgeChip
+import com.estimatefaster.audioforge.ui.forge.ForgeIcon
+import com.estimatefaster.audioforge.ui.forge.ForgeIcons
+import com.estimatefaster.audioforge.ui.forge.ForgePrimaryAction
+import com.estimatefaster.audioforge.ui.forge.ForgeSecondaryAction
+import com.estimatefaster.audioforge.ui.forge.ForgeSegmented
+import com.estimatefaster.audioforge.ui.forge.ForgeSheetHeader
 import com.estimatefaster.audioforge.ui.theme.AudioForgeTheme
+import com.estimatefaster.audioforge.ui.theme.spacing
 
 /**
- * 片段编辑 Sheet（P5-02 / 执行计划 §12.4 S07）。
+ * 片段编辑 Sheet（Forge Framework v1）。
  *
  * 有状态入口：收集 [SegmentEditViewModel.state]，把一次性事件转成调用方回调：
- * - `Saved` → `onSaved(updated)`（调用方决定是否关闭 Sheet / 提示已保存）；
+ * - `Saved` → `onSaved(updated)`；
  * - `Cancelled` → `onDismiss`；
  * - `RegenerateRequested` → `onRegenerate(segmentId)`（本 Sheet 不直接调用 TTS）。
- *
- * 保存、失败重试、取消、重置都委托给 ViewModel；Composable 不访问数据库。
  *
  * @param onDismiss 用户取消/下滑/返回时关闭 Sheet
  * @param onSaved 保存成功；`segment` 是实际写入的实体
  * @param onRegenerate “重新生成此句”回调；调用方负责入队
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SegmentEditSheet(
     viewModel: SegmentEditViewModel,
@@ -120,13 +114,12 @@ fun SegmentEditSheet(
 }
 
 /**
- * 无状态 Sheet 内容；Preview 与后续 UI 测试直接渲染它。
+ * 无状态 Sheet 内容；Preview 与 UI 测试直接渲染它。
  *
- * 布局：标题 + 重置 → 类型 → 角色 → 情绪 → 文本/计数 → 保存提示 → 校验错误 →
- * 保存错误 → 保存/重新生成/取消。内容整体可滚动并加 `imePadding()`，键盘弹出时
- * 不会盖住文本或底部按钮。所有用户可见文案来自 `strings.xml`。
+ * 布局对齐 prototype 的 SegmentEdit Sheet：固定 Sheet 头 + 角色 hero + 类型/角色/
+ * 情绪/文本编辑区 + 固定底部操作（重置 / 重新生成 / 保存）。文案全部来自
+ * `strings_ux_v2_script_characters.xml`。
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SegmentEditSheetContent(
     state: SegmentEditUiState,
@@ -144,368 +137,326 @@ fun SegmentEditSheetContent(
     Column(
         modifier = modifier
             .fillMaxWidth()
+            .fillMaxHeight(0.92f)
             .imePadding()
-            .navigationBarsPadding()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 24.dp)
-            .padding(top = 8.dp, bottom = 24.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+            .navigationBarsPadding(),
     ) {
-        SegmentEditHeader(state = state, onReset = onReset)
-
-        TypeSelector(
-            type = state.type,
-            enabled = !state.saving,
-            onTypeChange = onTypeChange,
-        )
-        RoleSelector(
-            state = state,
-            onRoleChange = onRoleChange,
-        )
-        EmotionSelector(
-            emotion = state.emotion,
-            enabled = !state.saving,
-            onEmotionChange = onEmotionChange,
-        )
-        TextEditor(
-            state = state,
-            onTextChange = onTextChange,
+        ForgeSheetHeader(
+            icon = ForgeIcons.Edit,
+            title = stringResource(R.string.ux2_segment_title),
+            onClose = onCancel,
+            subtitle = stringResource(
+                R.string.ux2_segment_header_subtitle,
+                state.segmentNumber,
+                stringResource(state.type.labelRes()),
+            ),
+            modifier = Modifier.padding(
+                start = MaterialTheme.spacing.lg,
+                end = MaterialTheme.spacing.sm,
+                top = MaterialTheme.spacing.sm,
+                bottom = MaterialTheme.spacing.xs,
+            ),
         )
 
-        Text(
-            text = stringResource(R.string.segment_edit_hint),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-
-        if (state.validationErrors.isNotEmpty()) {
-            ValidationCard(errors = state.validationErrors)
-        }
-        state.saveError?.let { message ->
-            SaveErrorCard(
-                message = message,
-                enabled = !state.saving,
-                onRetry = onRetry,
-            )
-        }
-
-        SaveButton(
-            saving = state.saving,
-            enabled = state.canSave,
-            onSave = onSave,
-        )
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            OutlinedButton(
-                onClick = onRegenerate,
-                enabled = !state.saving,
-                modifier = Modifier
-                    .weight(1f)
-                    .heightIn(min = 48.dp),
-            ) {
-                Text(stringResource(R.string.segment_edit_regenerate))
-            }
-            TextButton(
-                onClick = onCancel,
-                enabled = !state.saving,
-                modifier = Modifier
-                    .weight(1f)
-                    .heightIn(min = 48.dp),
-            ) {
-                Text(stringResource(R.string.action_cancel))
-            }
-        }
-    }
-}
-
-@Composable
-private fun SegmentEditHeader(
-    state: SegmentEditUiState,
-    onReset: () -> Unit,
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = stringResource(R.string.segment_edit_title),
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.SemiBold,
-            )
-            Text(
-                text = stringResource(
-                    R.string.segment_edit_subtitle,
-                    state.segmentNumber,
-                    stringResource(state.type.labelRes()),
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .verticalScroll(rememberScrollState())
+                .padding(
+                    horizontal = MaterialTheme.spacing.lg,
+                    vertical = MaterialTheme.spacing.sm,
                 ),
-                style = MaterialTheme.typography.bodyMedium,
+            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.lg),
+        ) {
+            SegmentHero(state = state)
+            TypeSection(
+                state = state,
+                onTypeChange = onTypeChange,
+            )
+            RoleSection(
+                state = state,
+                onRoleChange = onRoleChange,
+            )
+            EmotionSection(
+                state = state,
+                onEmotionChange = onEmotionChange,
+            )
+            TextSection(
+                state = state,
+                onTextChange = onTextChange,
+            )
+            Text(
+                text = stringResource(R.string.ux2_segment_hint),
+                style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-        }
-        TextButton(
-            onClick = onReset,
-            enabled = state.isDirty && !state.saving,
-            modifier = Modifier.heightIn(min = 48.dp),
-        ) {
-            Text(stringResource(R.string.segment_edit_reset))
-        }
-    }
-}
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun TypeSelector(
-    type: SegmentType,
-    enabled: Boolean,
-    onTypeChange: (SegmentType) -> Unit,
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        FieldLabel(text = stringResource(R.string.segment_edit_type_label))
-        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-            EDITABLE_TYPES.forEachIndexed { index, candidate ->
-                SegmentedButton(
-                    selected = type == candidate,
-                    onClick = { onTypeChange(candidate) },
-                    shape = SegmentedButtonDefaults.itemShape(
-                        index = index,
-                        count = EDITABLE_TYPES.size,
-                    ),
-                    enabled = enabled,
-                    label = { Text(stringResource(candidate.labelRes())) },
+            if (state.validationErrors.isNotEmpty()) {
+                ValidationCard(errors = state.validationErrors)
+            }
+            state.saveError?.let { message ->
+                SaveErrorCard(
+                    message = message,
+                    enabled = !state.saving,
+                    onRetry = onRetry,
                 )
             }
         }
+
+        SegmentFooter(
+            state = state,
+            onReset = onReset,
+            onRegenerate = onRegenerate,
+            onSave = onSave,
+        )
     }
 }
 
-/**
- * 角色下拉。
- *
- * 对白列出本书角色（可搜索）；旁白只有旁白且不可展开。当前 roleId 不在候选里时
- * 显示“未知角色”，同时校验卡片会提示重选。
- */
 @Composable
-private fun RoleSelector(
+private fun SegmentHero(state: SegmentEditUiState) {
+    val roleName = state.selectedRole?.let { option -> roleLabel(option) }
+        ?: stringResource(R.string.ux2_script_unknown_role)
+
+    ForgeCard(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.md),
+        ) {
+            RoleAvatar(name = roleName, size = 48.dp, decorative = true)
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(R.string.ux2_segment_hero_title, state.segmentNumber),
+                    style = MaterialTheme.typography.titleSmallEmphasized,
+                )
+                Text(
+                    text = stringResource(
+                        R.string.ux2_segment_hero_subtitle,
+                        stringResource(state.type.labelRes()),
+                        stringResource(state.emotion.labelRes()),
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            SegmentCurrentTag()
+        }
+    }
+}
+
+@Composable
+private fun SegmentCurrentTag() {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        ForgeIcon(
+            icon = ForgeIcons.AudioLines,
+            contentDescription = null,
+            modifier = Modifier.size(14.dp),
+            tint = MaterialTheme.colorScheme.primary,
+        )
+        Text(
+            text = stringResource(R.string.ux2_segment_current),
+            style = MaterialTheme.typography.labelSmallEmphasized,
+            color = MaterialTheme.colorScheme.primary,
+            maxLines = 1,
+        )
+    }
+}
+
+@Composable
+private fun TypeSection(
+    state: SegmentEditUiState,
+    onTypeChange: (SegmentType) -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm)) {
+        SectionLabel(text = stringResource(R.string.ux2_segment_section_type))
+        ForgeSegmented(
+            options = listOf(
+                ForgeIcons.UserRound to stringResource(R.string.ux2_script_type_dialogue),
+                ForgeIcons.BookOpen to stringResource(R.string.ux2_script_type_narration),
+            ),
+            selectedIndex = if (state.type == SegmentType.Dialogue) 0 else 1,
+            onSelect = { index ->
+                if (!state.saving) {
+                    onTypeChange(
+                        if (index == 0) SegmentType.Dialogue else SegmentType.Narration,
+                    )
+                }
+            },
+        )
+    }
+}
+
+@Composable
+private fun RoleSection(
     state: SegmentEditUiState,
     onRoleChange: (String) -> Unit,
 ) {
-    var expanded by rememberSaveable { mutableStateOf(false) }
-    var query by rememberSaveable { mutableStateOf("") }
-    val options = state.roleOptions
-    val filtered = if (query.isBlank()) {
-        options
-    } else {
-        options.filter { option ->
-            option.name.contains(query, ignoreCase = true) ||
-                option.roleId.contains(query, ignoreCase = true)
-        }
-    }
-    val selected = options.firstOrNull { it.roleId == state.roleId.trim() }
-    val display = selected?.let { roleLabel(it) }
-        ?: stringResource(R.string.script_role_unknown)
-    val canOpen = !state.saving && !state.isNarration && options.isNotEmpty()
-
-    // 切到旁白后不会再需要角色菜单，顺手关掉并清空搜索。
-    LaunchedEffect(state.type) {
+    Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm)) {
+        SectionLabel(text = stringResource(R.string.ux2_segment_section_role))
         if (state.isNarration) {
-            expanded = false
-            query = ""
-        }
-    }
-
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        FieldLabel(text = stringResource(R.string.segment_edit_role_label))
-        Box {
-            OutlinedButton(
-                onClick = { expanded = true },
-                enabled = canOpen,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 48.dp),
+            Surface(
+                shape = MaterialTheme.shapes.small,
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
             ) {
-                Text(
-                    text = display,
-                    modifier = Modifier.weight(1f),
-                    textAlign = TextAlign.Start,
-                )
-                Text(text = stringResource(R.string.segment_edit_dropdown_indicator))
-            }
-            DropdownMenu(
-                expanded = expanded,
-                onDismissRequest = {
-                    expanded = false
-                    query = ""
-                },
-                modifier = Modifier.widthIn(min = 260.dp),
-            ) {
-                if (options.size > 4) {
-                    OutlinedTextField(
-                        value = query,
-                        onValueChange = { query = it },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 12.dp, vertical = 8.dp),
-                        placeholder = {
-                            Text(stringResource(R.string.segment_edit_role_search_placeholder))
-                        },
-                        singleLine = true,
+                Row(
+                    modifier = Modifier.padding(
+                        horizontal = MaterialTheme.spacing.sm,
+                        vertical = MaterialTheme.spacing.xxs,
+                    ),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.xxs),
+                ) {
+                    ForgeIcon(
+                        icon = ForgeIcons.BookOpen,
+                        contentDescription = null,
+                        modifier = Modifier.size(14.dp),
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
+                    Text(
+                        text = stringResource(R.string.ux2_script_type_narration),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                if (filtered.isEmpty()) {
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.segment_edit_role_no_match)) },
-                        onClick = {},
-                        enabled = false,
-                    )
-                } else {
-                    filtered.forEach { option ->
-                        DropdownMenuItem(
-                            text = { Text(roleLabel(option)) },
+            }
+            Text(
+                text = stringResource(R.string.ux2_segment_role_locked),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        } else {
+            val options = state.roleOptions.filterNot { option -> option.isNarrator }
+            if (options.isEmpty()) {
+                Text(
+                    text = stringResource(R.string.ux2_segment_role_empty),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            } else {
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm),
+                    verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm),
+                ) {
+                    options.forEach { option ->
+                        ForgeChip(
+                            label = roleLabel(option),
+                            selected = option.roleId == state.roleId.trim(),
                             onClick = {
-                                onRoleChange(option.roleId)
-                                expanded = false
-                                query = ""
+                                if (!state.saving) onRoleChange(option.roleId)
                             },
-                            enabled = !state.saving,
-                            trailingIcon = {
-                                if (option.roleId == state.roleId) {
-                                    Text(
-                                        text = stringResource(R.string.segment_edit_selected_indicator),
-                                        color = MaterialTheme.colorScheme.primary,
-                                    )
-                                }
-                            },
+                            icon = ForgeIcons.UserRound,
                         )
                     }
                 }
             }
-        }
-        if (state.isNarration) {
-            Text(
-                text = stringResource(R.string.segment_edit_role_locked),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            if (state.selectedRole == null) {
+                Text(
+                    text = stringResource(R.string.ux2_segment_unknown_role_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                )
+            }
         }
     }
 }
 
-/** 情绪下拉：11 种，显示中文标签 + wire（wire 是落库/API 稳定值，不能翻译）。 */
 @Composable
-private fun EmotionSelector(
-    emotion: Emotion,
-    enabled: Boolean,
+private fun EmotionSection(
+    state: SegmentEditUiState,
     onEmotionChange: (Emotion) -> Unit,
 ) {
-    var expanded by rememberSaveable { mutableStateOf(false) }
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        FieldLabel(text = stringResource(R.string.segment_edit_emotion_label))
-        Box {
-            OutlinedButton(
-                onClick = { expanded = true },
-                enabled = enabled,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 48.dp),
-            ) {
-                Text(
-                    text = emotionLabel(emotion),
-                    modifier = Modifier.weight(1f),
-                    textAlign = TextAlign.Start,
+    Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm)) {
+        SectionLabel(text = stringResource(R.string.ux2_segment_section_emotion))
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm),
+        ) {
+            Emotion.entries.forEach { emotion ->
+                ForgeChip(
+                    label = stringResource(emotion.labelRes()),
+                    selected = emotion == state.emotion,
+                    onClick = { if (!state.saving) onEmotionChange(emotion) },
+                    icon = ForgeIcons.Sparkles,
                 )
-                Text(text = stringResource(R.string.segment_edit_dropdown_indicator))
-            }
-            DropdownMenu(
-                expanded = expanded,
-                onDismissRequest = { expanded = false },
-                modifier = Modifier.widthIn(min = 260.dp),
-            ) {
-                Emotion.entries.forEach { candidate ->
-                    DropdownMenuItem(
-                        text = { Text(emotionLabel(candidate)) },
-                        onClick = {
-                            onEmotionChange(candidate)
-                            expanded = false
-                        },
-                        enabled = enabled,
-                        trailingIcon = {
-                            if (candidate == emotion) {
-                                Text(
-                                    text = stringResource(R.string.segment_edit_selected_indicator),
-                                    color = MaterialTheme.colorScheme.primary,
-                                )
-                            }
-                        },
-                    )
-                }
             }
         }
     }
 }
 
 @Composable
-private fun TextEditor(
+private fun TextSection(
     state: SegmentEditUiState,
     onTextChange: (String) -> Unit,
 ) {
-    val textError = state.validationErrors.any {
-        it == SegmentEditError.EmptyText || it == SegmentEditError.TextTooLong
+    val textError = state.validationErrors.any { error ->
+        error == SegmentEditError.EmptyText || error == SegmentEditError.TextTooLong
     }
-    OutlinedTextField(
-        value = state.text,
-        onValueChange = onTextChange,
-        modifier = Modifier.fillMaxWidth(),
-        enabled = !state.saving,
-        label = { Text(stringResource(R.string.segment_edit_text_label)) },
-        placeholder = { Text(stringResource(R.string.segment_edit_text_placeholder)) },
-        minLines = 4,
-        maxLines = 8,
-        isError = textError,
-        supportingText = {
-            Text(
-                text = stringResource(
-                    R.string.segment_edit_text_counter,
-                    state.characterCount,
-                    SegmentEditUiState.MAX_TEXT_LENGTH,
-                ),
-                color = if (textError) {
-                    MaterialTheme.colorScheme.error
-                } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                },
-            )
-        },
-    )
+    Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm)) {
+        SectionLabel(text = stringResource(R.string.ux2_segment_section_text))
+        OutlinedTextField(
+            value = state.text,
+            onValueChange = onTextChange,
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !state.saving,
+            placeholder = {
+                Text(stringResource(R.string.ux2_segment_text_placeholder))
+            },
+            minLines = 4,
+            maxLines = 10,
+            isError = textError,
+            shape = MaterialTheme.shapes.large,
+            supportingText = {
+                Text(
+                    text = stringResource(
+                        R.string.ux2_segment_text_hint,
+                        state.characterCount,
+                        SegmentEditUiState.MAX_TEXT_LENGTH,
+                    ),
+                    color = if (textError) {
+                        MaterialTheme.colorScheme.error
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                )
+            },
+        )
+    }
 }
 
 @Composable
 private fun ValidationCard(errors: List<SegmentEditError>) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.errorContainer,
-        ),
+    ForgeCard(
+        containerColor = MaterialTheme.colorScheme.errorContainer,
+        contentPadding = PaddingValues(MaterialTheme.spacing.lg),
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm),
         ) {
+            ForgeIcon(
+                icon = ForgeIcons.AlertCircle,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onErrorContainer,
+            )
             Text(
-                text = stringResource(R.string.segment_edit_validation_title),
+                text = stringResource(R.string.ux2_segment_validation_title),
                 modifier = Modifier.semantics {
                     liveRegion = LiveRegionMode.Polite
                 },
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
+                style = MaterialTheme.typography.titleSmallEmphasized,
                 color = MaterialTheme.colorScheme.onErrorContainer,
             )
-            errors.distinct().forEach { error ->
-                Text(
-                    text = error.message(),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onErrorContainer,
-                )
-            }
+        }
+        errors.distinct().forEach { error ->
+            Text(
+                text = error.message(),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onErrorContainer,
+            )
         }
     }
 }
@@ -516,125 +467,136 @@ private fun SaveErrorCard(
     enabled: Boolean,
     onRetry: () -> Unit,
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.errorContainer,
-        ),
+    ForgeCard(
+        containerColor = MaterialTheme.colorScheme.errorContainer,
+        contentPadding = PaddingValues(MaterialTheme.spacing.lg),
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm),
         ) {
+            ForgeIcon(
+                icon = ForgeIcons.AlertCircle,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onErrorContainer,
+            )
             Text(
-                text = stringResource(R.string.action_save_error, message),
+                text = stringResource(R.string.ux2_segment_save_error, message),
+                modifier = Modifier.semantics {
+                    liveRegion = LiveRegionMode.Polite
+                },
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onErrorContainer,
             )
-            TextButton(
-                onClick = onRetry,
-                enabled = enabled,
-                modifier = Modifier.heightIn(min = 48.dp),
-            ) {
-                Text(stringResource(R.string.action_retry))
-            }
         }
+        ForgeSecondaryAction(
+            icon = ForgeIcons.Refresh,
+            label = stringResource(R.string.ux2_segment_retry),
+            onClick = onRetry,
+            enabled = enabled,
+        )
     }
 }
 
 @Composable
-private fun SaveButton(
-    saving: Boolean,
-    enabled: Boolean,
+private fun SegmentFooter(
+    state: SegmentEditUiState,
+    onReset: () -> Unit,
+    onRegenerate: () -> Unit,
     onSave: () -> Unit,
 ) {
-    Button(
-        onClick = onSave,
-        enabled = enabled,
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .heightIn(min = 48.dp),
+            .padding(
+                start = MaterialTheme.spacing.lg,
+                end = MaterialTheme.spacing.lg,
+                top = MaterialTheme.spacing.sm,
+                bottom = MaterialTheme.spacing.lg,
+            ),
+        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm),
     ) {
-        if (saving) {
-            CircularProgressIndicator(
-                modifier = Modifier.size(18.dp),
-                strokeWidth = 2.dp,
+        Row(horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm)) {
+            ForgeSecondaryAction(
+                icon = ForgeIcons.RotateCcw,
+                label = stringResource(R.string.ux2_segment_reset),
+                onClick = onReset,
+                modifier = Modifier.weight(1f),
+                enabled = state.isDirty && !state.saving,
             )
-            Spacer(Modifier.width(8.dp))
-            Text(stringResource(R.string.action_saving))
-        } else {
-            Text(stringResource(R.string.action_save))
+            ForgeSecondaryAction(
+                icon = ForgeIcons.Refresh,
+                label = stringResource(R.string.ux2_segment_regenerate),
+                onClick = onRegenerate,
+                modifier = Modifier.weight(1f),
+                enabled = !state.saving,
+            )
         }
+        ForgePrimaryAction(
+            icon = ForgeIcons.Check,
+            label = stringResource(
+                if (state.saving) R.string.ux2_segment_saving else R.string.ux2_segment_save,
+            ),
+            onClick = onSave,
+            modifier = Modifier.fillMaxWidth(),
+            enabled = state.canSave,
+            loading = state.saving,
+        )
     }
 }
 
 @Composable
-private fun FieldLabel(text: String) {
+private fun SectionLabel(text: String) {
     Text(
         text = text,
-        style = MaterialTheme.typography.titleSmall,
-        fontWeight = FontWeight.SemiBold,
+        style = MaterialTheme.typography.titleMediumEmphasized,
     )
 }
 
 @Composable
 private fun roleLabel(option: SegmentRoleOption): String = when {
-    option.isNarrator -> stringResource(R.string.script_type_narration)
+    option.isNarrator -> stringResource(R.string.ux2_script_type_narration)
     option.name.isNotBlank() -> option.name
-    else -> stringResource(R.string.script_role_unknown)
+    else -> stringResource(R.string.ux2_script_unknown_role)
 }
 
 @Composable
-private fun emotionLabel(emotion: Emotion): String = stringResource(
-    R.string.segment_edit_emotion_option,
-    stringResource(emotion.labelRes()),
-    emotion.wire,
-)
-
-@Composable
 private fun SegmentEditError.message(): String = when (this) {
-    SegmentEditError.EmptyText -> stringResource(R.string.segment_edit_error_empty_text)
+    SegmentEditError.EmptyText -> stringResource(R.string.ux2_segment_error_empty)
     SegmentEditError.TextTooLong -> stringResource(
-        R.string.segment_edit_error_too_long,
+        R.string.ux2_segment_error_too_long,
         SegmentEditUiState.MAX_TEXT_LENGTH,
     )
     SegmentEditError.NarrationRequiresNarrator ->
-        stringResource(R.string.segment_edit_error_narration_role)
+        stringResource(R.string.ux2_segment_error_narration_role)
     SegmentEditError.DialogueRequiresRole ->
-        stringResource(R.string.segment_edit_error_dialogue_role)
-    SegmentEditError.UnknownRole -> stringResource(R.string.segment_edit_error_unknown_role)
+        stringResource(R.string.ux2_segment_error_dialogue_role)
+    SegmentEditError.UnknownRole -> stringResource(R.string.ux2_segment_error_unknown_role)
 }
 
 @StringRes
 private fun SegmentType.labelRes(): Int = when (this) {
-    SegmentType.Dialogue -> R.string.script_type_dialogue
-    SegmentType.Narration -> R.string.script_type_narration
+    SegmentType.Dialogue -> R.string.ux2_script_type_dialogue
+    SegmentType.Narration -> R.string.ux2_script_type_narration
 }
 
 @StringRes
 private fun Emotion.labelRes(): Int = when (this) {
-    Emotion.Neutral -> R.string.script_emotion_neutral
-    Emotion.Happy -> R.string.script_emotion_happy
-    Emotion.Sad -> R.string.script_emotion_sad
-    Emotion.Angry -> R.string.script_emotion_angry
-    Emotion.Anxious -> R.string.script_emotion_anxious
-    Emotion.Excited -> R.string.script_emotion_excited
-    Emotion.Surprised -> R.string.script_emotion_surprised
-    Emotion.SoftTone -> R.string.script_emotion_soft_tone
-    Emotion.Serious -> R.string.script_emotion_serious
-    Emotion.Calm -> R.string.script_emotion_calm
-    Emotion.Whispering -> R.string.script_emotion_whispering
+    Emotion.Neutral -> R.string.ux2_emotion_neutral
+    Emotion.Happy -> R.string.ux2_emotion_happy
+    Emotion.Sad -> R.string.ux2_emotion_sad
+    Emotion.Angry -> R.string.ux2_emotion_angry
+    Emotion.Anxious -> R.string.ux2_emotion_anxious
+    Emotion.Excited -> R.string.ux2_emotion_excited
+    Emotion.Surprised -> R.string.ux2_emotion_surprised
+    Emotion.SoftTone -> R.string.ux2_emotion_soft_tone
+    Emotion.Serious -> R.string.ux2_emotion_serious
+    Emotion.Calm -> R.string.ux2_emotion_calm
+    Emotion.Whispering -> R.string.ux2_emotion_whispering
 }
 
-/** 可编辑类型顺序与 §12.4 S07 一致：对白在前、旁白在后。 */
-private val EDITABLE_TYPES: List<SegmentType> = listOf(
-    SegmentType.Dialogue,
-    SegmentType.Narration,
-)
-
 // ---------------------------------------------------------------------------
-// Preview：对白正常态 / 旁白态 / 校验错误态 / 保存失败可重试态。
-// 演示文本只是预览数据；所有 UI 文案来自 strings.xml。
+// Preview：对白正常态 / 校验错误态。演示文本只是固定夹具。
 // ---------------------------------------------------------------------------
 
 private fun previewRoles(): List<SegmentRoleOption> = listOf(
@@ -643,9 +605,9 @@ private fun previewRoles(): List<SegmentRoleOption> = listOf(
     SegmentRoleOption(roleId = "role_0002", name = "顾青"),
 )
 
-@Preview(name = "SegmentEdit Dialogue", showBackground = true, backgroundColor = 0xFFF7F8FC)
+@Preview(name = "SegmentEdit Forge", showBackground = true, backgroundColor = 0xFFF7F9F8)
 @Composable
-private fun SegmentEditDialoguePreview() {
+private fun SegmentEditForgePreview() {
     AudioForgeTheme(dynamicColor = false) {
         Surface {
             SegmentEditSheetContent(
@@ -663,31 +625,7 @@ private fun SegmentEditDialoguePreview() {
     }
 }
 
-@Preview(name = "SegmentEdit Narration", showBackground = true, backgroundColor = 0xFFF7F8FC)
-@Composable
-private fun SegmentEditNarrationPreview() {
-    AudioForgeTheme(dynamicColor = false) {
-        Surface {
-            SegmentEditSheetContent(
-                state = SegmentEditUiState(
-                    segmentId = 8L,
-                    segmentNumber = 4,
-                    type = SegmentType.Narration,
-                    roleId = NARRATOR_ROLE_ID,
-                    emotion = Emotion.SoftTone,
-                    text = "山雨欲来，旧城的灯火在风里一盏盏暗下去。",
-                    roles = previewRoles(),
-                ),
-            )
-        }
-    }
-}
-
-@Preview(
-    name = "SegmentEdit Validation Error",
-    showBackground = true,
-    backgroundColor = 0xFFF7F8FC,
-)
+@Preview(name = "SegmentEdit Validation", showBackground = true, backgroundColor = 0xFFF7F9F8)
 @Composable
 private fun SegmentEditValidationPreview() {
     AudioForgeTheme(dynamicColor = false) {
@@ -701,27 +639,6 @@ private fun SegmentEditValidationPreview() {
                     emotion = Emotion.Neutral,
                     text = "",
                     roles = previewRoles(),
-                ),
-            )
-        }
-    }
-}
-
-@Preview(name = "SegmentEdit Save Error", showBackground = true, backgroundColor = 0xFFF7F8FC)
-@Composable
-private fun SegmentEditSaveErrorPreview() {
-    AudioForgeTheme(dynamicColor = false) {
-        Surface {
-            SegmentEditSheetContent(
-                state = SegmentEditUiState(
-                    segmentId = 10L,
-                    segmentNumber = 6,
-                    type = SegmentType.Dialogue,
-                    roleId = "role_0002",
-                    emotion = Emotion.Sad,
-                    text = "雨停了，他却还没有回来。",
-                    roles = previewRoles(),
-                    saveError = "database is locked",
                 ),
             )
         }
