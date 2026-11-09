@@ -1,6 +1,10 @@
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class)
+
 package com.estimatefaster.audioforge.feature.project
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -22,17 +26,14 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -45,12 +46,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -61,6 +63,12 @@ import com.estimatefaster.audioforge.data.db.CharacterEntity
 import com.estimatefaster.audioforge.data.db.ProjectSummary
 import com.estimatefaster.audioforge.ui.components.EmptyState
 import com.estimatefaster.audioforge.ui.components.ErrorState
+import com.estimatefaster.audioforge.ui.components.ExpressiveCard
+import com.estimatefaster.audioforge.ui.components.ExpressiveLoading
+import com.estimatefaster.audioforge.ui.components.ExpressiveOutlinedButton
+import com.estimatefaster.audioforge.ui.components.ExpressivePrimaryButton
+import com.estimatefaster.audioforge.ui.components.ExpressiveTonalButton
+import com.estimatefaster.audioforge.ui.components.ExpressiveWavyProgress
 import com.estimatefaster.audioforge.ui.components.ProgressRing
 import com.estimatefaster.audioforge.ui.components.RoleAvatar
 import com.estimatefaster.audioforge.ui.components.SectionHeader
@@ -68,12 +76,14 @@ import com.estimatefaster.audioforge.ui.components.StatusKind
 import com.estimatefaster.audioforge.ui.components.StatusPill
 import com.estimatefaster.audioforge.ui.components.StatusTone
 import com.estimatefaster.audioforge.ui.theme.AudioForgeTheme
+import com.estimatefaster.audioforge.ui.theme.spacing
+import kotlin.math.roundToInt
 
 /**
  * 项目详情页（P4-05 / 执行计划 §12.4 S04）。
  *
  * 有状态入口：从 [ProjectViewModel.state] 收集状态后委托给无状态版本，
- * 方便 Preview 与后续导航层复用。
+ * 方便 Preview 与后续导航层复用。Expressive 改版只调整呈现，状态机与回调不变。
  */
 @Composable
 fun ProjectScreen(
@@ -113,11 +123,11 @@ fun ProjectScreen(
 }
 
 /**
- * 无状态项目详情页。
- *
- * - 顶部：书名、来源、字符数、更多（重命名/删除）；
- * - 摘要/进度/控制/告警/人物条；
- * - 加载/错误/空态复用 P4-02 组件。
+ * 无状态项目详情页的 Expressive 布局：
+ * - primaryContainer 大圆角 hero 承载书名与来源；
+ * - 进度卡用 ProgressRing + Wavy 同时表达章节/片段两级进度；
+ * - 控制卡只保留一个高饱和“开始生成”主按钮，停止为次级操作；
+ * - 告警、人物、更多入口统一使用 [ExpressiveCard] 与主题间距。
  *
  * 批次执行尚未接入（P3-04）：[batchRunnerAvailable] 为 false 时开始/停止禁用，
  * 并显示“任务模块接入后可开始”。回调只做 UI 解耦，不直接访问仓库。
@@ -163,30 +173,11 @@ fun ProjectScreen(
                     }
                 },
                 title = {
-                    Column {
-                        Text(
-                            text = project?.title
-                                ?: stringResource(R.string.project_screen_title),
-                            modifier = Modifier.semantics { heading() },
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.SemiBold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                        if (project != null) {
-                            Text(
-                                text = stringResource(
-                                    R.string.project_header_meta,
-                                    project.sourceName,
-                                    project.charCount,
-                                ),
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                        }
-                    }
+                    Text(
+                        text = stringResource(R.string.project_screen_title),
+                        style = MaterialTheme.typography.titleMediumEmphasized,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 },
                 actions = {
                     if (project != null) {
@@ -195,56 +186,12 @@ fun ProjectScreen(
                                 onClick = { menuExpanded = true },
                                 modifier = Modifier.heightIn(min = 48.dp),
                             ) {
-                                Text(stringResource(R.string.action_more))
+                                Text(stringResource(R.string.ux_project_manage_menu))
                             }
                             DropdownMenu(
                                 expanded = menuExpanded,
                                 onDismissRequest = { menuExpanded = false },
                             ) {
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.project_more_chapters)) },
-                                    onClick = {
-                                        menuExpanded = false
-                                        onOpenChapters()
-                                    },
-                                )
-                                DropdownMenuItem(
-                                    text = {
-                                        Text(stringResource(R.string.project_more_characters))
-                                    },
-                                    onClick = {
-                                        menuExpanded = false
-                                        onOpenCharacters()
-                                    },
-                                )
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.project_more_player)) },
-                                    onClick = {
-                                        menuExpanded = false
-                                        onOpenPlayer()
-                                    },
-                                )
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.project_more_export)) },
-                                    onClick = {
-                                        menuExpanded = false
-                                        onOpenExport()
-                                    },
-                                )
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.project_more_storage)) },
-                                    onClick = {
-                                        menuExpanded = false
-                                        onOpenStorage()
-                                    },
-                                )
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.project_more_about)) },
-                                    onClick = {
-                                        menuExpanded = false
-                                        onOpenAbout()
-                                    },
-                                )
                                 DropdownMenuItem(
                                     text = { Text(stringResource(R.string.action_rename)) },
                                     onClick = {
@@ -276,7 +223,14 @@ fun ProjectScreen(
         },
     ) { padding ->
         when {
-            state.loading -> LoadingContent(modifier = Modifier.padding(padding))
+            state.loading -> Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+                contentAlignment = Alignment.Center,
+            ) {
+                ExpressiveLoading(label = stringResource(R.string.project_loading))
+            }
 
             loadError != null -> CenteredError(
                 message = stringResource(R.string.project_load_error, loadError),
@@ -284,7 +238,7 @@ fun ProjectScreen(
                 modifier = Modifier.padding(padding),
             )
 
-            state.isMissing -> CenteredError(
+            project == null -> CenteredError(
                 message = stringResource(R.string.project_missing_message),
                 onRetry = onRetry,
                 modifier = Modifier.padding(padding),
@@ -306,10 +260,17 @@ fun ProjectScreen(
 
             else -> ProjectContent(
                 state = state,
+                project = project,
                 contentPadding = padding,
                 batchRunnerAvailable = batchRunnerAvailable,
                 onStartBatch = onStartBatch,
                 onStopBatch = onStopBatch,
+                onOpenChapters = onOpenChapters,
+                onOpenCharacters = onOpenCharacters,
+                onOpenPlayer = onOpenPlayer,
+                onOpenExport = onOpenExport,
+                onOpenStorage = onOpenStorage,
+                onOpenAbout = onOpenAbout,
             )
         }
     }
@@ -340,23 +301,6 @@ fun ProjectScreen(
 }
 
 @Composable
-private fun LoadingContent(modifier: Modifier = Modifier) {
-    Column(
-        modifier = modifier.fillMaxSize(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        CircularProgressIndicator()
-        Spacer(Modifier.height(14.dp))
-        Text(
-            text = stringResource(R.string.project_loading),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
-}
-
-@Composable
 private fun CenteredError(
     message: String,
     onRetry: () -> Unit,
@@ -373,21 +317,35 @@ private fun CenteredError(
 @Composable
 private fun ProjectContent(
     state: ProjectUiState,
+    project: ProjectHeaderUi,
     contentPadding: PaddingValues,
     batchRunnerAvailable: Boolean,
     onStartBatch: () -> Unit,
     onStopBatch: () -> Unit,
+    onOpenChapters: () -> Unit,
+    onOpenCharacters: () -> Unit,
+    onOpenPlayer: () -> Unit,
+    onOpenExport: () -> Unit,
+    onOpenStorage: () -> Unit,
+    onOpenAbout: () -> Unit,
 ) {
     val stats = state.chapterStats
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
             .padding(contentPadding),
-        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
+        contentPadding = PaddingValues(
+            horizontal = MaterialTheme.spacing.lg,
+            vertical = MaterialTheme.spacing.md,
+        ),
+        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.md),
     ) {
-        item(key = "summary") {
-            SummaryRow(stats = stats)
+        item(key = "hero") {
+            ProjectHero(
+                project = project,
+                stats = stats,
+                onOpenChapters = onOpenChapters,
+            )
         }
         item(key = "progress") {
             ProgressCard(stats = stats)
@@ -402,120 +360,218 @@ private fun ProjectContent(
         }
         if (state.warnings.hasWarnings || stats.error > 0) {
             item(key = "warnings") {
-                WarningBanner(warnings = state.warnings, errorCount = stats.error)
+                WarningCard(
+                    warnings = state.warnings,
+                    errorCount = stats.error,
+                    onOpenChapters = onOpenChapters,
+                )
             }
         }
         if (state.characters.isNotEmpty()) {
             item(key = "characters") {
-                CharacterStrip(
+                CharacterCard(
                     characters = state.characters,
                     hiddenCount = state.hiddenCharacterCount,
+                    onOpenCharacters = onOpenCharacters,
                 )
             }
+        }
+        item(key = "more") {
+            MoreCard(
+                onOpenChapters = onOpenChapters,
+                onOpenCharacters = onOpenCharacters,
+                onOpenPlayer = onOpenPlayer,
+                onOpenExport = onOpenExport,
+                onOpenStorage = onOpenStorage,
+                onOpenAbout = onOpenAbout,
+            )
         }
     }
 }
 
 @Composable
-private fun SummaryRow(stats: ChapterStatsUi) {
-    Row(
-        modifier = Modifier.horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically,
+private fun ProjectHero(
+    project: ProjectHeaderUi,
+    stats: ChapterStatsUi,
+    onOpenChapters: () -> Unit,
+) {
+    val content = MaterialTheme.colorScheme.onPrimaryContainer
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.extraExtraLarge,
+        color = MaterialTheme.colorScheme.primaryContainer,
+        contentColor = content,
     ) {
-        StatusPill(
-            text = stringResource(R.string.project_chapter_total, stats.total),
-            tone = StatusTone.Neutral,
-        )
-        StatusPill(
-            kind = StatusKind.Parse,
-            status = stats.parseAggregateStatus(),
-        )
-        StatusPill(
-            kind = StatusKind.Audio,
-            status = stats.audioAggregateStatus(),
-        )
+        Box {
+            Canvas(
+                modifier = Modifier
+                    .matchParentSize()
+                    .clearAndSetSemantics { },
+            ) {
+                drawCircle(
+                    color = content.copy(alpha = 0.08f),
+                    radius = size.minDimension * 0.55f,
+                    center = Offset(size.width * 0.92f, size.height * 0.08f),
+                )
+                drawCircle(
+                    color = content.copy(alpha = 0.05f),
+                    radius = size.minDimension * 0.35f,
+                    center = Offset(size.width * 0.72f, size.height * 0.98f),
+                )
+            }
+            Column(
+                modifier = Modifier.padding(MaterialTheme.spacing.xl),
+                verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm),
+            ) {
+                Text(
+                    text = stringResource(R.string.ux_project_hero_label),
+                    style = MaterialTheme.typography.labelLargeEmphasized,
+                    color = content.copy(alpha = 0.8f),
+                )
+                Text(
+                    text = project.title,
+                    modifier = Modifier.semantics { heading() },
+                    style = MaterialTheme.typography.headlineMediumEmphasized,
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    text = stringResource(
+                        R.string.project_header_meta,
+                        project.sourceName,
+                        project.charCount,
+                    ),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = content.copy(alpha = 0.8f),
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Row(
+                    modifier = Modifier
+                        .horizontalScroll(rememberScrollState())
+                        .padding(top = MaterialTheme.spacing.xs),
+                    horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm),
+                ) {
+                    StatusPill(
+                        text = stringResource(R.string.project_chapter_total, stats.total),
+                        tone = StatusTone.Neutral,
+                    )
+                    StatusPill(
+                        kind = StatusKind.Parse,
+                        status = stats.parseAggregateStatus(),
+                    )
+                    StatusPill(
+                        kind = StatusKind.Audio,
+                        status = stats.audioAggregateStatus(),
+                    )
+                }
+                if (stats.total > 0) {
+                    ExpressiveTonalButton(
+                        text = stringResource(R.string.ux_project_hero_open_chapters),
+                        onClick = onOpenChapters,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+            }
+        }
     }
 }
 
 @Composable
 private fun ProgressCard(stats: ChapterStatsUi) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-    ) {
-        Column(
-            modifier = Modifier.padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+    val segmentProgress = if (stats.segmentsTotal <= 0) {
+        0f
+    } else {
+        (stats.segmentsDone.toFloat() / stats.segmentsTotal).coerceIn(0f, 1f)
+    }
+    val segmentPercent = (segmentProgress * 100f).roundToInt()
+    val segmentDescription = stringResource(
+        R.string.ux_project_progress_wavy_content_description,
+        segmentPercent,
+    )
+
+    ExpressiveCard {
+        SectionHeader(title = stringResource(R.string.project_progress_title))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.lg),
         ) {
-            SectionHeader(title = stringResource(R.string.project_progress_title))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                ProgressRing(
-                    progress = stats.progress,
-                    label = stringResource(R.string.project_progress_ring_label),
-                    diameter = 104.dp,
-                    strokeWidth = 9.dp,
+            ProgressRing(
+                progress = stats.progress,
+                label = stringResource(R.string.project_progress_ring_label),
+                diameter = 104.dp,
+                strokeWidth = 9.dp,
+            )
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm),
+            ) {
+                Text(
+                    text = stringResource(
+                        R.string.project_progress_chapters,
+                        stats.done,
+                        stats.total,
+                    ),
+                    style = MaterialTheme.typography.titleMediumEmphasized,
                 )
-                Spacer(Modifier.width(18.dp))
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                Text(
+                    text = stringResource(
+                        R.string.project_progress_segments,
+                        stats.segmentsDone,
+                        stats.segmentsTotal,
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Row(
+                    modifier = Modifier
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm),
                 ) {
-                    Text(
+                    StatusPill(
                         text = stringResource(
-                            R.string.project_progress_chapters,
+                            R.string.project_chapter_stat_done,
                             stats.done,
-                            stats.total,
                         ),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
+                        tone = StatusTone.Success,
                     )
-                    Text(
+                    StatusPill(
                         text = stringResource(
-                            R.string.project_progress_segments,
-                            stats.segmentsDone,
-                            stats.segmentsTotal,
+                            R.string.project_chapter_stat_running,
+                            stats.running,
                         ),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        tone = StatusTone.Running,
                     )
-                    Row(
-                        modifier = Modifier.horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
+                    StatusPill(
+                        text = stringResource(
+                            R.string.project_chapter_stat_error,
+                            stats.error,
+                        ),
+                        tone = StatusTone.Danger,
+                    )
+                    if (stats.pending > 0) {
                         StatusPill(
                             text = stringResource(
-                                R.string.project_chapter_stat_done,
-                                stats.done,
+                                R.string.project_chapter_stat_pending,
+                                stats.pending,
                             ),
-                            tone = StatusTone.Success,
+                            tone = StatusTone.Neutral,
                         )
-                        StatusPill(
-                            text = stringResource(
-                                R.string.project_chapter_stat_running,
-                                stats.running,
-                            ),
-                            tone = StatusTone.Running,
-                        )
-                        StatusPill(
-                            text = stringResource(
-                                R.string.project_chapter_stat_error,
-                                stats.error,
-                            ),
-                            tone = StatusTone.Danger,
-                        )
-                        if (stats.pending > 0) {
-                            StatusPill(
-                                text = stringResource(
-                                    R.string.project_chapter_stat_pending,
-                                    stats.pending,
-                                ),
-                                tone = StatusTone.Neutral,
-                            )
-                        }
                     }
                 }
             }
+        }
+        Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.xs)) {
+            Text(
+                text = stringResource(R.string.ux_project_progress_wavy_label),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            ExpressiveWavyProgress(
+                progress = segmentProgress,
+                modifier = Modifier.semantics { contentDescription = segmentDescription },
+            )
         }
     }
 }
@@ -527,112 +583,125 @@ private fun ControlCard(
     onStartBatch: () -> Unit,
     onStopBatch: () -> Unit,
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-    ) {
-        Column(
-            modifier = Modifier.padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            SectionHeader(title = stringResource(R.string.project_control_title))
-            Text(
-                text = stringResource(R.string.project_control_description),
+    ExpressiveCard {
+        SectionHeader(title = stringResource(R.string.project_control_title))
+        Text(
+            text = stringResource(R.string.ux_project_control_description),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        ExpressivePrimaryButton(
+            text = stringResource(R.string.batch_action_start),
+            onClick = onStartBatch,
+            enabled = batchRunnerAvailable && !running,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        when {
+            !batchRunnerAvailable -> Text(
+                text = stringResource(R.string.project_control_unavailable),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                FilledTonalButton(
-                    onClick = onStartBatch,
-                    enabled = batchRunnerAvailable && !running,
-                    modifier = Modifier.heightIn(min = 48.dp),
-                ) {
-                    Text(stringResource(R.string.project_action_start))
-                }
-                OutlinedButton(
-                    onClick = onStopBatch,
-                    enabled = batchRunnerAvailable && running,
-                    modifier = Modifier.heightIn(min = 48.dp),
-                ) {
-                    Text(stringResource(R.string.project_action_stop))
-                }
-            }
-            if (!batchRunnerAvailable) {
-                Text(
-                    text = stringResource(R.string.project_control_unavailable),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            } else if (running) {
+
+            running -> {
                 Text(
                     text = stringResource(R.string.project_control_running),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                ExpressiveOutlinedButton(
+                    text = stringResource(R.string.batch_action_stop),
+                    onClick = onStopBatch,
+                    enabled = batchRunnerAvailable,
+                    modifier = Modifier.fillMaxWidth(),
+                )
             }
+
+            else -> Text(
+                text = stringResource(R.string.ux_project_control_ready),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }
 
 @Composable
-private fun WarningBanner(
+private fun WarningCard(
     warnings: WarningSummaryUi,
     errorCount: Int,
+    onOpenChapters: () -> Unit,
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.secondaryContainer,
-        ),
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
+    ExpressiveCard(onClick = onOpenChapters) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.md),
+            verticalAlignment = Alignment.Top,
         ) {
-            Text(
-                text = stringResource(R.string.project_warning_title),
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSecondaryContainer,
-            )
-            if (warnings.hasWarnings) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.secondaryContainer)
+                    .clearAndSetSemantics { },
+                contentAlignment = Alignment.Center,
+            ) {
                 Text(
-                    text = stringResource(
-                        R.string.project_warning_summary,
-                        warnings.warningCount,
-                        warnings.summary,
-                    ),
-                    style = MaterialTheme.typography.bodyMedium,
+                    text = "!",
+                    style = MaterialTheme.typography.titleMediumEmphasized,
                     color = MaterialTheme.colorScheme.onSecondaryContainer,
                 )
             }
-            if (errorCount > 0) {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.xs),
+            ) {
                 Text(
-                    text = stringResource(R.string.project_error_summary, errorCount),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                    text = stringResource(R.string.project_warning_title),
+                    style = MaterialTheme.typography.titleMediumEmphasized,
                 )
+                if (warnings.hasWarnings) {
+                    Text(
+                        text = stringResource(
+                            R.string.project_warning_summary,
+                            warnings.warningCount,
+                            warnings.summary,
+                        ),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                if (errorCount > 0) {
+                    Text(
+                        text = stringResource(R.string.project_error_summary, errorCount),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
         }
     }
 }
 
 @Composable
-private fun CharacterStrip(
+private fun CharacterCard(
     characters: List<CharacterUi>,
     hiddenCount: Int,
+    onOpenCharacters: () -> Unit,
 ) {
-    Column {
+    ExpressiveCard {
         SectionHeader(
             title = stringResource(R.string.project_characters_title),
             subtitle = stringResource(
                 R.string.project_characters_subtitle,
                 characters.size + hiddenCount,
             ),
+            actionText = stringResource(R.string.action_view_all),
+            onAction = onOpenCharacters,
         )
         LazyRow(
-            horizontalArrangement = Arrangement.spacedBy(14.dp),
-            contentPadding = PaddingValues(vertical = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.md),
+            contentPadding = PaddingValues(vertical = MaterialTheme.spacing.xs),
         ) {
             items(items = characters, key = { it.roleId }) { character ->
                 CharacterItem(character = character)
@@ -656,7 +725,7 @@ private fun CharacterItem(character: CharacterUi) {
     ) {
         // 头像旁已有可见名字，装饰化以避免同一个人物被读两遍。
         RoleAvatar(name = character.name, decorative = true)
-        Spacer(Modifier.height(4.dp))
+        Spacer(Modifier.height(MaterialTheme.spacing.xs))
         Text(
             text = character.name,
             style = MaterialTheme.typography.labelMedium,
@@ -683,13 +752,12 @@ private fun MoreCharactersBadge(count: Int) {
         ) {
             Text(
                 text = stringResource(R.string.project_characters_more_badge, count),
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.SemiBold,
+                style = MaterialTheme.typography.labelLargeEmphasized,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
             )
         }
-        Spacer(Modifier.height(4.dp))
+        Spacer(Modifier.height(MaterialTheme.spacing.xs))
         Text(
             text = stringResource(R.string.project_characters_more, count),
             style = MaterialTheme.typography.labelMedium,
@@ -697,6 +765,85 @@ private fun MoreCharactersBadge(count: Int) {
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
+    }
+}
+
+@Composable
+private fun MoreCard(
+    onOpenChapters: () -> Unit,
+    onOpenCharacters: () -> Unit,
+    onOpenPlayer: () -> Unit,
+    onOpenExport: () -> Unit,
+    onOpenStorage: () -> Unit,
+    onOpenAbout: () -> Unit,
+) {
+    ExpressiveCard {
+        SectionHeader(
+            title = stringResource(R.string.ux_project_more_title),
+            subtitle = stringResource(R.string.ux_project_more_subtitle),
+        )
+        MoreActionRow(
+            label = stringResource(R.string.project_more_chapters),
+            onClick = onOpenChapters,
+        )
+        MoreActionRow(
+            label = stringResource(R.string.project_more_characters),
+            onClick = onOpenCharacters,
+        )
+        MoreActionRow(
+            label = stringResource(R.string.project_more_player),
+            onClick = onOpenPlayer,
+        )
+        MoreActionRow(
+            label = stringResource(R.string.project_more_export),
+            onClick = onOpenExport,
+        )
+        MoreActionRow(
+            label = stringResource(R.string.project_more_storage),
+            onClick = onOpenStorage,
+        )
+        MoreActionRow(
+            label = stringResource(R.string.project_more_about),
+            onClick = onOpenAbout,
+            showDivider = false,
+        )
+    }
+}
+
+@Composable
+private fun MoreActionRow(
+    label: String,
+    onClick: () -> Unit,
+    showDivider: Boolean = true,
+) {
+    Column {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 48.dp)
+                .clip(MaterialTheme.shapes.large)
+                .clickable(role = Role.Button, onClick = onClick)
+                .padding(
+                    horizontal = MaterialTheme.spacing.sm,
+                    vertical = MaterialTheme.spacing.md,
+                ),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = label,
+                modifier = Modifier.weight(1f),
+                style = MaterialTheme.typography.bodyLargeEmphasized,
+            )
+            Text(
+                text = "›",
+                modifier = Modifier.clearAndSetSemantics { },
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.primary,
+            )
+        }
+        if (showDivider) {
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+        }
     }
 }
 
@@ -711,15 +858,17 @@ private fun RenameDialog(
     val trimmed = value.trim()
     AlertDialog(
         onDismissRequest = onDismiss,
+        shape = MaterialTheme.shapes.extraLarge,
         title = { Text(stringResource(R.string.project_rename_title)) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.xs)) {
                 OutlinedTextField(
                     value = value,
                     onValueChange = onValueChange,
                     label = { Text(stringResource(R.string.project_rename_label)) },
                     singleLine = true,
                     isError = trimmed.isEmpty(),
+                    shape = MaterialTheme.shapes.large,
                     modifier = Modifier.fillMaxWidth(),
                 )
                 if (trimmed.isEmpty()) {
@@ -741,12 +890,16 @@ private fun RenameDialog(
             TextButton(
                 onClick = { onConfirm(trimmed) },
                 enabled = trimmed.isNotEmpty(),
+                modifier = Modifier.heightIn(min = 48.dp),
             ) {
                 Text(stringResource(R.string.action_save))
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            TextButton(
+                onClick = onDismiss,
+                modifier = Modifier.heightIn(min = 48.dp),
+            ) {
                 Text(stringResource(R.string.action_cancel))
             }
         },
@@ -761,10 +914,14 @@ private fun DeleteDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
+        shape = MaterialTheme.shapes.extraLarge,
         title = { Text(stringResource(R.string.project_delete_title)) },
         text = { Text(stringResource(R.string.project_delete_message, title)) },
         confirmButton = {
-            TextButton(onClick = onConfirm) {
+            TextButton(
+                onClick = onConfirm,
+                modifier = Modifier.heightIn(min = 48.dp),
+            ) {
                 Text(
                     text = stringResource(R.string.action_delete),
                     color = MaterialTheme.colorScheme.error,
@@ -772,7 +929,10 @@ private fun DeleteDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            TextButton(
+                onClick = onDismiss,
+                modifier = Modifier.heightIn(min = 48.dp),
+            ) {
                 Text(stringResource(R.string.action_cancel))
             }
         },
@@ -780,7 +940,7 @@ private fun DeleteDialog(
 }
 
 // ---------------------------------------------------------------------------
-// Preview：正常 / 空项目 / 错误态。所有文案来自 strings.xml。
+// Preview：正常 / 空项目 / 错误态 / 深色 200%。所有文案来自 strings.xml。
 // ---------------------------------------------------------------------------
 
 private fun previewProject(
@@ -886,6 +1046,22 @@ private fun ProjectScreenErrorPreview() {
     AudioForgeTheme(dynamicColor = false) {
         ProjectScreen(
             state = ProjectUiState(loading = false, loadError = "database is locked"),
+        )
+    }
+}
+
+@Preview(
+    name = "ProjectScreen Dark 200%",
+    showBackground = true,
+    uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES,
+    fontScale = 2f,
+)
+@Composable
+private fun ProjectScreenDarkPreview() {
+    AudioForgeTheme(darkTheme = true, dynamicColor = false) {
+        ProjectScreen(
+            state = previewNormalState(),
+            batchRunnerAvailable = true,
         )
     }
 }

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Expressive 项目详情/章节/批次/微调新增文案；通用 key 继续复用 strings.xml。 -->
+<resources>
+    <string name="ux_project_hero_label">有声书项目</string>
+    <string name="ux_project_hero_open_chapters">查看章节</string>
+    <string name="ux_project_progress_wavy_label">片段进度</string>
+    <string name="ux_project_progress_wavy_content_description">片段进度 %1$d%%</string>
+    <string name="ux_project_control_description">选择范围与生成模式后开始；已完成的章节会被跳过。</string>
+    <string name="ux_project_control_ready">准备就绪，可以开始生成。</string>
+    <string name="ux_project_more_title">更多</string>
+    <string name="ux_project_more_subtitle">章节、人物与导出</string>
+    <string name="ux_project_manage_menu">管理</string>
+
+    <string name="ux_chapter_list_loaded_count">已加载 %1$d 章</string>
+    <string name="ux_chapter_list_segment_content_description">第 %1$d 章片段进度 %2$d%%</string>
+
+    <string name="ux_batch_mode_subtitle">模式决定本次调用哪些服务</string>
+    <string name="ux_batch_mode_full_desc">解析剧本并生成音频</string>
+    <string name="ux_batch_mode_parse_desc">只解析剧本，不生成音频</string>
+    <string name="ux_batch_mode_render_desc">只生成音频，跳过解析</string>
+    <string name="ux_batch_selected_count">已选 %1$d 章</string>
+    <string name="ux_batch_start_hint">开始前会再次校验范围与 Key。</string>
+
+    <string name="ux_tuning_header_label">角色微调</string>
+    <string name="ux_tuning_range_label">范围 %1$s</string>
+    <string name="ux_tuning_no_changes">暂无改动</string>
+    <string name="ux_tuning_save_hint">保存后立即应用到该角色的后续生成。</string>
+</resources>
