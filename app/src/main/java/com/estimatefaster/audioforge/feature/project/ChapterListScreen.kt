@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class)
+
 package com.estimatefaster.audioforge.feature.project
 
 import android.content.res.Configuration
@@ -14,7 +16,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -24,18 +25,14 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -54,12 +51,11 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -68,10 +64,15 @@ import com.estimatefaster.audioforge.R
 import com.estimatefaster.audioforge.ui.components.EmptyState
 import com.estimatefaster.audioforge.ui.components.ErrorBanner
 import com.estimatefaster.audioforge.ui.components.ErrorState
+import com.estimatefaster.audioforge.ui.components.ExpressiveChip
+import com.estimatefaster.audioforge.ui.components.ExpressiveLoading
+import com.estimatefaster.audioforge.ui.components.ExpressiveWavyProgress
 import com.estimatefaster.audioforge.ui.components.StatusKind
 import com.estimatefaster.audioforge.ui.components.StatusPill
 import com.estimatefaster.audioforge.ui.theme.AudioForgeTheme
+import com.estimatefaster.audioforge.ui.theme.spacing
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlin.math.roundToInt
 
 /**
  * 章节列表（P4-07 / 执行计划 §12.4 S04 的章节区）。
@@ -106,12 +107,11 @@ fun ChapterListScreen(
 }
 
 /**
- * 无状态章节列表。
- *
- * - 顶部：返回 + 标题“章节”；
- * - 搜索框（标题）+ 状态筛选（全部/解析中/解析失败/音频完成/未完成）；
- * - `LazyColumn` 稳定 key（章节主键），接近底部由 `LaunchedEffect` 触发加载更多；
- * - 空态/首屏错误/加载态复用 P4-02 的 [EmptyState]/[ErrorState]。
+ * 无状态章节列表的 Expressive 布局：
+ * - 顶部搜索框 + [ExpressiveChip] 横向筛选；
+ * - 章节行是 tonal 大圆角卡片，状态用 pill、片段进度用 Wavy；
+ * - 空态/加载/首屏错误统一走共享状态组件；
+ * - 分页触发条件与原来完全一致（最后 3 行、失败后手动重试）。
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -147,8 +147,7 @@ fun ChapterListScreen(
                     Text(
                         text = stringResource(R.string.chapter_list_title),
                         modifier = Modifier.semantics { heading() },
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.SemiBold,
+                        style = MaterialTheme.typography.titleLargeEmphasized,
                     )
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -167,7 +166,12 @@ fun ChapterListScreen(
                 onValueChange = onQueryChange,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 20.dp, end = 20.dp, top = 8.dp),
+                    .padding(
+                        start = MaterialTheme.spacing.lg,
+                        end = MaterialTheme.spacing.lg,
+                        top = MaterialTheme.spacing.sm,
+                    ),
+                shape = MaterialTheme.shapes.extraLarge,
                 label = { Text(stringResource(R.string.chapter_list_search_label)) },
                 placeholder = { Text(stringResource(R.string.chapter_list_search_placeholder)) },
                 singleLine = true,
@@ -186,22 +190,30 @@ fun ChapterListScreen(
                 selected = state.filter,
                 onFilterChange = onFilterChange,
             )
+            if (state.chapters.isNotEmpty() || state.hasActiveFilters) {
+                ChapterListSummaryBar(
+                    loadedCount = state.loadedCount,
+                    hasActiveFilters = state.hasActiveFilters,
+                    onClearFilters = onClearFilters,
+                )
+            }
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f),
             ) {
                 when {
-                    state.isInitialLoading -> ChapterListLoading(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 24.dp),
-                    )
+                    state.isInitialLoading -> Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        ExpressiveLoading(label = stringResource(R.string.chapter_list_loading))
+                    }
 
                     loadError != null -> Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(horizontal = 12.dp),
+                            .padding(horizontal = MaterialTheme.spacing.md),
                         contentAlignment = Alignment.Center,
                     ) {
                         ErrorState(
@@ -239,15 +251,50 @@ private fun ChapterFilterRow(
         modifier = Modifier
             .fillMaxWidth()
             .horizontalScroll(rememberScrollState())
-            .padding(horizontal = 20.dp, vertical = 4.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+            .padding(
+                horizontal = MaterialTheme.spacing.lg,
+                vertical = MaterialTheme.spacing.sm,
+            ),
+        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm),
     ) {
         ChapterFilter.entries.forEach { filter ->
-            FilterChip(
+            ExpressiveChip(
+                label = stringResource(filter.labelRes()),
                 selected = filter == selected,
                 onClick = { onFilterChange(filter) },
-                label = { Text(stringResource(filter.labelRes())) },
             )
+        }
+    }
+}
+
+@Composable
+private fun ChapterListSummaryBar(
+    loadedCount: Int,
+    hasActiveFilters: Boolean,
+    onClearFilters: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(
+                horizontal = MaterialTheme.spacing.lg,
+                vertical = MaterialTheme.spacing.xs,
+            ),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = stringResource(R.string.ux_chapter_list_loaded_count, loadedCount),
+            modifier = Modifier.weight(1f),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        if (hasActiveFilters) {
+            TextButton(
+                onClick = onClearFilters,
+                modifier = Modifier.heightIn(min = 48.dp),
+            ) {
+                Text(stringResource(R.string.chapter_list_filtered_empty_action))
+            }
         }
     }
 }
@@ -261,7 +308,7 @@ private fun ChapterListEmpty(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 12.dp),
+            .padding(horizontal = MaterialTheme.spacing.md),
         contentAlignment = Alignment.Center,
     ) {
         EmptyState(
@@ -287,23 +334,6 @@ private fun ChapterListEmpty(
                 },
             ),
             onAction = if (filtered) onClearFilters else onBack,
-        )
-    }
-}
-
-@Composable
-private fun ChapterListLoading(modifier: Modifier = Modifier) {
-    Column(
-        modifier = modifier,
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        CircularProgressIndicator()
-        Spacer(Modifier.height(14.dp))
-        Text(
-            text = stringResource(R.string.chapter_list_loading),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }
@@ -348,9 +378,12 @@ private fun ChapterList(
         state = listState,
         modifier = Modifier
             .fillMaxSize()
-            .padding(top = 4.dp),
-        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
+            .padding(top = MaterialTheme.spacing.xs),
+        contentPadding = PaddingValues(
+            horizontal = MaterialTheme.spacing.lg,
+            vertical = MaterialTheme.spacing.md,
+        ),
+        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.md),
     ) {
         items(
             items = state.chapters,
@@ -378,7 +411,7 @@ private fun ChapterRow(
     onRerender: (Long) -> Unit,
 ) {
     var menuExpanded by rememberSaveable(chapter.id) { mutableStateOf(false) }
-    val cardShape = MaterialTheme.shapes.medium
+    val cardShape = MaterialTheme.shapes.extraLarge
     val openScriptLabel = stringResource(R.string.chapter_list_action_open_script)
     val moreLabel = stringResource(R.string.action_more)
     val moreDescription = stringResource(
@@ -386,7 +419,7 @@ private fun ChapterRow(
         chapter.number,
     )
 
-    Card(
+    Surface(
         modifier = Modifier
             .fillMaxWidth()
             .clip(cardShape)
@@ -397,55 +430,45 @@ private fun ChapterRow(
                 onClick = { onOpenScript(chapter.id) },
             ),
         shape = cardShape,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        tonalElevation = 0.dp,
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+            modifier = Modifier.padding(
+                horizontal = MaterialTheme.spacing.lg,
+                vertical = MaterialTheme.spacing.md,
+            ),
             verticalAlignment = Alignment.Top,
         ) {
             ChapterNumberBadge(number = chapter.number)
-            Spacer(Modifier.width(12.dp))
+            Spacer(Modifier.width(MaterialTheme.spacing.md))
             Column(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm),
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = chapter.title,
                         modifier = Modifier.weight(1f),
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold,
+                        style = MaterialTheme.typography.titleSmallEmphasized,
                         maxLines = 3,
                         overflow = TextOverflow.Ellipsis,
                     )
                     if (chapter.hasWarning) {
-                        Spacer(Modifier.width(6.dp))
+                        Spacer(Modifier.width(MaterialTheme.spacing.xs))
                         WarningIcon()
                     }
                 }
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     StatusPill(kind = StatusKind.Parse, status = chapter.parseStatus)
                     StatusPill(kind = StatusKind.Audio, status = chapter.audioStatus)
                 }
                 if (chapter.hasSegments) {
-                    Text(
-                        text = stringResource(
-                            R.string.chapter_list_item_segments,
-                            chapter.segmentDone,
-                            chapter.segmentTotal,
-                        ),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    LinearProgressIndicator(
-                        progress = { chapter.segmentProgress },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(4.dp),
-                    )
+                    ChapterSegmentProgress(chapter = chapter)
                 }
             }
             Box {
@@ -489,20 +512,55 @@ private fun ChapterRow(
 }
 
 @Composable
+private fun ChapterSegmentProgress(chapter: ChapterListItemUi) {
+    val percent = (chapter.segmentProgress * 100f).roundToInt()
+    val description = stringResource(
+        R.string.ux_chapter_list_segment_content_description,
+        chapter.number,
+        percent,
+    )
+    Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.xs)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = stringResource(
+                    R.string.chapter_list_item_segments,
+                    chapter.segmentDone,
+                    chapter.segmentTotal,
+                ),
+                modifier = Modifier.weight(1f),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                text = stringResource(R.string.progress_percent, percent),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.primary,
+            )
+        }
+        ExpressiveWavyProgress(
+            progress = chapter.segmentProgress,
+            modifier = Modifier.semantics { contentDescription = description },
+        )
+    }
+}
+
+@Composable
 private fun ChapterNumberBadge(number: Int) {
     Box(
         modifier = Modifier
             .sizeIn(minWidth = 36.dp, minHeight = 36.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant)
-            .padding(horizontal = 6.dp, vertical = 4.dp),
+            .clip(MaterialTheme.shapes.large)
+            .background(MaterialTheme.colorScheme.primaryContainer)
+            .padding(
+                horizontal = MaterialTheme.spacing.sm,
+                vertical = MaterialTheme.spacing.xs,
+            ),
         contentAlignment = Alignment.Center,
     ) {
         Text(
             text = number.toString(),
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.labelLargeEmphasized,
+            color = MaterialTheme.colorScheme.onPrimaryContainer,
             maxLines = 1,
         )
     }
@@ -551,7 +609,7 @@ private fun ChapterListFooter(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp),
+            .padding(vertical = MaterialTheme.spacing.sm),
         contentAlignment = Alignment.Center,
     ) {
         if (loadMoreError != null) {
@@ -563,12 +621,9 @@ private fun ChapterListFooter(
             Row(
                 modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm),
             ) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(18.dp),
-                    strokeWidth = 2.dp,
-                )
+                LoadingIndicator(modifier = Modifier.size(24.dp))
                 Text(
                     text = stringResource(R.string.chapter_list_loading_more),
                     style = MaterialTheme.typography.bodySmall,
@@ -601,7 +656,7 @@ private fun ChapterFilter.labelRes(): Int = when (this) {
 }
 
 // ---------------------------------------------------------------------------
-// Preview：正常列表 / 筛选空结果 / 加载 / 错误。所有文案来自 strings.xml。
+// Preview：正常列表 / 筛选空结果 / 加载 / 错误 / 200%。所有文案来自 strings.xml。
 // ---------------------------------------------------------------------------
 
 private fun previewChapter(
@@ -683,6 +738,25 @@ private fun ChapterListErrorPreview() {
             state = ChapterListUiState(
                 loading = false,
                 loadError = "database is locked",
+            ),
+        )
+    }
+}
+
+@Preview(
+    name = "ChapterList Dark 200%",
+    showBackground = true,
+    uiMode = Configuration.UI_MODE_NIGHT_YES,
+    fontScale = 2f,
+)
+@Composable
+private fun ChapterListDarkPreview() {
+    AudioForgeTheme(darkTheme = true, dynamicColor = false) {
+        ChapterListScreen(
+            state = ChapterListUiState(
+                loading = false,
+                chapters = previewChapters(),
+                hasMore = false,
             ),
         )
     }

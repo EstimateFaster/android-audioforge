@@ -1,29 +1,24 @@
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class)
+
 package com.estimatefaster.audioforge.feature.project
 
 import android.content.res.Configuration
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -31,19 +26,23 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.estimatefaster.audioforge.R
 import com.estimatefaster.audioforge.data.repository.TuningDefaults
 import com.estimatefaster.audioforge.data.repository.TuningRanges
 import com.estimatefaster.audioforge.ui.components.ErrorState
+import com.estimatefaster.audioforge.ui.components.ExpressiveCard
+import com.estimatefaster.audioforge.ui.components.ExpressiveLoading
+import com.estimatefaster.audioforge.ui.components.ExpressivePrimaryButton
+import com.estimatefaster.audioforge.ui.components.ExpressiveTextButton
 import com.estimatefaster.audioforge.ui.components.SectionHeader
 import com.estimatefaster.audioforge.ui.theme.AudioForgeTheme
+import com.estimatefaster.audioforge.ui.theme.spacing
 
 /**
  * 角色微调 Sheet（P5-06 / 执行计划 §12.4 S09、§15 P5-06）。
@@ -81,6 +80,7 @@ fun TuningSheet(
         onDismissRequest = onDismiss,
         modifier = modifier,
         sheetState = sheetState,
+        shape = MaterialTheme.shapes.extraExtraLarge,
     ) {
         TuningSheetContent(
             state = state,
@@ -98,8 +98,9 @@ fun TuningSheet(
 /**
  * 无状态 Sheet 内容；Preview 与 UI 测试直接渲染它。
  *
- * 布局：标题/角色/音色 → 三个滑杆 + 当前值 + 范围 + “跟随全局”提示 → 恢复默认
- * → 校验/保存错误 → 取消/保存。文案全部来自 `strings.xml`。
+ * Expressive 布局：primaryContainer 头卡 → 参数卡（三个滑杆 + 范围/跟随全局）
+ * → 校验/保存错误卡 → 唯一“保存”主按钮 + 取消。保存条件仍由
+ * [TuningUiState.canSave] 决定。
  */
 @Composable
 fun TuningSheetContent(
@@ -121,18 +122,32 @@ fun TuningSheetContent(
             .fillMaxWidth()
             .navigationBarsPadding()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 24.dp)
-            .padding(top = 8.dp, bottom = 24.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+            .padding(horizontal = MaterialTheme.spacing.xl)
+            .padding(
+                top = MaterialTheme.spacing.sm,
+                bottom = MaterialTheme.spacing.xl,
+            ),
+        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.lg),
     ) {
         TuningHeader(state)
 
         when {
-            state.loading -> TuningLoading()
-            loadError != null -> ErrorState(
-                message = stringResource(R.string.tuning_load_error, loadError),
-                onRetry = onRetryLoad,
+            state.loading -> ExpressiveLoading(
+                modifier = Modifier.fillMaxWidth(),
+                label = stringResource(R.string.tuning_loading),
             )
+
+            loadError != null -> {
+                ErrorState(
+                    message = stringResource(R.string.tuning_load_error, loadError),
+                    onRetry = onRetryLoad,
+                )
+                ExpressiveTextButton(
+                    text = stringResource(R.string.action_cancel),
+                    onClick = onDismiss,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
 
             else -> {
                 TuningSliders(
@@ -150,31 +165,33 @@ fun TuningSheetContent(
                     TuningSaveErrorCard(message = saveError, onRetry = onSave)
                 }
 
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    OutlinedButton(
-                        onClick = onDismiss,
-                        modifier = Modifier
-                            .weight(1f)
-                            .heightIn(min = 48.dp),
-                    ) {
-                        Text(stringResource(R.string.action_cancel))
-                    }
-                    Button(
-                        onClick = onSave,
-                        enabled = state.canSave,
-                        modifier = Modifier
-                            .weight(1f)
-                            .heightIn(min = 48.dp),
-                    ) {
-                        Text(
-                            text = if (state.saving) {
-                                stringResource(R.string.action_saving)
-                            } else {
-                                stringResource(R.string.action_save)
-                            },
-                        )
-                    }
+                if (!state.isDirty && state.isValid) {
+                    Text(
+                        text = stringResource(R.string.ux_tuning_no_changes),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
+                Text(
+                    text = stringResource(R.string.ux_tuning_save_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                ExpressivePrimaryButton(
+                    text = if (state.saving) {
+                        stringResource(R.string.action_saving)
+                    } else {
+                        stringResource(R.string.action_save)
+                    },
+                    onClick = onSave,
+                    enabled = state.canSave,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                ExpressiveTextButton(
+                    text = stringResource(R.string.action_cancel),
+                    onClick = onDismiss,
+                    modifier = Modifier.fillMaxWidth(),
+                )
             }
         }
     }
@@ -182,51 +199,41 @@ fun TuningSheetContent(
 
 @Composable
 private fun TuningHeader(state: TuningUiState) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text(
-            text = stringResource(R.string.tuning_sheet_title),
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.SemiBold,
-        )
-        Text(
-            text = stringResource(R.string.tuning_character, state.displayName),
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
-        )
-        Text(
-            text = stringResource(
-                R.string.tuning_voice,
-                state.voiceLabel ?: stringResource(R.string.tuning_voice_unassigned),
-            ),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        if (state.unknownRole) {
-            Text(
-                text = stringResource(R.string.tuning_role_unknown),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.error,
-            )
-        }
-    }
-}
-
-@Composable
-private fun TuningLoading() {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 24.dp),
-        horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically,
+    val content = MaterialTheme.colorScheme.onPrimaryContainer
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.extraLarge,
+        color = MaterialTheme.colorScheme.primaryContainer,
+        contentColor = content,
     ) {
-        CircularProgressIndicator()
-        Spacer(Modifier.width(12.dp))
-        Text(
-            text = stringResource(R.string.tuning_loading),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        Column(
+            modifier = Modifier.padding(MaterialTheme.spacing.xl),
+            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.xs),
+        ) {
+            Text(
+                text = stringResource(R.string.ux_tuning_header_label),
+                style = MaterialTheme.typography.labelLargeEmphasized,
+                color = content.copy(alpha = 0.8f),
+            )
+            Text(
+                text = state.displayName,
+                style = MaterialTheme.typography.headlineSmallEmphasized,
+            )
+            Text(
+                text = stringResource(
+                    R.string.tuning_voice,
+                    state.voiceLabel ?: stringResource(R.string.tuning_voice_unassigned),
+                ),
+                style = MaterialTheme.typography.bodyMedium,
+                color = content.copy(alpha = 0.8f),
+            )
+            if (state.unknownRole) {
+                Text(
+                    text = stringResource(R.string.tuning_role_unknown),
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+        }
     }
 }
 
@@ -239,55 +246,55 @@ private fun TuningSliders(
     onReset: () -> Unit,
 ) {
     val enabled = !state.saving
-    SectionHeader(
-        title = stringResource(R.string.tuning_section_title),
-        subtitle = stringResource(R.string.tuning_section_subtitle),
-        actionText = if (state.canReset) stringResource(R.string.tuning_action_reset) else null,
-        onAction = if (state.canReset) onReset else null,
-    )
-
-    TuningSlider(
-        label = stringResource(R.string.tuning_speed_label),
-        valueText = formatTuningValue(TuningField.Speed, state.speed),
-        rangeText = stringResource(R.string.tuning_speed_range),
-        followsGlobal = state.followsGlobal(TuningField.Speed),
-        value = state.speed.toFloat(),
-        valueRange = TuningRanges.SPEED.toFloatRange(),
-        enabled = enabled,
-        onValueChange = {
-            onSpeedChange(snapTuningValue(TuningField.Speed, it.toDouble()))
-        },
-    )
-    TuningSlider(
-        label = stringResource(R.string.tuning_volume_label),
-        valueText = formatTuningValue(TuningField.Volume, state.volume),
-        rangeText = stringResource(R.string.tuning_volume_range),
-        followsGlobal = state.followsGlobal(TuningField.Volume),
-        value = state.volume.toFloat(),
-        valueRange = TuningRanges.VOLUME.toFloatRange(),
-        enabled = enabled,
-        onValueChange = {
-            onVolumeChange(snapTuningValue(TuningField.Volume, it.toDouble()))
-        },
-    )
-    TuningSlider(
-        label = stringResource(R.string.tuning_pitch_label),
-        valueText = formatTuningValue(TuningField.Pitch, state.pitch),
-        rangeText = stringResource(R.string.tuning_pitch_range),
-        followsGlobal = state.followsGlobal(TuningField.Pitch),
-        value = state.pitch.toFloat(),
-        valueRange = TuningRanges.PITCH.toFloatRange(),
-        enabled = enabled,
-        onValueChange = {
-            onPitchChange(snapTuningValue(TuningField.Pitch, it.toDouble()))
-        },
-    )
-
-    Text(
-        text = stringResource(R.string.tuning_section_footer),
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
+    ExpressiveCard {
+        SectionHeader(
+            title = stringResource(R.string.tuning_section_title),
+            subtitle = stringResource(R.string.tuning_section_subtitle),
+            actionText = if (state.canReset) stringResource(R.string.tuning_action_reset) else null,
+            onAction = if (state.canReset) onReset else null,
+        )
+        TuningSlider(
+            label = stringResource(R.string.tuning_speed_label),
+            valueText = formatTuningValue(TuningField.Speed, state.speed),
+            rangeText = stringResource(R.string.tuning_speed_range),
+            followsGlobal = state.followsGlobal(TuningField.Speed),
+            value = state.speed.toFloat(),
+            valueRange = TuningRanges.SPEED.toFloatRange(),
+            enabled = enabled,
+            onValueChange = {
+                onSpeedChange(snapTuningValue(TuningField.Speed, it.toDouble()))
+            },
+        )
+        TuningSlider(
+            label = stringResource(R.string.tuning_volume_label),
+            valueText = formatTuningValue(TuningField.Volume, state.volume),
+            rangeText = stringResource(R.string.tuning_volume_range),
+            followsGlobal = state.followsGlobal(TuningField.Volume),
+            value = state.volume.toFloat(),
+            valueRange = TuningRanges.VOLUME.toFloatRange(),
+            enabled = enabled,
+            onValueChange = {
+                onVolumeChange(snapTuningValue(TuningField.Volume, it.toDouble()))
+            },
+        )
+        TuningSlider(
+            label = stringResource(R.string.tuning_pitch_label),
+            valueText = formatTuningValue(TuningField.Pitch, state.pitch),
+            rangeText = stringResource(R.string.tuning_pitch_range),
+            followsGlobal = state.followsGlobal(TuningField.Pitch),
+            value = state.pitch.toFloat(),
+            valueRange = TuningRanges.PITCH.toFloatRange(),
+            enabled = enabled,
+            onValueChange = {
+                onPitchChange(snapTuningValue(TuningField.Pitch, it.toDouble()))
+            },
+        )
+        Text(
+            text = stringResource(R.string.tuning_section_footer),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
 }
 
 @Composable
@@ -307,17 +314,16 @@ private fun TuningSlider(
         valueText,
         rangeText,
     )
-    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.xs)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 text = label,
                 modifier = Modifier.weight(1f),
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
+                style = MaterialTheme.typography.titleSmallEmphasized,
             )
             Text(
                 text = valueText,
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.titleMediumEmphasized,
                 color = MaterialTheme.colorScheme.primary,
             )
         }
@@ -330,17 +336,26 @@ private fun TuningSlider(
         )
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                text = rangeText,
+                text = stringResource(R.string.ux_tuning_range_label, rangeText),
                 modifier = Modifier.weight(1f),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             if (followsGlobal) {
-                Text(
-                    text = stringResource(R.string.tuning_follow_global),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary,
-                )
+                Surface(
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.secondaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                ) {
+                    Text(
+                        text = stringResource(R.string.tuning_follow_global),
+                        modifier = Modifier.padding(
+                            horizontal = MaterialTheme.spacing.sm,
+                            vertical = MaterialTheme.spacing.xxs,
+                        ),
+                        style = MaterialTheme.typography.labelSmall,
+                    )
+                }
             }
         }
     }
@@ -348,63 +363,63 @@ private fun TuningSlider(
 
 @Composable
 private fun TuningValidationCard(state: TuningUiState) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.errorContainer,
-        ),
+    NoticeCard(
+        containerColor = MaterialTheme.colorScheme.errorContainer,
+        contentColor = MaterialTheme.colorScheme.onErrorContainer,
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
+        Text(
+            text = stringResource(R.string.tuning_validation_title),
+            style = MaterialTheme.typography.titleSmallEmphasized,
+        )
+        state.validationErrors.forEach { field ->
             Text(
-                text = stringResource(R.string.tuning_validation_title),
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onErrorContainer,
+                text = validationMessage(field),
+                style = MaterialTheme.typography.bodySmall,
             )
-            state.validationErrors.forEach { field ->
-                Text(
-                    text = validationMessage(field),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onErrorContainer,
-                )
-            }
         }
     }
 }
 
 @Composable
 private fun TuningSaveErrorCard(message: String, onRetry: () -> Unit) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.errorContainer,
-        ),
+    NoticeCard(
+        containerColor = MaterialTheme.colorScheme.errorContainer,
+        contentColor = MaterialTheme.colorScheme.onErrorContainer,
+    ) {
+        Text(
+            text = stringResource(R.string.tuning_save_error_title),
+            style = MaterialTheme.typography.titleSmallEmphasized,
+        )
+        Text(
+            text = stringResource(R.string.action_save_error, message),
+            style = MaterialTheme.typography.bodySmall,
+        )
+        ExpressiveTextButton(
+            text = stringResource(R.string.action_retry),
+            onClick = onRetry,
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
+}
+
+@Composable
+private fun NoticeCard(
+    containerColor: Color,
+    contentColor: Color,
+    modifier: Modifier = Modifier,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.extraLarge,
+        color = containerColor,
+        contentColor = contentColor,
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            Text(
-                text = stringResource(R.string.tuning_save_error_title),
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onErrorContainer,
-            )
-            Text(
-                text = stringResource(R.string.action_save_error, message),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onErrorContainer,
-            )
-            TextButton(
-                onClick = onRetry,
-                modifier = Modifier.heightIn(min = 48.dp),
-            ) {
-                Text(stringResource(R.string.action_retry))
-            }
-        }
+            modifier = Modifier.padding(MaterialTheme.spacing.xl),
+            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm),
+            content = content,
+        )
     }
 }
 
