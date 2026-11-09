@@ -30,6 +30,7 @@ import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -138,11 +139,11 @@ fun ForgePrimaryAction(
 ) {
     Button(
         onClick = onClick,
-        modifier = modifier.heightIn(min = 56.dp),
+        modifier = modifier.heightIn(min = 48.dp),
         enabled = enabled && !loading,
-        shape = MaterialTheme.shapes.extraLarge,
+        shape = MaterialTheme.shapes.large,
         contentPadding = PaddingValues(
-            horizontal = MaterialTheme.spacing.xl,
+            horizontal = MaterialTheme.spacing.lg,
             vertical = MaterialTheme.spacing.md,
         ),
         colors = ButtonDefaults.buttonColors(
@@ -206,6 +207,7 @@ fun ForgeCard(
             .animateContentSize(),
         shape = MaterialTheme.shapes.extraLarge,
         color = containerColor,
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         contentColor = MaterialTheme.colorScheme.onSurface,
     ) {
         Column(
@@ -299,6 +301,74 @@ fun ForgeFab(
     ) {
         ForgeIcon(icon, contentDescription, modifier = Modifier.size(28.dp), tint = MaterialTheme.colorScheme.onPrimaryContainer)
     }
+}
+
+@Composable
+fun ForgeExtendedFab(
+    @DrawableRes icon: Int,
+    label: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    androidx.compose.material3.ExtendedFloatingActionButton(
+        onClick = onClick,
+        modifier = modifier.heightIn(min = 56.dp),
+        shape = MaterialTheme.shapes.large,
+        containerColor = MaterialTheme.colorScheme.primary,
+        contentColor = MaterialTheme.colorScheme.onPrimary,
+        icon = { ForgeIcon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimary) },
+        text = { Text(label, style = MaterialTheme.typography.labelLargeEmphasized) },
+    )
+}
+
+@Composable
+fun ForgeSegmented(
+    options: List<Pair<Int, String>>,
+    selectedIndex: Int,
+    onSelect: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    androidx.compose.material3.SingleChoiceSegmentedButtonRow(modifier = modifier.fillMaxWidth()) {
+        options.forEachIndexed { index, (icon, label) ->
+            androidx.compose.material3.SegmentedButton(
+                selected = index == selectedIndex,
+                onClick = { onSelect(index) },
+                shape = androidx.compose.material3.SegmentedButtonDefaults.itemShape(index, options.size),
+                icon = { ForgeIcon(icon, contentDescription = null, modifier = Modifier.size(18.dp)) },
+            ) {
+                Text(label, style = MaterialTheme.typography.labelMedium)
+            }
+        }
+    }
+}
+
+@Composable
+fun ForgeDialog(
+    title: String,
+    message: String,
+    confirmLabel: String,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+    @DrawableRes icon: Int = ForgeIcons.Info,
+    danger: Boolean = false,
+) {
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        shape = MaterialTheme.shapes.extraLarge,
+        icon = { ForgeIcon(icon, contentDescription = null, tint = if (danger) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary) },
+        title = { Text(title, style = MaterialTheme.typography.titleLargeEmphasized) },
+        text = { Text(message, style = MaterialTheme.typography.bodyMedium) },
+        confirmButton = {
+            if (danger) {
+                ForgeSecondaryAction(ForgeIcons.Trash, confirmLabel, onConfirm, danger = true)
+            } else {
+                ForgePrimaryAction(ForgeIcons.Check, confirmLabel, onConfirm)
+            }
+        },
+        dismissButton = {
+            ForgeSecondaryAction(ForgeIcons.Close, "取消", onDismiss)
+        },
+    )
 }
 
 @Composable
