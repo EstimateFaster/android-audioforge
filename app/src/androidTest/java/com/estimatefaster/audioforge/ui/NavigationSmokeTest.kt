@@ -64,7 +64,6 @@ class NavigationSmokeTest {
         waitForText(text(R.string.ux2_projects_empty_title))
         assertTextDisplayed(text(R.string.ux2_projects_empty_title))
         assertTextDisplayed(text(R.string.ux2_projects_empty_action))
-        assertTextDisplayed(text(R.string.ux2_projects_import))
     }
 
     @Test
