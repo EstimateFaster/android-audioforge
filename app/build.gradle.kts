@@ -115,6 +115,7 @@ dependencies {
     implementation("androidx.compose.material3:material3:1.5.0-rc01")
     implementation("androidx.compose.material3:material3-adaptive-navigation-suite:1.5.0-rc01")
     implementation("androidx.compose.material3:material3-window-size-class:1.5.0-rc01")
+    implementation("com.composables:icons-lucide-android:2.2.1")
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
 
