@@ -1,3 +1,8 @@
+@file:OptIn(
+    androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class,
+    androidx.compose.foundation.layout.ExperimentalLayoutApi::class,
+)
+
 package com.estimatefaster.audioforge.feature.characters
 
 import android.content.res.Configuration
@@ -6,26 +11,22 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -42,12 +43,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -56,10 +55,14 @@ import com.estimatefaster.audioforge.R
 import com.estimatefaster.audioforge.core.model.Gender
 import com.estimatefaster.audioforge.core.model.Importance
 import com.estimatefaster.audioforge.data.db.CharacterEntity
-import com.estimatefaster.audioforge.ui.components.EmptyState
-import com.estimatefaster.audioforge.ui.components.ErrorState
+import com.estimatefaster.audioforge.ui.components.ExpressiveChip
+import com.estimatefaster.audioforge.ui.components.ExpressiveTonalButton
 import com.estimatefaster.audioforge.ui.components.RoleAvatar
+import com.estimatefaster.audioforge.ui.components.ScreenState
+import com.estimatefaster.audioforge.ui.components.StatusPill
+import com.estimatefaster.audioforge.ui.components.StatusTone
 import com.estimatefaster.audioforge.ui.theme.AudioForgeTheme
+import com.estimatefaster.audioforge.ui.theme.spacing
 
 /**
  * 人物音色页（P5-04 / 执行计划 §12.4 S08）。
@@ -102,11 +105,12 @@ fun CharactersScreen(
 /**
  * 无状态人物音色页。
  *
- * - 顶部：返回、标题、“已用角色数 / 总数”；
- * - 搜索（名字/别名）+ 性别/重要性筛选（AND 组合）；
- * - 角色卡：头像、名字、别名、性别/重要性标签、音色类别、当前音色、锁定标记；
- * - 点击整卡换音色；长按或“更多”打开重命名/编辑别名/排除菜单；
- * - 空态、筛选无结果、首屏加载、错误态复用 P4-02 组件。
+ * - 顶栏：返回、标题、“已用角色数 / 总数”；
+ * - 搜索（名字/别名）+ 性别/重要性 `ExpressiveChip` 筛选（AND 组合）；
+ * - 人物卡：头像、名字、别名、性别/重要性标签、音色类别、当前音色、锁定标记；
+ *   主操作“更换音色”是卡内的 tonal 按钮，整卡点击同样打开音色 Sheet；
+ * - 长按或“更多”打开重命名/编辑别名/调参/排除菜单；
+ * - 加载、错误、空态、筛选无结果统一走 [ScreenState]。
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -127,6 +131,35 @@ fun CharactersScreen(
     onParseNovel: (() -> Unit)? = null,
 ) {
     val loadError = state.loadError
+    val screenState = when {
+        state.isInitialLoading -> ScreenState.Loading(stringResource(R.string.characters_loading))
+
+        loadError != null -> ScreenState.Error(
+            message = stringResource(R.string.characters_load_error, loadError),
+            onRetry = onRetry,
+        )
+
+        state.isEmpty -> ScreenState.Empty(
+            title = stringResource(R.string.characters_empty_title),
+            description = stringResource(R.string.characters_empty_description),
+            actionText = if (onParseNovel != null) {
+                stringResource(R.string.characters_empty_action_parse)
+            } else {
+                null
+            },
+            onAction = onParseNovel,
+        )
+
+        state.isFilteredEmpty -> ScreenState.Empty(
+            title = stringResource(R.string.characters_filtered_empty_title),
+            description = stringResource(R.string.characters_filtered_empty_description),
+            actionText = stringResource(R.string.characters_filtered_empty_action),
+            onAction = onClearFilters,
+        )
+
+        else -> ScreenState.Content
+    }
+
     Scaffold(
         modifier = modifier,
         containerColor = MaterialTheme.colorScheme.background,
@@ -141,27 +174,13 @@ fun CharactersScreen(
                     }
                 },
                 title = {
-                    Column {
-                        Text(
-                            text = stringResource(R.string.characters_title),
-                            modifier = Modifier.semantics { heading() },
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.SemiBold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                        if (state.totalCount > 0) {
-                            Text(
-                                text = stringResource(
-                                    R.string.characters_count,
-                                    state.usedCount,
-                                    state.totalCount,
-                                ),
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                    }
+                    Text(
+                        text = stringResource(R.string.characters_title),
+                        modifier = Modifier.semantics { heading() },
+                        style = MaterialTheme.typography.titleLargeEmphasized,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background,
@@ -175,12 +194,33 @@ fun CharactersScreen(
                 .padding(padding),
         ) {
             if (state.allCharacters.isNotEmpty()) {
+                if (state.totalCount > 0) {
+                    Text(
+                        text = stringResource(
+                            R.string.characters_count,
+                            state.usedCount,
+                            state.totalCount,
+                        ),
+                        modifier = Modifier.padding(
+                            start = MaterialTheme.spacing.lg,
+                            end = MaterialTheme.spacing.lg,
+                            top = MaterialTheme.spacing.sm,
+                        ),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
                 OutlinedTextField(
                     value = state.query,
                     onValueChange = onQueryChange,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(start = 20.dp, end = 20.dp, top = 4.dp),
+                        .padding(
+                            start = MaterialTheme.spacing.lg,
+                            end = MaterialTheme.spacing.lg,
+                            top = MaterialTheme.spacing.xs,
+                        ),
+                    shape = MaterialTheme.shapes.large,
                     label = { Text(stringResource(R.string.characters_search_label)) },
                     placeholder = {
                         Text(stringResource(R.string.characters_search_placeholder))
@@ -206,16 +246,32 @@ fun CharactersScreen(
                     onSelect = onImportanceFilterChange,
                 )
                 if (state.hasActiveFilters) {
-                    Text(
-                        text = stringResource(
-                            R.string.characters_count_filtered,
-                            state.visibleCount,
-                            state.totalCount,
-                        ),
-                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 2.dp),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(
+                                horizontal = MaterialTheme.spacing.lg,
+                                vertical = MaterialTheme.spacing.xxs,
+                            ),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = stringResource(
+                                R.string.characters_count_filtered,
+                                state.visibleCount,
+                                state.totalCount,
+                            ),
+                            modifier = Modifier.weight(1f),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        TextButton(
+                            onClick = onClearFilters,
+                            modifier = Modifier.heightIn(min = 48.dp),
+                        ) {
+                            Text(stringResource(R.string.characters_filtered_empty_action))
+                        }
+                    }
                 }
             }
 
@@ -224,68 +280,19 @@ fun CharactersScreen(
                     .fillMaxWidth()
                     .weight(1f),
             ) {
-                when {
-                    state.isInitialLoading -> CharactersLoading(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 24.dp),
-                    )
-
-                    loadError != null -> Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 12.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        ErrorState(
-                            message = stringResource(R.string.characters_load_error, loadError),
-                            onRetry = onRetry,
-                        )
-                    }
-
-                    state.isEmpty -> Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 12.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        EmptyState(
-                            title = stringResource(R.string.characters_empty_title),
-                            description = stringResource(R.string.characters_empty_description),
-                            actionText = if (onParseNovel != null) {
-                                stringResource(R.string.characters_empty_action_parse)
-                            } else {
-                                null
-                            },
-                            onAction = onParseNovel,
-                        )
-                    }
-
-                    state.isFilteredEmpty -> Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 12.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        EmptyState(
-                            title = stringResource(R.string.characters_filtered_empty_title),
-                            description = stringResource(
-                                R.string.characters_filtered_empty_description,
-                            ),
-                            actionText = stringResource(R.string.characters_filtered_empty_action),
-                            onAction = onClearFilters,
-                        )
-                    }
-
-                    else -> LazyColumn(
+                ScreenState(
+                    state = screenState,
+                    modifier = Modifier.fillMaxSize(),
+                ) {
+                    LazyColumn(
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(
-                            start = 20.dp,
-                            end = 20.dp,
-                            top = 8.dp,
-                            bottom = 24.dp,
+                            start = MaterialTheme.spacing.lg,
+                            end = MaterialTheme.spacing.lg,
+                            top = MaterialTheme.spacing.sm,
+                            bottom = MaterialTheme.spacing.xl,
                         ),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.md),
                     ) {
                         items(
                             items = state.visibleCharacters,
@@ -355,20 +362,24 @@ private fun <T> CharacterFilterChipRow(
         modifier = Modifier
             .fillMaxWidth()
             .horizontalScroll(rememberScrollState())
-            .padding(horizontal = 20.dp, vertical = 2.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+            .padding(
+                horizontal = MaterialTheme.spacing.lg,
+                vertical = MaterialTheme.spacing.xxs,
+            ),
+        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             text = label,
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(end = MaterialTheme.spacing.xs),
         )
         options.forEach { (value, text) ->
-            FilterChip(
+            ExpressiveChip(
+                label = text,
                 selected = selected == value,
                 onClick = { onSelect(value) },
-                label = { Text(text) },
             )
         }
     }
@@ -384,7 +395,7 @@ private fun CharacterCard(
     onTune: () -> Unit,
 ) {
     var menuExpanded by rememberSaveable(character.key) { mutableStateOf(false) }
-    val shape = MaterialTheme.shapes.medium
+    val shape = MaterialTheme.shapes.extraLarge
     val displayName = character.displayName.ifBlank {
         stringResource(R.string.role_avatar_unknown)
     }
@@ -397,7 +408,7 @@ private fun CharacterCard(
         ?: character.category.takeIf { it.isNotEmpty() }
         ?: stringResource(R.string.characters_voice_unassigned)
 
-    Card(
+    Surface(
         modifier = Modifier
             .fillMaxWidth()
             .clip(shape)
@@ -408,109 +419,100 @@ private fun CharacterCard(
                 onClick = onVoiceClick,
             ),
         shape = shape,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface,
-        ),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
     ) {
-        Row(
-            modifier = Modifier.padding(start = 16.dp, end = 8.dp, top = 12.dp, bottom = 12.dp),
-            verticalAlignment = Alignment.Top,
+        Column(
+            modifier = Modifier.padding(MaterialTheme.spacing.lg),
+            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm),
         ) {
-            // 名字在右侧可见，头像只做装饰，避免 TalkBack 把同一人物读两遍。
-            RoleAvatar(name = displayName, size = 48.dp, decorative = true)
-            Spacer(Modifier.width(12.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = displayName,
-                        modifier = Modifier.weight(1f),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    if (character.locked) {
-                        Spacer(Modifier.width(6.dp))
-                        CharacterTag(
-                            text = stringResource(R.string.characters_locked),
-                            container = MaterialTheme.colorScheme.secondaryContainer,
-                            content = MaterialTheme.colorScheme.onSecondaryContainer,
-                        )
-                    }
-                }
-                if (character.aliases.isNotEmpty()) {
-                    Spacer(Modifier.height(2.dp))
-                    Text(
-                        text = stringResource(
-                            R.string.characters_alias,
-                            character.aliases.joinToString(
-                                stringResource(R.string.characters_alias_separator),
-                            ),
-                        ),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-                Spacer(Modifier.height(6.dp))
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
+            Row(verticalAlignment = Alignment.Top) {
+                // 名字在右侧可见，头像只做装饰，避免 TalkBack 把同一人物读两遍。
+                RoleAvatar(name = displayName, size = 56.dp, decorative = true)
+                Spacer(Modifier.width(MaterialTheme.spacing.md))
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.xs),
                 ) {
-                    CharacterTag(
-                        text = stringResource(character.gender.labelRes()),
-                        container = MaterialTheme.colorScheme.surfaceVariant,
-                        content = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    CharacterTag(
-                        text = stringResource(character.importance.labelRes()),
-                        container = MaterialTheme.colorScheme.surfaceVariant,
-                        content = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    if (character.category.isNotEmpty()) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = displayName,
+                            modifier = Modifier.weight(1f),
+                            style = MaterialTheme.typography.titleMediumEmphasized,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        if (character.locked) {
+                            Spacer(Modifier.width(MaterialTheme.spacing.sm))
+                            StatusPill(
+                                text = stringResource(R.string.characters_locked),
+                                tone = StatusTone.Warning,
+                            )
+                        }
+                    }
+                    if (character.aliases.isNotEmpty()) {
                         Text(
                             text = stringResource(
-                                R.string.characters_category,
-                                character.category,
+                                R.string.characters_alias,
+                                character.aliases.joinToString(
+                                    stringResource(R.string.characters_alias_separator),
+                                ),
                             ),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
+                            maxLines = 2,
                             overflow = TextOverflow.Ellipsis,
                         )
                     }
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm),
+                        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.xs),
+                    ) {
+                        CharacterTag(text = stringResource(character.gender.labelRes()))
+                        CharacterTag(text = stringResource(character.importance.labelRes()))
+                    }
                 }
-                Spacer(Modifier.height(6.dp))
+            }
+
+            Text(
+                text = stringResource(R.string.characters_voice_current, voiceName),
+                style = MaterialTheme.typography.bodyMediumEmphasized,
+                color = if (character.hasVoice) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                },
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+            if (character.category.isNotEmpty()) {
                 Text(
-                    text = stringResource(R.string.characters_voice_current, voiceName),
+                    text = stringResource(R.string.characters_category, character.category),
                     style = MaterialTheme.typography.bodySmall,
-                    color = if (character.hasVoice) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    },
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            if (character.note.isNotEmpty()) {
+                Text(
+                    text = character.note,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
-                if (character.note.isNotEmpty()) {
-                    Spacer(Modifier.height(2.dp))
-                    Text(
-                        text = character.note,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
             }
-            Column(horizontalAlignment = Alignment.End) {
-                TextButton(
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                ExpressiveTonalButton(
+                    text = stringResource(R.string.characters_action_change_voice),
                     onClick = onVoiceClick,
-                    modifier = Modifier.heightIn(min = 48.dp),
-                ) {
-                    Text(stringResource(R.string.characters_voice_change))
-                }
+                    modifier = Modifier.weight(1f),
+                )
                 Box {
                     TextButton(
                         onClick = { menuExpanded = true },
@@ -584,38 +586,20 @@ private fun CharacterMenu(
 }
 
 @Composable
-private fun CharacterTag(
-    text: String,
-    container: Color,
-    content: Color,
-) {
+private fun CharacterTag(text: String) {
     Surface(
-        shape = RoundedCornerShape(percent = 50),
-        color = container,
+        shape = CircleShape,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
     ) {
         Text(
             text = text,
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+            modifier = Modifier.padding(
+                horizontal = MaterialTheme.spacing.sm,
+                vertical = MaterialTheme.spacing.xxs,
+            ),
             style = MaterialTheme.typography.labelSmall,
-            color = content,
             maxLines = 1,
-        )
-    }
-}
-
-@Composable
-private fun CharactersLoading(modifier: Modifier = Modifier) {
-    Column(
-        modifier = modifier,
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        CircularProgressIndicator()
-        Spacer(Modifier.height(12.dp))
-        Text(
-            text = stringResource(R.string.characters_loading),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }
@@ -635,7 +619,7 @@ private fun Importance.labelRes(): Int = when (this) {
 }
 
 // ---------------------------------------------------------------------------
-// Preview 数据：只用固定非动态色，分别检查正常列表与空态。
+// Preview 数据：只用固定非动态色，分别检查正常列表、筛选空结果与空态（深色 200%）。
 // ---------------------------------------------------------------------------
 
 private val previewVoiceLabels: Map<String, String> = mapOf(
@@ -702,7 +686,7 @@ private fun previewCharactersState(): CharactersUiState {
     )
 }
 
-@Preview(name = "Characters", showBackground = true, backgroundColor = 0xFFF7F8FC)
+@Preview(name = "Characters", showBackground = true)
 @Composable
 private fun CharactersPreview() {
     AudioForgeTheme(dynamicColor = false) {
@@ -713,7 +697,7 @@ private fun CharactersPreview() {
     }
 }
 
-@Preview(name = "Characters Filtered Empty", showBackground = true, backgroundColor = 0xFFF7F8FC)
+@Preview(name = "Characters Filtered Empty", showBackground = true)
 @Composable
 private fun CharactersFilteredEmptyPreview() {
     AudioForgeTheme(dynamicColor = false) {

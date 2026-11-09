@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    UX 重做（剧本页 / 片段编辑 Sheet / 人物页 / 音色 Sheet）新增文案。
+    能复用 strings.xml 现有 key 的地方已复用；这里只放本次新增的 key。
+-->
+<resources>
+    <!-- 剧本页章节 hero 与筛选 -->
+    <string name="script_hero_eyebrow">本章剧本</string>
+    <string name="script_hero_meta">共 %1$d 段台词 · %2$d 段有音频</string>
+    <string name="script_filter_role_label">角色</string>
+    <string name="script_segment_current_badge">当前</string>
+    <string name="script_segment_playing_badge">播放中</string>
+
+    <!-- 片段编辑 Sheet 分组与校验 -->
+    <string name="segment_edit_group_basic">类型与角色</string>
+    <string name="segment_edit_group_text">台词内容</string>
+    <string name="segment_edit_validation_banner">%1$s：%2$s</string>
+
+    <!-- 人物页主操作 -->
+    <string name="characters_action_change_voice">更换音色</string>
+
+    <!-- 音色 Sheet 选中摘要 -->
+    <string name="voice_picker_selected">已选：%1$s</string>
+</resources>

@@ -1,6 +1,12 @@
+@file:OptIn(
+    androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class,
+    androidx.compose.foundation.layout.ExperimentalLayoutApi::class,
+)
+
 package com.estimatefaster.audioforge.feature.characters
 
 import android.content.res.Configuration
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -13,23 +19,15 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
@@ -42,21 +40,26 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.estimatefaster.audioforge.R
 import com.estimatefaster.audioforge.ui.components.EmptyState
+import com.estimatefaster.audioforge.ui.components.ErrorBanner
+import com.estimatefaster.audioforge.ui.components.ExpressiveChip
+import com.estimatefaster.audioforge.ui.components.ExpressiveOutlinedButton
+import com.estimatefaster.audioforge.ui.components.ExpressivePrimaryButton
+import com.estimatefaster.audioforge.ui.components.StatusPill
+import com.estimatefaster.audioforge.ui.components.StatusTone
 import com.estimatefaster.audioforge.ui.theme.AudioForgeTheme
+import com.estimatefaster.audioforge.ui.theme.spacing
 
 /**
  * 音色选择 Sheet（P5-05 / 执行计划 §12.4 S09）。
@@ -66,6 +69,7 @@ import com.estimatefaster.audioforge.ui.theme.AudioForgeTheme
  * - `Cancelled` → `onDismiss`。
  *
  * 保存/失败重试/取消/锁定二次确认全部委托给 ViewModel；Composable 不访问数据库。
+ * Sheet 使用 Expressive 大圆角与低层表面色，内容卡/音色行在 `surfaceContainer*` 上。
  *
  * @param onDismiss 用户取消/下滑/返回时关闭 Sheet
  * @param onAssigned 保存成功；宿主要据此刷新角色卡
@@ -99,6 +103,8 @@ fun VoicePickerSheet(
         onDismissRequest = viewModel::cancel,
         modifier = modifier,
         sheetState = sheetState,
+        shape = MaterialTheme.shapes.extraLargeIncreased,
+        containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
     ) {
         VoicePickerSheetContent(
             state = state,
@@ -118,8 +124,8 @@ fun VoicePickerSheet(
 /**
  * 无状态 Sheet 内容；Preview 与后续 UI 测试直接渲染它。
  *
- * 布局：标题 → 当前音色/锁定提示 → 搜索 → 档位 FilterChip → 按
- * “语言 · 性别”分组的音色列表 → 保存错误 → 取消/保存。
+ * 布局：标题 → 当前音色/锁定提示 → 搜索 → 档位 chips → 按“语言 · 性别”
+ * 分组的音色卡片（当前项带 pill、选中项加描边）→ 保存错误条 → 取消/唯一主按钮保存。
  * 搜索和档位只做内存过滤；locked 角色保存时弹二次确认。
  */
 @Composable
@@ -139,16 +145,16 @@ fun VoicePickerSheetContent(
     LazyColumn(
         modifier = modifier
             .fillMaxWidth()
-            .fillMaxHeight(0.92f)
+            .fillMaxHeight(0.94f)
             .imePadding()
             .navigationBarsPadding(),
         contentPadding = PaddingValues(
-            start = 24.dp,
-            end = 24.dp,
-            top = 8.dp,
-            bottom = 24.dp,
+            start = MaterialTheme.spacing.lg,
+            end = MaterialTheme.spacing.lg,
+            top = MaterialTheme.spacing.sm,
+            bottom = MaterialTheme.spacing.xl,
         ),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.md),
     ) {
         item(key = "header") {
             VoicePickerHeader(state = state, onCancel = onCancel)
@@ -212,10 +218,10 @@ fun VoicePickerSheetContent(
 
         state.saveError?.let { message ->
             item(key = "save-error") {
-                VoiceSaveError(
-                    message = message,
-                    enabled = !state.saving,
-                    onRetry = onRetry,
+                ErrorBanner(
+                    message = stringResource(R.string.action_save_error, message),
+                    retryText = stringResource(R.string.action_retry),
+                    onRetry = if (state.saving) null else onRetry,
                 )
             }
         }
@@ -251,8 +257,7 @@ private fun VoicePickerHeader(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = stringResource(R.string.voice_picker_title),
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.SemiBold,
+                style = MaterialTheme.typography.headlineSmallEmphasized,
             )
             Text(
                 text = stringResource(
@@ -295,43 +300,41 @@ private fun CurrentVoiceSummary(state: VoicePickerUiState) {
         rawCurrentVoiceId
     }
 
-    Card(
+    Surface(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-        ),
+        shape = MaterialTheme.shapes.extraLarge,
+        color = MaterialTheme.colorScheme.primaryContainer,
+        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
+            modifier = Modifier.padding(MaterialTheme.spacing.lg),
+            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.xs),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = stringResource(R.string.voice_picker_current, currentName),
                     modifier = Modifier.weight(1f),
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
+                    style = MaterialTheme.typography.titleSmallEmphasized,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
                 if (state.locked) {
-                    Spacer(Modifier.width(8.dp))
-                    VoiceTag(
+                    Spacer(Modifier.width(MaterialTheme.spacing.sm))
+                    StatusPill(
                         text = stringResource(R.string.characters_locked),
-                        container = MaterialTheme.colorScheme.secondaryContainer,
-                        content = MaterialTheme.colorScheme.onSecondaryContainer,
+                        tone = StatusTone.Warning,
                     )
                 }
             }
             Text(
                 text = stringResource(R.string.characters_category, currentCategory),
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
             )
             Text(
                 text = stringResource(R.string.voice_picker_voice_id, currentVoiceId),
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
                 fontFamily = FontFamily.Monospace,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -339,8 +342,8 @@ private fun CurrentVoiceSummary(state: VoicePickerUiState) {
             if (state.locked) {
                 Text(
                     text = stringResource(R.string.voice_picker_locked_warning),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmallEmphasized,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
                 )
             }
         }
@@ -357,6 +360,7 @@ private fun VoiceSearchField(
         onValueChange = onQueryChange,
         modifier = Modifier.fillMaxWidth(),
         enabled = !state.saving,
+        shape = MaterialTheme.shapes.large,
         label = { Text(stringResource(R.string.voice_picker_search_label)) },
         placeholder = { Text(stringResource(R.string.voice_picker_search_placeholder)) },
         singleLine = true,
@@ -379,7 +383,7 @@ private fun VoiceGroupFilterRow(
     state: VoicePickerUiState,
     onGenderFilterChange: (VoiceGenderGroup?) -> Unit,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.xs)) {
         Text(
             text = stringResource(R.string.voice_picker_group_label),
             style = MaterialTheme.typography.labelMedium,
@@ -389,21 +393,19 @@ private fun VoiceGroupFilterRow(
             modifier = Modifier
                 .fillMaxWidth()
                 .horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            FilterChip(
+            ExpressiveChip(
+                label = stringResource(R.string.voice_picker_group_all),
                 selected = state.genderFilter == null,
                 onClick = { onGenderFilterChange(null) },
-                enabled = !state.saving,
-                label = { Text(stringResource(R.string.voice_picker_group_all)) },
             )
             state.availableGroups.forEach { group ->
-                FilterChip(
+                ExpressiveChip(
+                    label = group.label(),
                     selected = state.genderFilter == group,
                     onClick = { onGenderFilterChange(group) },
-                    enabled = !state.saving,
-                    label = { Text(group.label()) },
                 )
             }
         }
@@ -412,18 +414,29 @@ private fun VoiceGroupFilterRow(
 
 @Composable
 private fun VoiceSectionHeader(section: VoiceSectionUi) {
-    Text(
-        text = stringResource(
-            R.string.voice_picker_section_header,
-            localeLabel(section.locale),
-            section.gender.label(),
-        ),
+    Row(
         modifier = Modifier
-            .padding(top = 8.dp)
-            .semantics { heading() },
-        style = MaterialTheme.typography.titleSmall,
-        fontWeight = FontWeight.SemiBold,
-    )
+            .fillMaxWidth()
+            .padding(top = MaterialTheme.spacing.sm),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = stringResource(
+                R.string.voice_picker_section_header,
+                localeLabel(section.locale),
+                section.gender.label(),
+            ),
+            modifier = Modifier
+                .weight(1f)
+                .semantics { heading() },
+            style = MaterialTheme.typography.titleSmallEmphasized,
+        )
+        Text(
+            text = section.voices.size.toString(),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
 }
 
 @Composable
@@ -447,26 +460,52 @@ private fun VoiceRow(
         rawVoiceId
     }
     val note = voice.note?.trim().orEmpty()
+    val shape = if (selected) {
+        MaterialTheme.shapes.extraLargeIncreased
+    } else {
+        MaterialTheme.shapes.extraLarge
+    }
+    val contentColor = if (selected) {
+        MaterialTheme.colorScheme.onSecondaryContainer
+    } else {
+        MaterialTheme.colorScheme.onSurface
+    }
+    val mutedColor = if (selected) {
+        MaterialTheme.colorScheme.onSecondaryContainer
+    } else {
+        MaterialTheme.colorScheme.onSurfaceVariant
+    }
 
-    Card(
+    Surface(
         modifier = Modifier
             .fillMaxWidth()
+            .clip(shape)
             .selectable(
                 selected = selected,
                 enabled = enabled,
                 role = Role.RadioButton,
                 onClick = onSelect,
             ),
-        colors = CardDefaults.cardColors(
-            containerColor = if (selected) {
-                MaterialTheme.colorScheme.secondaryContainer
-            } else {
-                MaterialTheme.colorScheme.surface
-            },
-        ),
+        shape = shape,
+        color = if (selected) {
+            MaterialTheme.colorScheme.secondaryContainer
+        } else {
+            MaterialTheme.colorScheme.surfaceContainerHigh
+        },
+        contentColor = contentColor,
+        border = if (selected) {
+            BorderStroke(2.dp, MaterialTheme.colorScheme.secondary)
+        } else {
+            null
+        },
     ) {
         Row(
-            modifier = Modifier.padding(start = 8.dp, end = 12.dp, top = 8.dp, bottom = 8.dp),
+            modifier = Modifier.padding(
+                start = MaterialTheme.spacing.sm,
+                end = MaterialTheme.spacing.lg,
+                top = MaterialTheme.spacing.sm,
+                bottom = MaterialTheme.spacing.sm,
+            ),
             verticalAlignment = Alignment.Top,
         ) {
             RadioButton(
@@ -474,33 +513,31 @@ private fun VoiceRow(
                 onClick = null,
                 enabled = enabled,
             )
-            Spacer(Modifier.width(4.dp))
+            Spacer(Modifier.width(MaterialTheme.spacing.xs))
             Column(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(2.dp),
+                verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.xxs),
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = label,
                         modifier = Modifier.weight(1f),
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold,
+                        style = MaterialTheme.typography.titleSmallEmphasized,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                     )
                     if (current) {
-                        Spacer(Modifier.width(6.dp))
-                        VoiceTag(
+                        Spacer(Modifier.width(MaterialTheme.spacing.sm))
+                        StatusPill(
                             text = stringResource(R.string.voice_picker_current_badge),
-                            container = MaterialTheme.colorScheme.primaryContainer,
-                            content = MaterialTheme.colorScheme.onPrimaryContainer,
+                            tone = StatusTone.Info,
                         )
                     }
                 }
                 Text(
                     text = voice.category,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = mutedColor,
                     fontFamily = FontFamily.Monospace,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -508,7 +545,7 @@ private fun VoiceRow(
                 Text(
                     text = stringResource(R.string.voice_picker_voice_id, voiceId),
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = mutedColor,
                     fontFamily = FontFamily.Monospace,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -517,7 +554,11 @@ private fun VoiceRow(
                     Text(
                         text = note,
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error,
+                        color = if (selected) {
+                            MaterialTheme.colorScheme.onSecondaryContainer
+                        } else {
+                            MaterialTheme.colorScheme.error
+                        },
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -526,44 +567,9 @@ private fun VoiceRow(
                     Text(
                         text = stringResource(R.string.voice_picker_speed, speed),
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = mutedColor,
                     )
                 }
-            }
-        }
-    }
-}
-
-@Composable
-private fun VoiceSaveError(
-    message: String,
-    enabled: Boolean,
-    onRetry: () -> Unit,
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.errorContainer,
-        ),
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            Text(
-                text = stringResource(R.string.action_save_error, message),
-                modifier = Modifier.semantics {
-                    liveRegion = LiveRegionMode.Polite
-                },
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onErrorContainer,
-            )
-            TextButton(
-                onClick = onRetry,
-                enabled = enabled,
-                modifier = Modifier.heightIn(min = 48.dp),
-            ) {
-                Text(stringResource(R.string.action_retry))
             }
         }
     }
@@ -575,7 +581,8 @@ private fun VoiceActions(
     onCancel: () -> Unit,
     onSave: () -> Unit,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    val selected = state.selectedVoice
+    Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm)) {
         if (state.hasSelection && state.isSameAsCurrent) {
             Text(
                 text = stringResource(R.string.voice_picker_same_as_current),
@@ -583,41 +590,34 @@ private fun VoiceActions(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            OutlinedButton(
-                onClick = onCancel,
-                enabled = !state.saving,
-                modifier = Modifier
-                    .weight(1f)
-                    .heightIn(min = 48.dp),
-            ) {
-                Text(stringResource(R.string.action_cancel))
-            }
-            Button(
-                onClick = onSave,
-                enabled = state.canSave,
-                modifier = Modifier
-                    .weight(1f)
-                    .heightIn(min = 48.dp),
-            ) {
-                if (state.saving) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(18.dp),
-                        strokeWidth = 2.dp,
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Text(stringResource(R.string.action_saving))
-                } else {
-                    Text(
-                        text = if (state.saveError != null) {
-                            stringResource(R.string.action_retry)
-                        } else {
-                            stringResource(R.string.voice_picker_save)
-                        },
-                    )
-                }
-            }
+        if (selected != null && !state.isSameAsCurrent) {
+            Text(
+                text = stringResource(
+                    R.string.voice_picker_selected,
+                    selected.displayLabel,
+                ),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
+        ExpressivePrimaryButton(
+            text = when {
+                state.saving -> stringResource(R.string.action_saving)
+                state.saveError != null -> stringResource(R.string.action_retry)
+                else -> stringResource(R.string.voice_picker_save)
+            },
+            onClick = onSave,
+            enabled = state.canSave,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        ExpressiveOutlinedButton(
+            text = stringResource(R.string.action_cancel),
+            onClick = onCancel,
+            enabled = !state.saving,
+            modifier = Modifier.fillMaxWidth(),
+        )
     }
 }
 
@@ -629,45 +629,31 @@ private fun LockedVoiceConfirmDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.voice_picker_locked_confirm_title)) },
+        shape = MaterialTheme.shapes.extraLargeIncreased,
+        title = {
+            Text(
+                text = stringResource(R.string.voice_picker_locked_confirm_title),
+                style = MaterialTheme.typography.titleMediumEmphasized,
+            )
+        },
         text = { Text(stringResource(R.string.voice_picker_locked_confirm_message)) },
         confirmButton = {
-            TextButton(
+            ExpressivePrimaryButton(
+                text = stringResource(R.string.voice_picker_locked_confirm_action),
                 onClick = onConfirm,
                 enabled = !saving,
-            ) {
-                Text(stringResource(R.string.voice_picker_locked_confirm_action))
-            }
+            )
         },
         dismissButton = {
             TextButton(
                 onClick = onDismiss,
                 enabled = !saving,
+                modifier = Modifier.heightIn(min = 48.dp),
             ) {
                 Text(stringResource(R.string.action_cancel))
             }
         },
     )
-}
-
-@Composable
-private fun VoiceTag(
-    text: String,
-    container: androidx.compose.ui.graphics.Color,
-    content: androidx.compose.ui.graphics.Color,
-) {
-    Surface(
-        shape = RoundedCornerShape(percent = 50),
-        color = container,
-    ) {
-        Text(
-            text = text,
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-            style = MaterialTheme.typography.labelSmall,
-            color = content,
-            maxLines = 1,
-        )
-    }
 }
 
 @Composable
@@ -752,7 +738,7 @@ private fun previewState(
     selectedCategory = selectedCategory,
 ).copy(pendingLockedConfirm = pendingLockedConfirm)
 
-@Preview(name = "VoicePicker Normal", showBackground = true, backgroundColor = 0xFFF7F8FC)
+@Preview(name = "VoicePicker Normal", showBackground = true)
 @Composable
 private fun VoicePickerNormalPreview() {
     AudioForgeTheme(dynamicColor = false) {
@@ -762,7 +748,7 @@ private fun VoicePickerNormalPreview() {
     }
 }
 
-@Preview(name = "VoicePicker Locked", showBackground = true, backgroundColor = 0xFFF7F8FC)
+@Preview(name = "VoicePicker Locked", showBackground = true)
 @Composable
 private fun VoicePickerLockedPreview() {
     AudioForgeTheme(dynamicColor = false) {
@@ -772,7 +758,7 @@ private fun VoicePickerLockedPreview() {
     }
 }
 
-@Preview(name = "VoicePicker Locked Confirm", showBackground = true, backgroundColor = 0xFFF7F8FC)
+@Preview(name = "VoicePicker Locked Confirm", showBackground = true)
 @Composable
 private fun VoicePickerLockedConfirmPreview() {
     AudioForgeTheme(dynamicColor = false) {
@@ -784,11 +770,7 @@ private fun VoicePickerLockedConfirmPreview() {
     }
 }
 
-@Preview(
-    name = "VoicePicker No Results",
-    showBackground = true,
-    backgroundColor = 0xFFF7F8FC,
-)
+@Preview(name = "VoicePicker No Results", showBackground = true)
 @Composable
 private fun VoicePickerNoResultsPreview() {
     AudioForgeTheme(dynamicColor = false) {

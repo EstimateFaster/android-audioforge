@@ -1,25 +1,25 @@
+@file:OptIn(
+    androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class,
+    androidx.compose.foundation.layout.ExperimentalLayoutApi::class,
+)
+
 package com.estimatefaster.audioforge.feature.script
 
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -44,10 +44,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.LiveRegionMode
-import androidx.compose.ui.semantics.liveRegion
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -57,7 +53,13 @@ import com.estimatefaster.audioforge.core.model.Emotion
 import com.estimatefaster.audioforge.core.model.NARRATOR_ROLE_ID
 import com.estimatefaster.audioforge.core.model.SegmentType
 import com.estimatefaster.audioforge.data.db.SegmentEntity
+import com.estimatefaster.audioforge.ui.components.ErrorBanner
+import com.estimatefaster.audioforge.ui.components.ExpressiveCard
+import com.estimatefaster.audioforge.ui.components.ExpressiveOutlinedButton
+import com.estimatefaster.audioforge.ui.components.ExpressivePrimaryButton
+import com.estimatefaster.audioforge.ui.components.ExpressiveTonalButton
 import com.estimatefaster.audioforge.ui.theme.AudioForgeTheme
+import com.estimatefaster.audioforge.ui.theme.spacing
 
 /**
  * 片段编辑 Sheet（P5-02 / 执行计划 §12.4 S07）。
@@ -68,6 +70,7 @@ import com.estimatefaster.audioforge.ui.theme.AudioForgeTheme
  * - `RegenerateRequested` → `onRegenerate(segmentId)`（本 Sheet 不直接调用 TTS）。
  *
  * 保存、失败重试、取消、重置都委托给 ViewModel；Composable 不访问数据库。
+ * Sheet 容器使用 Expressive 大圆角与低层表面色，内容卡在 `surfaceContainerLow` 上。
  *
  * @param onDismiss 用户取消/下滑/返回时关闭 Sheet
  * @param onSaved 保存成功；`segment` 是实际写入的实体
@@ -103,6 +106,8 @@ fun SegmentEditSheet(
         onDismissRequest = viewModel::cancel,
         modifier = modifier,
         sheetState = sheetState,
+        shape = MaterialTheme.shapes.extraLargeIncreased,
+        containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
     ) {
         SegmentEditSheetContent(
             state = state,
@@ -122,11 +127,11 @@ fun SegmentEditSheet(
 /**
  * 无状态 Sheet 内容；Preview 与后续 UI 测试直接渲染它。
  *
- * 布局：标题 + 重置 → 类型 → 角色 → 情绪 → 文本/计数 → 保存提示 → 校验错误 →
- * 保存错误 → 保存/重新生成/取消。内容整体可滚动并加 `imePadding()`，键盘弹出时
- * 不会盖住文本或底部按钮。所有用户可见文案来自 `strings.xml`。
+ * 布局：标题 + 重置 → “类型与角色”分组卡 → “台词内容”分组卡 → 提示 →
+ * 校验/保存错误条 → 唯一主按钮“保存” → 重新生成/取消次操作。
+ * 内容整体可滚动并加 `imePadding()`，键盘弹出时不会盖住文本或底部按钮。
+ * 所有用户可见文案来自 `strings.xml`。
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SegmentEditSheetContent(
     state: SegmentEditUiState,
@@ -147,30 +152,45 @@ fun SegmentEditSheetContent(
             .imePadding()
             .navigationBarsPadding()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 24.dp)
-            .padding(top = 8.dp, bottom = 24.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+            .padding(horizontal = MaterialTheme.spacing.lg)
+            .padding(top = MaterialTheme.spacing.sm, bottom = MaterialTheme.spacing.xl),
+        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.lg),
     ) {
         SegmentEditHeader(state = state, onReset = onReset)
 
-        TypeSelector(
-            type = state.type,
-            enabled = !state.saving,
-            onTypeChange = onTypeChange,
-        )
-        RoleSelector(
-            state = state,
-            onRoleChange = onRoleChange,
-        )
-        EmotionSelector(
-            emotion = state.emotion,
-            enabled = !state.saving,
-            onEmotionChange = onEmotionChange,
-        )
-        TextEditor(
-            state = state,
-            onTextChange = onTextChange,
-        )
+        ExpressiveCard(contentPadding = PaddingValues(MaterialTheme.spacing.lg)) {
+            Text(
+                text = stringResource(R.string.segment_edit_group_basic),
+                style = MaterialTheme.typography.titleSmallEmphasized,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            TypeSelector(
+                type = state.type,
+                enabled = !state.saving,
+                onTypeChange = onTypeChange,
+            )
+            RoleSelector(
+                state = state,
+                onRoleChange = onRoleChange,
+            )
+            EmotionSelector(
+                emotion = state.emotion,
+                enabled = !state.saving,
+                onEmotionChange = onEmotionChange,
+            )
+        }
+
+        ExpressiveCard(contentPadding = PaddingValues(MaterialTheme.spacing.lg)) {
+            Text(
+                text = stringResource(R.string.segment_edit_group_text),
+                style = MaterialTheme.typography.titleSmallEmphasized,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            TextEditor(
+                state = state,
+                onTextChange = onTextChange,
+            )
+        }
 
         Text(
             text = stringResource(R.string.segment_edit_hint),
@@ -179,40 +199,50 @@ fun SegmentEditSheetContent(
         )
 
         if (state.validationErrors.isNotEmpty()) {
-            ValidationCard(errors = state.validationErrors)
+            val parts = mutableListOf<String>()
+            for (error in state.validationErrors.distinct()) {
+                parts += error.message()
+            }
+            ErrorBanner(
+                message = stringResource(
+                    R.string.segment_edit_validation_banner,
+                    stringResource(R.string.segment_edit_validation_title),
+                    parts.joinToString(separator = "；"),
+                ),
+            )
         }
         state.saveError?.let { message ->
-            SaveErrorCard(
-                message = message,
-                enabled = !state.saving,
-                onRetry = onRetry,
+            ErrorBanner(
+                message = stringResource(R.string.action_save_error, message),
+                retryText = stringResource(R.string.action_retry),
+                onRetry = if (state.saving) null else onRetry,
             )
         }
 
-        SaveButton(
-            saving = state.saving,
+        ExpressivePrimaryButton(
+            text = if (state.saving) {
+                stringResource(R.string.action_saving)
+            } else {
+                stringResource(R.string.action_save)
+            },
+            onClick = onSave,
             enabled = state.canSave,
-            onSave = onSave,
+            modifier = Modifier.fillMaxWidth(),
         )
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            OutlinedButton(
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.md),
+            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm),
+        ) {
+            ExpressiveTonalButton(
+                text = stringResource(R.string.segment_edit_regenerate),
                 onClick = onRegenerate,
                 enabled = !state.saving,
-                modifier = Modifier
-                    .weight(1f)
-                    .heightIn(min = 48.dp),
-            ) {
-                Text(stringResource(R.string.segment_edit_regenerate))
-            }
-            TextButton(
+            )
+            ExpressiveOutlinedButton(
+                text = stringResource(R.string.action_cancel),
                 onClick = onCancel,
                 enabled = !state.saving,
-                modifier = Modifier
-                    .weight(1f)
-                    .heightIn(min = 48.dp),
-            ) {
-                Text(stringResource(R.string.action_cancel))
-            }
+            )
         }
     }
 }
@@ -229,8 +259,7 @@ private fun SegmentEditHeader(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = stringResource(R.string.segment_edit_title),
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.SemiBold,
+                style = MaterialTheme.typography.headlineSmallEmphasized,
             )
             Text(
                 text = stringResource(
@@ -252,14 +281,14 @@ private fun SegmentEditHeader(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun TypeSelector(
     type: SegmentType,
     enabled: Boolean,
     onTypeChange: (SegmentType) -> Unit,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm)) {
         FieldLabel(text = stringResource(R.string.segment_edit_type_label))
         SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
             EDITABLE_TYPES.forEachIndexed { index, candidate ->
@@ -282,7 +311,7 @@ private fun TypeSelector(
  * 角色下拉。
  *
  * 对白列出本书角色（可搜索）；旁白只有旁白且不可展开。当前 roleId 不在候选里时
- * 显示“未知角色”，同时校验卡片会提示重选。
+ * 显示“未知角色”，同时校验错误条会提示重选。
  */
 @Composable
 private fun RoleSelector(
@@ -313,12 +342,13 @@ private fun RoleSelector(
         }
     }
 
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm)) {
         FieldLabel(text = stringResource(R.string.segment_edit_role_label))
         Box {
             OutlinedButton(
                 onClick = { expanded = true },
                 enabled = canOpen,
+                shape = MaterialTheme.shapes.large,
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(min = 48.dp),
@@ -344,7 +374,11 @@ private fun RoleSelector(
                         onValueChange = { query = it },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                            .padding(
+                                horizontal = MaterialTheme.spacing.md,
+                                vertical = MaterialTheme.spacing.sm,
+                            ),
+                        shape = MaterialTheme.shapes.large,
                         placeholder = {
                             Text(stringResource(R.string.segment_edit_role_search_placeholder))
                         },
@@ -398,12 +432,13 @@ private fun EmotionSelector(
     onEmotionChange: (Emotion) -> Unit,
 ) {
     var expanded by rememberSaveable { mutableStateOf(false) }
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm)) {
         FieldLabel(text = stringResource(R.string.segment_edit_emotion_label))
         Box {
             OutlinedButton(
                 onClick = { expanded = true },
                 enabled = enabled,
+                shape = MaterialTheme.shapes.large,
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(min = 48.dp),
@@ -456,6 +491,7 @@ private fun TextEditor(
         onValueChange = onTextChange,
         modifier = Modifier.fillMaxWidth(),
         enabled = !state.saving,
+        shape = MaterialTheme.shapes.large,
         label = { Text(stringResource(R.string.segment_edit_text_label)) },
         placeholder = { Text(stringResource(R.string.segment_edit_text_placeholder)) },
         minLines = 4,
@@ -479,101 +515,10 @@ private fun TextEditor(
 }
 
 @Composable
-private fun ValidationCard(errors: List<SegmentEditError>) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.errorContainer,
-        ),
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            Text(
-                text = stringResource(R.string.segment_edit_validation_title),
-                modifier = Modifier.semantics {
-                    liveRegion = LiveRegionMode.Polite
-                },
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onErrorContainer,
-            )
-            errors.distinct().forEach { error ->
-                Text(
-                    text = error.message(),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onErrorContainer,
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun SaveErrorCard(
-    message: String,
-    enabled: Boolean,
-    onRetry: () -> Unit,
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.errorContainer,
-        ),
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            Text(
-                text = stringResource(R.string.action_save_error, message),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onErrorContainer,
-            )
-            TextButton(
-                onClick = onRetry,
-                enabled = enabled,
-                modifier = Modifier.heightIn(min = 48.dp),
-            ) {
-                Text(stringResource(R.string.action_retry))
-            }
-        }
-    }
-}
-
-@Composable
-private fun SaveButton(
-    saving: Boolean,
-    enabled: Boolean,
-    onSave: () -> Unit,
-) {
-    Button(
-        onClick = onSave,
-        enabled = enabled,
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(min = 48.dp),
-    ) {
-        if (saving) {
-            CircularProgressIndicator(
-                modifier = Modifier.size(18.dp),
-                strokeWidth = 2.dp,
-            )
-            Spacer(Modifier.width(8.dp))
-            Text(stringResource(R.string.action_saving))
-        } else {
-            Text(stringResource(R.string.action_save))
-        }
-    }
-}
-
-@Composable
 private fun FieldLabel(text: String) {
     Text(
         text = text,
-        style = MaterialTheme.typography.titleSmall,
-        fontWeight = FontWeight.SemiBold,
+        style = MaterialTheme.typography.titleSmallEmphasized,
     )
 }
 
@@ -633,7 +578,7 @@ private val EDITABLE_TYPES: List<SegmentType> = listOf(
 )
 
 // ---------------------------------------------------------------------------
-// Preview：对白正常态 / 旁白态 / 校验错误态 / 保存失败可重试态。
+// Preview：对白正常态 / 旁白态 / 校验错误态 / 保存失败可重试态（200% 字号）。
 // 演示文本只是预览数据；所有 UI 文案来自 strings.xml。
 // ---------------------------------------------------------------------------
 
@@ -643,7 +588,7 @@ private fun previewRoles(): List<SegmentRoleOption> = listOf(
     SegmentRoleOption(roleId = "role_0002", name = "顾青"),
 )
 
-@Preview(name = "SegmentEdit Dialogue", showBackground = true, backgroundColor = 0xFFF7F8FC)
+@Preview(name = "SegmentEdit Dialogue", showBackground = true)
 @Composable
 private fun SegmentEditDialoguePreview() {
     AudioForgeTheme(dynamicColor = false) {
@@ -663,7 +608,7 @@ private fun SegmentEditDialoguePreview() {
     }
 }
 
-@Preview(name = "SegmentEdit Narration", showBackground = true, backgroundColor = 0xFFF7F8FC)
+@Preview(name = "SegmentEdit Narration", showBackground = true)
 @Composable
 private fun SegmentEditNarrationPreview() {
     AudioForgeTheme(dynamicColor = false) {
@@ -686,7 +631,6 @@ private fun SegmentEditNarrationPreview() {
 @Preview(
     name = "SegmentEdit Validation Error",
     showBackground = true,
-    backgroundColor = 0xFFF7F8FC,
 )
 @Composable
 private fun SegmentEditValidationPreview() {
@@ -707,7 +651,11 @@ private fun SegmentEditValidationPreview() {
     }
 }
 
-@Preview(name = "SegmentEdit Save Error", showBackground = true, backgroundColor = 0xFFF7F8FC)
+@Preview(
+    name = "SegmentEdit Save Error 200%",
+    showBackground = true,
+    fontScale = 2f,
+)
 @Composable
 private fun SegmentEditSaveErrorPreview() {
     AudioForgeTheme(dynamicColor = false) {
