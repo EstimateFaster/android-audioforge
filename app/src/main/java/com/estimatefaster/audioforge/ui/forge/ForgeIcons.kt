@@ -39,6 +39,7 @@ object ForgeIcons {
     @DrawableRes val Edit = LucideR.drawable.lucide_ic_pencil
     @DrawableRes val List = LucideR.drawable.lucide_ic_list
     @DrawableRes val Check = LucideR.drawable.lucide_ic_check
+    @DrawableRes val Circle = LucideR.drawable.lucide_ic_circle
     @DrawableRes val Close = LucideR.drawable.lucide_ic_x
     @DrawableRes val Back = LucideR.drawable.lucide_ic_arrow_left
     @DrawableRes val ChevronRight = LucideR.drawable.lucide_ic_chevron_right
@@ -49,6 +50,9 @@ object ForgeIcons {
     @DrawableRes val Refresh = LucideR.drawable.lucide_ic_refresh_cw
     @DrawableRes val RotateCcw = LucideR.drawable.lucide_ic_rotate_ccw
     @DrawableRes val Square = LucideR.drawable.lucide_ic_square
+    @DrawableRes val Repeat = LucideR.drawable.lucide_ic_repeat
+    @DrawableRes val Tag = LucideR.drawable.lucide_ic_tag
+
     @DrawableRes val Storage = LucideR.drawable.lucide_ic_hard_drive
     @DrawableRes val Info = LucideR.drawable.lucide_ic_info
     @DrawableRes val Key = LucideR.drawable.lucide_ic_key_round
