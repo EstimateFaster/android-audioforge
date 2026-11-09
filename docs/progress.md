@@ -405,3 +405,4 @@
 - 2026-11-09：Phase 2/3 门禁记录（P2-18、P3-10 真机依赖 BLOCKED）；P5-01 剧本页合并。
 - 2026-11-09：Phase 4/5 门禁记录；导航接线完成（PR #88）；P5-13 无障碍合并。
 - 2026-11-09：Phase 6 v1.0.0 签名 APK 由 GitHub Actions 发布；Phase 6 门禁记录完成。
+- 2026-11-09：Material 3 Expressive 全量 UI/UX 重做（主题/组件/导航/11 模块），见 docs/expressive-redesign.md。

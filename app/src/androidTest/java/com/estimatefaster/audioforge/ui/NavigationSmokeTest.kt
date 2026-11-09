@@ -1,6 +1,7 @@
 package com.estimatefaster.audioforge.ui
 
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasScrollToNodeAction
 import androidx.compose.ui.test.hasText
@@ -108,6 +109,27 @@ class NavigationSmokeTest {
         composeRule.onNodeWithText(text(R.string.about_title)).assertIsDisplayed()
         composeRule.onNodeWithText(text(R.string.action_back)).assertIsDisplayed().performClick()
         waitForSettingsContent()
+    }
+
+    @Test
+    fun theme_switch_applies_immediately_and_keeps_navigation() {
+        skipOnboarding()
+        openTopLevelTab(R.string.nav_settings)
+        waitForSettingsContent()
+
+        scrollSettingsTo(text(R.string.settings_theme_dark))
+        composeRule.onNodeWithText(text(R.string.settings_theme_dark)).performClick()
+        composeRule.waitForIdle()
+        composeRule.onNodeWithText(text(R.string.settings_theme_dark)).assertIsSelected()
+
+        scrollSettingsTo(text(R.string.settings_theme_light))
+        composeRule.onNodeWithText(text(R.string.settings_theme_light)).performClick()
+        composeRule.waitForIdle()
+        composeRule.onNodeWithText(text(R.string.settings_theme_light)).assertIsSelected()
+
+        openTopLevelTab(R.string.nav_projects)
+        waitForText(text(R.string.project_library_title))
+        composeRule.onNodeWithText(text(R.string.project_library_title)).assertIsDisplayed()
     }
 
     // ------------------------------------------------------------------
