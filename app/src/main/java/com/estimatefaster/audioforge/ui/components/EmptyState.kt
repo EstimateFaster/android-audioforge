@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class)
+
 package com.estimatefaster.audioforge.ui.components
 
 import android.content.res.Configuration
@@ -5,11 +7,10 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
+import com.estimatefaster.audioforge.ui.theme.spacing
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -40,15 +41,14 @@ fun EmptyState(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 24.dp, vertical = 32.dp),
+            .padding(horizontal = MaterialTheme.spacing.xl, vertical = MaterialTheme.spacing.xxl),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.md),
     ) {
         EmptyStateGlyph()
         Text(
             text = title,
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.SemiBold,
+            style = MaterialTheme.typography.headlineSmallEmphasized,
             textAlign = TextAlign.Center,
         )
         Text(
@@ -58,12 +58,7 @@ fun EmptyState(
             textAlign = TextAlign.Center,
         )
         if (actionText != null && onAction != null && actionText.isNotBlank()) {
-            FilledTonalButton(
-                onClick = onAction,
-                modifier = Modifier.heightIn(min = 48.dp),
-            ) {
-                Text(actionText)
-            }
+            ExpressiveTonalButton(text = actionText, onClick = onAction)
         }
     }
 }
@@ -74,7 +69,7 @@ private fun EmptyStateGlyph() {
     val content = MaterialTheme.colorScheme.onPrimaryContainer
     Canvas(
         modifier = Modifier
-            .size(72.dp)
+            .size(96.dp)
             .clearAndSetSemantics { },
     ) {
         drawCircle(color = container, radius = size.minDimension / 2f, center = center)
