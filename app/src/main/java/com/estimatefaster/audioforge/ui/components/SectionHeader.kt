@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class)
+
 package com.estimatefaster.audioforge.ui.components
 
 import android.content.res.Configuration
@@ -47,8 +49,7 @@ fun SectionHeader(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = title,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
+                style = MaterialTheme.typography.titleLargeEmphasized,
                 modifier = Modifier.semantics { heading() },
             )
             if (resolvedSubtitle != null) {

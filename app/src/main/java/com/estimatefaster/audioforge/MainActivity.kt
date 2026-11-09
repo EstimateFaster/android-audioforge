@@ -5,6 +5,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CircularProgressIndicator
@@ -16,6 +17,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.rememberNavController
 import com.estimatefaster.audioforge.core.settings.AppSettings
+import com.estimatefaster.audioforge.core.settings.ThemeMode
 import com.estimatefaster.audioforge.ui.navigation.AppNavHost
 import com.estimatefaster.audioforge.ui.navigation.startDestinationFor
 import com.estimatefaster.audioforge.ui.theme.AudioForgeTheme
@@ -33,10 +35,19 @@ class MainActivity : ComponentActivity() {
         val container = (application as AudioForgeApp).container
 
         setContent {
-            AudioForgeTheme {
+            val settings: AppSettings? by container.settingsRepository.settings
+                .collectAsState(initial = null)
+            val darkTheme = when (settings?.theme) {
+                ThemeMode.Light -> false
+                ThemeMode.Dark -> true
+                else -> isSystemInDarkTheme()
+            }
+
+            AudioForgeTheme(
+                darkTheme = darkTheme,
+                dynamicColor = settings?.dynamicColor ?: true,
+            ) {
                 // 初始 null 表示设置尚未读出：先显示进度，避免先闪引导页再跳项目库。
-                val settings: AppSettings? by container.settingsRepository.settings
-                    .collectAsState(initial = null)
                 val startDestination = startDestinationFor(settings?.onboardingCompleted)
 
                 if (startDestination == null) {

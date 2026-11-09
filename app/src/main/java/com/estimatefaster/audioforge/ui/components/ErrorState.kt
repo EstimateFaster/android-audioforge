@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class)
+
 package com.estimatefaster.audioforge.ui.components
 
 import android.content.res.Configuration
@@ -5,11 +7,10 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
+import com.estimatefaster.audioforge.ui.theme.spacing
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -41,27 +42,22 @@ fun ErrorState(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 24.dp, vertical = 32.dp),
+            .padding(horizontal = MaterialTheme.spacing.xl, vertical = MaterialTheme.spacing.xxl),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.md),
     ) {
         ErrorStateGlyph()
         Text(
             text = message,
             modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
-            style = MaterialTheme.typography.bodyLarge,
+            style = MaterialTheme.typography.bodyLargeEmphasized,
             color = MaterialTheme.colorScheme.onSurface,
             textAlign = TextAlign.Center,
         )
         if (onRetry != null) {
             val label = retryText?.takeIf { it.isNotBlank() }
                 ?: stringResource(R.string.action_retry)
-            FilledTonalButton(
-                onClick = onRetry,
-                modifier = Modifier.heightIn(min = 48.dp),
-            ) {
-                Text(label)
-            }
+            ExpressiveTonalButton(text = label, onClick = onRetry)
         }
     }
 }
@@ -72,7 +68,7 @@ private fun ErrorStateGlyph() {
     val content = MaterialTheme.colorScheme.onErrorContainer
     Canvas(
         modifier = Modifier
-            .size(72.dp)
+            .size(96.dp)
             .clearAndSetSemantics { },
     ) {
         drawCircle(color = container, radius = size.minDimension / 2f, center = center)
