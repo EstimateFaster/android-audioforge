@@ -1,41 +1,38 @@
+@file:OptIn(
+    androidx.compose.foundation.layout.ExperimentalLayoutApi::class,
+    androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class,
+)
+
 package com.estimatefaster.audioforge.feature.player
 
 import android.content.res.Configuration
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
-import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.toShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -43,16 +40,20 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -60,12 +61,21 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.estimatefaster.audioforge.R
 import com.estimatefaster.audioforge.core.model.NARRATOR_ROLE_ID
-import com.estimatefaster.audioforge.ui.components.EmptyState
-import com.estimatefaster.audioforge.ui.components.ErrorState
+import com.estimatefaster.audioforge.ui.forge.ForgeCard
+import com.estimatefaster.audioforge.ui.forge.ForgeChip
+import com.estimatefaster.audioforge.ui.forge.ForgeEmpty
+import com.estimatefaster.audioforge.ui.forge.ForgeError
+import com.estimatefaster.audioforge.ui.forge.ForgeIcon
+import com.estimatefaster.audioforge.ui.forge.ForgeIconAction
+import com.estimatefaster.audioforge.ui.forge.ForgeIcons
+import com.estimatefaster.audioforge.ui.forge.ForgeLoading
+import com.estimatefaster.audioforge.ui.forge.ForgeTopBar
+import com.estimatefaster.audioforge.ui.forge.ForgeWavyProgress
 import com.estimatefaster.audioforge.ui.theme.AudioForgeTheme
+import com.estimatefaster.audioforge.ui.theme.spacing
 
 /**
- * 播放器页（P5-07 / 执行计划 §15 P5-07）。
+ * 播放器页（P5-07 / 执行计划 §15 P5-07，UX v2 重设计）。
  *
  * 有状态入口：收集 [PlayerViewModel.state] 后委托给无状态版本。页面不直接访问播放器、
  * 仓库或数据库；播放/暂停/seek/切章/切句/倍速/睡眠定时都只是 ViewModel 回调。
@@ -96,19 +106,19 @@ fun PlayerScreen(
 }
 
 /**
- * 无状态播放器页。
+ * 无状态播放器页（视觉对应 `docs/prototype/forge-framework.html` 的 Player）。
  *
  * 布局：
- * - 顶部：返回 + 书名；
- * - 大封面占位（书名首字 + 主题渐变）、书名、当前章节标题；
- * - 当前段文本（角色名 + 台词）；
- * - 可拖动进度条、当前/总时长；
- * - 播放/暂停、上一章/下一章、上一句/下一句；
- * - 倍速 chips、睡眠定时 chips（选中后显示剩余）；
- * - 底部可折叠章节列表，当前章高亮，点击直接跳转；
- * - 加载/错误/无音频空态复用 P4-02 组件。
+ * - 顶栏：返回 + 「正在播放」+ 当前章副标题 + 章节列表图标开关；
+ * - 大封面：MaterialShapes 有机形状 + 渐变 + 首字 + Lucide 耳机角标；
+ * - 书名 / 章节 / 第 N 句，当前台词卡；
+ * - Wavy 进度 + 透明 Slider 拖动 + 时间；
+ * - 播放控制全部使用 [ForgeIconAction]（Play/Pause/Skip）；
+ * - 倍速 / 睡眠 chips（Lucide 图标 + 文案）；
+ * - 可展开章节列表：整行是图标+文字的可点击操作。
+ *
+ * 加载 / 错误 / 无音频空态复用 `ui/forge` 的 ForgeLoading / ForgeError / ForgeEmpty。
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PlayerScreen(
     state: PlayerUiState,
@@ -127,71 +137,69 @@ fun PlayerScreen(
     onRetry: () -> Unit = {},
 ) {
     val loadError = state.loadError
+    val chapterTitle = state.currentChapter?.title?.takeIf { it.isNotBlank() }
+    val topBarSubtitle = chapterTitle?.let { title ->
+        stringResource(R.string.ux_v2_player_topbar_subtitle, title)
+    }
+    val chaptersToggleLabel = stringResource(
+        if (state.chaptersExpanded) {
+            R.string.player_chapters_collapse
+        } else {
+            R.string.player_chapters_expand
+        },
+    )
+
     Scaffold(
         modifier = modifier,
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
-            TopAppBar(
-                navigationIcon = {
-                    TextButton(
-                        onClick = onBack,
-                        modifier = Modifier.heightIn(min = 48.dp),
-                    ) {
-                        Text(stringResource(R.string.action_back))
+            ForgeTopBar(
+                title = stringResource(R.string.ux_v2_player_topbar_title),
+                subtitle = topBarSubtitle,
+                navigationIcon = ForgeIcons.Back,
+                navigationDescription = stringResource(R.string.action_back),
+                onNavigation = onBack,
+                actions = {
+                    if (state.chapters.isNotEmpty()) {
+                        ForgeIconAction(
+                            icon = ForgeIcons.List,
+                            contentDescription = chaptersToggleLabel,
+                            onClick = onToggleChapters,
+                            container = false,
+                        )
                     }
                 },
-                title = {
-                    val bookTitle = state.bookTitle.takeIf { it.isNotBlank() }
-                        ?: stringResource(R.string.player_book_untitled)
-                    Text(
-                        text = bookTitle,
-                        modifier = Modifier.semantics { heading() },
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
-                ),
             )
         },
     ) { padding ->
         when {
-            state.isInitialLoading -> PlayerLoading(
+            state.isInitialLoading -> ForgeLoading(
+                label = stringResource(R.string.player_loading),
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding),
             )
 
-            loadError != null -> Box(
+            loadError != null -> ForgeError(
+                message = stringResource(R.string.player_load_error, loadError),
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(padding)
-                    .padding(horizontal = 12.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                ErrorState(
-                    message = stringResource(R.string.player_load_error, loadError),
-                    onRetry = onRetry,
-                )
-            }
+                    .padding(padding),
+                onRetry = onRetry,
+                retryLabel = stringResource(R.string.action_retry),
+            )
 
-            state.isEmpty -> Box(
+            state.isEmpty -> ForgeEmpty(
+                icon = ForgeIcons.Headphones,
+                title = stringResource(R.string.player_empty_title),
+                description = stringResource(R.string.player_empty_description),
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(padding)
-                    .padding(horizontal = 12.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                EmptyState(
-                    title = stringResource(R.string.player_empty_title),
-                    description = stringResource(R.string.player_empty_description),
-                    actionText = stringResource(R.string.player_empty_action),
-                    onAction = onBack,
-                )
-            }
+                    .padding(padding),
+                actionIcon = ForgeIcons.ChevronLeft,
+                actionLabel = stringResource(R.string.player_empty_action),
+                onAction = onBack,
+            )
 
             else -> PlayerReadyContent(
                 state = state,
@@ -228,64 +236,32 @@ private fun PlayerReadyContent(
     onChapterClick: (Long) -> Unit,
     onToggleChapters: () -> Unit,
 ) {
-    Column(modifier = modifier) {
-        Column(
-            modifier = Modifier
-                .weight(1f)
-                .verticalScroll(rememberScrollState())
-                .padding(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            PlayerCover(bookTitle = state.bookTitle)
-            Spacer(Modifier.height(16.dp))
-
-            val bookTitle = state.bookTitle.takeIf { it.isNotBlank() }
-                ?: stringResource(R.string.player_book_untitled)
-            Text(
-                text = bookTitle,
-                modifier = Modifier.semantics { heading() },
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.SemiBold,
-                textAlign = TextAlign.Center,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Spacer(Modifier.height(4.dp))
-
-            val chapterTitle = state.currentChapter?.title?.takeIf { it.isNotBlank() }
-                ?: stringResource(R.string.player_chapter_untitled)
-            Text(
-                text = chapterTitle,
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-
-            Spacer(Modifier.height(20.dp))
-            PlayerSegmentCard(state = state)
-            Spacer(Modifier.height(16.dp))
-            PlayerProgress(state = state, onSeek = onSeek)
-            Spacer(Modifier.height(8.dp))
-            PlayerControls(
-                state = state,
-                onPlayPause = onPlayPause,
-                onPreviousChapter = onPreviousChapter,
-                onNextChapter = onNextChapter,
-                onPreviousSegment = onPreviousSegment,
-                onNextSegment = onNextSegment,
-            )
-            Spacer(Modifier.height(24.dp))
-            PlayerSpeedSelector(state = state, onSpeedChange = onSpeedChange)
-            Spacer(Modifier.height(16.dp))
-            PlayerSleepSelector(state = state, onSleepTimerChange = onSleepTimerChange)
-            Spacer(Modifier.height(16.dp))
-            PlayerChapterHeader(state = state, onToggleChapters = onToggleChapters)
-        }
-
+    Column(
+        modifier = modifier
+            .verticalScroll(rememberScrollState())
+            .padding(
+                horizontal = MaterialTheme.spacing.lg,
+                vertical = MaterialTheme.spacing.md,
+            ),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.lg),
+    ) {
+        PlayerCover(bookTitle = state.bookTitle)
+        PlayerTitleBlock(state = state)
+        PlayerSegmentCard(state = state)
+        PlayerProgress(state = state, onSeek = onSeek)
+        PlayerTransport(
+            state = state,
+            onPlayPause = onPlayPause,
+            onPreviousChapter = onPreviousChapter,
+            onNextChapter = onNextChapter,
+            onPreviousSegment = onPreviousSegment,
+            onNextSegment = onNextSegment,
+        )
+        PlayerSpeedCard(state = state, onSpeedChange = onSpeedChange)
+        PlayerSleepCard(state = state, onSleepTimerChange = onSleepTimerChange)
+        PlayerChapterHeader(state = state, onToggleChapters = onToggleChapters)
         if (state.chaptersExpanded) {
-            HorizontalDivider()
             PlayerChapterList(state = state, onChapterClick = onChapterClick)
         }
     }
@@ -293,6 +269,8 @@ private fun PlayerReadyContent(
 
 @Composable
 private fun PlayerCover(bookTitle: String) {
+    val coverShape = MaterialShapes.Cookie9Sided.toShape(startAngle = 12)
+    val badgeShape = MaterialShapes.Pill.toShape()
     val gradient = Brush.linearGradient(
         colors = listOf(
             MaterialTheme.colorScheme.primaryContainer,
@@ -308,19 +286,85 @@ private fun PlayerCover(bookTitle: String) {
     }
     Box(
         modifier = Modifier
-            .fillMaxWidth()
-            .height(180.dp)
-            .clip(RoundedCornerShape(28.dp))
-            .background(gradient)
+            .fillMaxWidth(0.7f)
+            .widthIn(max = 260.dp)
+            .aspectRatio(1f)
+            // 封面是装饰性视觉，书名与章节已经由下方文本朗读。
             .clearAndSetSemantics { },
-        contentAlignment = Alignment.Center,
     ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .clip(coverShape)
+                .background(gradient),
+        )
         Text(
             text = letter,
+            modifier = Modifier.align(Alignment.Center),
             style = MaterialTheme.typography.displayLarge,
-            fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onPrimaryContainer,
         )
+        Surface(
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(MaterialTheme.spacing.lg)
+                .size(44.dp),
+            shape = badgeShape,
+            color = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary,
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    painter = painterResource(ForgeIcons.Headphones),
+                    contentDescription = null,
+                    modifier = Modifier.size(24.dp),
+                    tint = MaterialTheme.colorScheme.onPrimary,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun PlayerTitleBlock(state: PlayerUiState) {
+    val bookTitle = state.bookTitle.takeIf { it.isNotBlank() }
+        ?: stringResource(R.string.player_book_untitled)
+    val chapterTitle = state.currentChapter?.title?.takeIf { it.isNotBlank() }
+        ?: stringResource(R.string.player_chapter_untitled)
+    val playable = state.currentChapter?.playableSegments.orEmpty()
+    val position = playable.indexOfFirst { it.index == state.currentSegmentIndex }
+
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.xxs),
+    ) {
+        Text(
+            text = bookTitle,
+            modifier = Modifier.semantics { heading() },
+            style = MaterialTheme.typography.headlineSmallEmphasized,
+            textAlign = TextAlign.Center,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Text(
+            text = chapterTitle,
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        if (position >= 0) {
+            Text(
+                text = stringResource(
+                    R.string.ux_v2_player_segment_indicator,
+                    position + 1,
+                    playable.size,
+                ),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
     }
 }
 
@@ -335,33 +379,29 @@ private fun PlayerSegmentCard(state: PlayerUiState) {
     val roleName = segment?.roleName?.takeIf { it.isNotBlank() } ?: fallbackRole
     val text = segment?.text?.takeIf { it.isNotBlank() }
         ?: stringResource(R.string.player_no_segment)
-    Card(
+
+    ForgeCard(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+        contentPadding = PaddingValues(
+            horizontal = MaterialTheme.spacing.lg,
+            vertical = MaterialTheme.spacing.md,
         ),
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 14.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Text(
-                text = roleName,
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.primary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = text,
-                style = MaterialTheme.typography.bodyLarge,
-                textAlign = TextAlign.Center,
-            )
-        }
+        Text(
+            text = roleName,
+            modifier = Modifier.fillMaxWidth(),
+            style = MaterialTheme.typography.labelLargeEmphasized,
+            color = MaterialTheme.colorScheme.primary,
+            textAlign = TextAlign.Center,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Text(
+            text = text,
+            modifier = Modifier.fillMaxWidth(),
+            style = MaterialTheme.typography.bodyLarge,
+            textAlign = TextAlign.Center,
+        )
     }
 }
 
@@ -374,6 +414,7 @@ private fun PlayerProgress(
     var dragFraction by remember(state.currentChapterIndex, state.currentSegmentIndex) {
         mutableStateOf<Float?>(null)
     }
+    val displayedFraction = dragFraction ?: state.progress
     val displayedPosition = dragFraction
         ?.let { fraction -> seekTargetMs(fraction, state.durationMs) }
         ?: state.positionMs
@@ -385,41 +426,64 @@ private fun PlayerProgress(
         positionText,
         durationText,
     )
-    Slider(
-        value = dragFraction ?: state.progress,
-        onValueChange = { dragFraction = it },
-        onValueChangeFinished = {
-            dragFraction?.let(onSeek)
-            dragFraction = null
-        },
-        enabled = state.durationMs > 0L,
-        modifier = Modifier
-            .fillMaxWidth()
-            .semantics {
-                contentDescription = progressLabel
-                stateDescription = progressState
-            },
-    )
-    Row(
+
+    Column(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.xxs),
     ) {
-        Text(
-            text = positionText,
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Text(
-            text = durationText,
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 48.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            ForgeWavyProgress(
+                progress = displayedFraction,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clearAndSetSemantics { },
+            )
+            Slider(
+                value = displayedFraction,
+                onValueChange = { dragFraction = it },
+                onValueChangeFinished = {
+                    dragFraction?.let(onSeek)
+                    dragFraction = null
+                },
+                enabled = state.durationMs > 0L,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .semantics {
+                        contentDescription = progressLabel
+                        stateDescription = progressState
+                    },
+                colors = SliderDefaults.colors(
+                    thumbColor = MaterialTheme.colorScheme.primary,
+                    activeTrackColor = Color.Transparent,
+                    inactiveTrackColor = Color.Transparent,
+                ),
+            )
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Text(
+                text = positionText,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                text = durationText,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun PlayerControls(
+private fun PlayerTransport(
     state: PlayerUiState,
     onPlayPause: () -> Unit,
     onPreviousChapter: () -> Unit,
@@ -427,92 +491,97 @@ private fun PlayerControls(
     onPreviousSegment: () -> Unit,
     onNextSegment: () -> Unit,
 ) {
-    // 200% 字体下按钮会换行而不是被挤出屏幕；正常字体仍是单行居中。
-    FlowRow(
+    Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.SpaceEvenly,
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        TextButton(
-            onClick = onPreviousChapter,
-            enabled = state.previousChapterIndex() != null,
-            modifier = Modifier.heightIn(min = 48.dp),
-        ) {
-            Text(stringResource(R.string.player_previous_chapter))
-        }
-        FilledTonalButton(
-            onClick = onPlayPause,
-            enabled = state.hasPlayableAudio,
-            modifier = Modifier.heightIn(min = 56.dp),
-        ) {
-            Text(
-                stringResource(
-                    if (state.isPlaying) R.string.player_pause else R.string.player_play,
-                ),
-            )
-        }
-        TextButton(
-            onClick = onNextChapter,
-            enabled = state.nextChapterIndex() != null,
-            modifier = Modifier.heightIn(min = 48.dp),
-        ) {
-            Text(stringResource(R.string.player_next_chapter))
-        }
-    }
-    Spacer(Modifier.height(4.dp))
-    FlowRow(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        OutlinedButton(
-            onClick = onPreviousSegment,
+        TransportIconAction(
+            icon = ForgeIcons.SkipPrevious,
+            contentDescription = stringResource(R.string.player_previous_segment),
             enabled = state.previousSegmentIndex() != null,
-            modifier = Modifier.heightIn(min = 48.dp),
-        ) {
-            Text(stringResource(R.string.player_previous_segment))
-        }
-        OutlinedButton(
-            onClick = onNextSegment,
+            onClick = onPreviousSegment,
+        )
+        TransportIconAction(
+            icon = ForgeIcons.ChevronLeft,
+            contentDescription = stringResource(R.string.player_previous_chapter),
+            enabled = state.previousChapterIndex() != null,
+            onClick = onPreviousChapter,
+        )
+        TransportIconAction(
+            icon = if (state.isPlaying) ForgeIcons.Pause else ForgeIcons.Play,
+            contentDescription = stringResource(
+                if (state.isPlaying) R.string.player_pause else R.string.player_play,
+            ),
+            enabled = state.hasPlayableAudio,
+            onClick = onPlayPause,
+            container = true,
+        )
+        TransportIconAction(
+            icon = ForgeIcons.ChevronRight,
+            contentDescription = stringResource(R.string.player_next_chapter),
+            enabled = state.nextChapterIndex() != null,
+            onClick = onNextChapter,
+        )
+        TransportIconAction(
+            icon = ForgeIcons.SkipNext,
+            contentDescription = stringResource(R.string.player_next_segment),
             enabled = state.nextSegmentIndex() != null,
-            modifier = Modifier.heightIn(min = 48.dp),
-        ) {
-            Text(stringResource(R.string.player_next_segment))
-        }
+            onClick = onNextSegment,
+        )
     }
 }
 
+/**
+ * 播放控制统一入口：始终是 [ForgeIconAction]（纯图标 + contentDescription）。
+ *
+ * [ForgeIconAction] 没有 enabled 参数，因此禁用时降透明度、标记 disabled 语义，
+ * 并在 onClick 内兜底拦截，保持原状态机“不可用按钮不触发回调”的行为。
+ */
 @Composable
-private fun PlayerSpeedSelector(
+private fun TransportIconAction(
+    @DrawableRes icon: Int,
+    contentDescription: String,
+    enabled: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    container: Boolean = false,
+) {
+    ForgeIconAction(
+        icon = icon,
+        contentDescription = contentDescription,
+        onClick = { if (enabled) onClick() },
+        modifier = modifier
+            .alpha(if (enabled) 1f else DISABLED_ALPHA)
+            .semantics { if (!enabled) disabled() },
+        container = container,
+    )
+}
+
+@Composable
+private fun PlayerSpeedCard(
     state: PlayerUiState,
     onSpeedChange: (PlayerSpeed) -> Unit,
 ) {
-    Column(modifier = Modifier.fillMaxWidth()) {
+    ForgeCard(modifier = Modifier.fillMaxWidth()) {
         Text(
             text = stringResource(R.string.player_speed_title),
             modifier = Modifier.semantics { heading() },
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.SemiBold,
+            style = MaterialTheme.typography.titleSmallEmphasized,
         )
-        Spacer(Modifier.height(6.dp))
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm),
+            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm),
         ) {
             PlayerSpeed.options.forEach { option ->
-                FilterChip(
+                ForgeChip(
+                    label = stringResource(
+                        R.string.player_speed_option,
+                        formatSpeedMultiplier(option.multiplier),
+                    ),
                     selected = state.speed == option,
                     onClick = { onSpeedChange(option) },
-                    label = {
-                        Text(
-                            stringResource(
-                                R.string.player_speed_option,
-                                formatSpeedMultiplier(option.multiplier),
-                            ),
-                        )
-                    },
+                    icon = ForgeIcons.Gauge,
                 )
             }
         }
@@ -520,60 +589,63 @@ private fun PlayerSpeedSelector(
 }
 
 @Composable
-private fun PlayerSleepSelector(
+private fun PlayerSleepCard(
     state: PlayerUiState,
     onSleepTimerChange: (SleepTimerOption) -> Unit,
 ) {
-    Column(modifier = Modifier.fillMaxWidth()) {
+    ForgeCard(modifier = Modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm),
         ) {
             Text(
                 text = stringResource(R.string.player_sleep_title),
                 modifier = Modifier
                     .weight(1f)
                     .semantics { heading() },
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
+                style = MaterialTheme.typography.titleSmallEmphasized,
             )
             val remaining = state.sleepRemainingMs
             if (remaining != null) {
-                Text(
-                    text = stringResource(
-                        R.string.player_sleep_remaining,
-                        formatPlaybackTime(remaining),
-                    ),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.xxs),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    ForgeIcon(
+                        icon = ForgeIcons.Clock,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
+                    Text(
+                        text = stringResource(
+                            R.string.player_sleep_remaining,
+                            formatPlaybackTime(remaining),
+                        ),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
             }
         }
-        Spacer(Modifier.height(6.dp))
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm),
+            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm),
         ) {
             SleepTimerOption.options.forEach { option ->
-                FilterChip(
+                val minutes = option.minutes
+                ForgeChip(
+                    label = if (minutes == null) {
+                        stringResource(R.string.player_sleep_off)
+                    } else {
+                        stringResource(R.string.player_sleep_minutes, minutes)
+                    },
                     selected = state.sleepTimer == option,
                     onClick = { onSleepTimerChange(option) },
-                    label = { Text(sleepOptionLabel(option)) },
+                    icon = if (option.isEnabled) ForgeIcons.Timer else ForgeIcons.Moon,
                 )
             }
         }
-    }
-}
-
-@Composable
-private fun sleepOptionLabel(option: SleepTimerOption): String {
-    val minutes = option.minutes
-    return if (minutes == null) {
-        stringResource(R.string.player_sleep_off)
-    } else {
-        stringResource(R.string.player_sleep_minutes, minutes)
     }
 }
 
@@ -585,13 +657,13 @@ private fun PlayerChapterHeader(
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm),
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = stringResource(R.string.player_chapters_title),
                 modifier = Modifier.semantics { heading() },
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
+                style = MaterialTheme.typography.titleSmallEmphasized,
             )
             Text(
                 text = stringResource(R.string.player_chapters_count, state.chapters.size),
@@ -599,20 +671,19 @@ private fun PlayerChapterHeader(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        TextButton(
+        ForgeIconAction(
+            icon = ForgeIcons.ChevronDown,
+            contentDescription = stringResource(
+                if (state.chaptersExpanded) {
+                    R.string.player_chapters_collapse
+                } else {
+                    R.string.player_chapters_expand
+                },
+            ),
             onClick = onToggleChapters,
-            modifier = Modifier.heightIn(min = 48.dp),
-        ) {
-            Text(
-                stringResource(
-                    if (state.chaptersExpanded) {
-                        R.string.player_chapters_collapse
-                    } else {
-                        R.string.player_chapters_expand
-                    },
-                ),
-            )
-        }
+            modifier = Modifier.rotate(if (state.chaptersExpanded) 180f else 0f),
+            container = false,
+        )
     }
 }
 
@@ -621,17 +692,15 @@ private fun PlayerChapterList(
     state: PlayerUiState,
     onChapterClick: (Long) -> Unit,
 ) {
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(max = 280.dp),
-        contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ForgeCard(
+        modifier = Modifier.fillMaxWidth(),
+        contentPadding = PaddingValues(MaterialTheme.spacing.sm),
     ) {
-        items(items = state.chapters, key = { chapter -> chapter.key }) { chapter ->
+        state.chapters.forEach { chapter ->
             PlayerChapterRow(
                 chapter = chapter,
                 isCurrent = state.isCurrentChapter(chapter),
+                isPlaying = state.isPlaying,
                 onClick = { onChapterClick(chapter.chapterId) },
             )
         }
@@ -642,79 +711,120 @@ private fun PlayerChapterList(
 private fun PlayerChapterRow(
     chapter: PlayerChapterUi,
     isCurrent: Boolean,
+    isPlaying: Boolean,
     onClick: () -> Unit,
 ) {
+    val title = chapter.title.takeIf { it.isNotBlank() }
+        ?: stringResource(R.string.player_chapter_untitled)
+    val notReadyLabel = stringResource(R.string.player_chapter_no_audio)
+    val currentLabel = stringResource(R.string.player_chapter_current)
     val container = if (isCurrent) {
         MaterialTheme.colorScheme.primaryContainer
     } else {
-        MaterialTheme.colorScheme.surface
+        Color.Transparent
     }
-    val title = chapter.title.takeIf { it.isNotBlank() }
-        ?: stringResource(R.string.player_chapter_untitled)
-    Card(
-        onClick = onClick,
-        enabled = chapter.hasAudio,
+    val leadingColor = if (isCurrent) {
+        MaterialTheme.colorScheme.primary
+    } else {
+        MaterialTheme.colorScheme.surfaceContainerHighest
+    }
+    val leadingTint = if (isCurrent) {
+        MaterialTheme.colorScheme.onPrimary
+    } else {
+        MaterialTheme.colorScheme.onSurfaceVariant
+    }
+
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .semantics { selected = isCurrent },
-        colors = CardDefaults.cardColors(containerColor = container),
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = 48.dp)
-                .padding(horizontal = 16.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            Text(
-                text = (chapter.index + 1).toString(),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            .clip(MaterialTheme.shapes.large)
+            .background(container)
+            .clickable(
+                enabled = chapter.hasAudio,
+                role = androidx.compose.ui.semantics.Role.Button,
+                onClick = onClick,
             )
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.bodyLarge,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
+            .semantics(mergeDescendants = true) {
+                selected = isCurrent
                 if (!chapter.hasAudio) {
-                    Text(
-                        text = stringResource(R.string.player_chapter_no_audio),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                    stateDescription = notReadyLabel
                 }
             }
-            if (isCurrent) {
+            .padding(
+                horizontal = MaterialTheme.spacing.sm,
+                vertical = MaterialTheme.spacing.sm,
+            ),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.md),
+    ) {
+        Surface(
+            modifier = Modifier.size(40.dp),
+            shape = MaterialTheme.shapes.medium,
+            color = leadingColor,
+            contentColor = leadingTint,
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                ForgeIcon(
+                    icon = if (isCurrent) ForgeIcons.AudioLines else ForgeIcons.Music,
+                    contentDescription = null,
+                    tint = leadingTint,
+                )
+            }
+        }
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyLarge,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = stringResource(
+                    R.string.ux_v2_player_chapter_meta,
+                    chapter.playableSegments.size,
+                    formatPlaybackTime(chapter.durationMs),
+                ),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        when {
+            isCurrent -> Row(
+                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.xxs),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                ForgeIcon(
+                    icon = if (isPlaying) ForgeIcons.Pause else ForgeIcons.CheckCircle,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                )
                 Text(
-                    text = stringResource(R.string.player_chapter_current),
+                    text = currentLabel,
                     style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
+
+            !chapter.hasAudio -> Row(
+                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.xxs),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                ForgeIcon(
+                    icon = ForgeIcons.Clock,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    text = notReadyLabel,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
     }
 }
 
-@Composable
-private fun PlayerLoading(modifier: Modifier = Modifier) {
-    Column(
-        modifier = modifier,
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        CircularProgressIndicator()
-        Spacer(Modifier.height(14.dp))
-        Text(
-            text = stringResource(R.string.player_loading),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
-}
+private const val DISABLED_ALPHA = 0.38f
 
 // ---------------------------------------------------------------------------
 // Preview：播放中（含睡眠定时）/ 暂停 / 无音频空态 / 错误态（深色 200%）。
