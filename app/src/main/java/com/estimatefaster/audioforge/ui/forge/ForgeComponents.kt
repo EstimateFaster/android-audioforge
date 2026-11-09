@@ -30,7 +30,6 @@ import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -328,16 +327,18 @@ fun ForgeSegmented(
     onSelect: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    androidx.compose.material3.SingleChoiceSegmentedButtonRow(modifier = modifier.fillMaxWidth()) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.xs),
+    ) {
         options.forEachIndexed { index, (icon, label) ->
-            androidx.compose.material3.SegmentedButton(
+            ForgeChip(
+                label = label,
                 selected = index == selectedIndex,
                 onClick = { onSelect(index) },
-                shape = androidx.compose.material3.SegmentedButtonDefaults.itemShape(index, options.size),
-                icon = { ForgeIcon(icon, contentDescription = null, modifier = Modifier.size(18.dp)) },
-            ) {
-                Text(label, style = MaterialTheme.typography.labelMedium)
-            }
+                icon = icon,
+                modifier = Modifier.weight(1f),
+            )
         }
     }
 }
