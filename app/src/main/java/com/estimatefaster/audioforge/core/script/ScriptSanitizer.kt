@@ -291,7 +291,7 @@ class ScriptSanitizer {
         private const val SENTENCE_END_CHARS = "。！？…"
 
         private fun compile(pattern: String): Regex =
-            Pattern.compile(pattern, Pattern.UNICODE_CHARACTER_CLASS).toRegex()
+            Pattern.compile(pattern).toRegex()
 
         private val QUOTE_RUN = compile("([“\"][^”\"]*[”\"]|「[^」]*」)")
         private val QUOTED_ONLY = compile("^\\s*[“\"‘’「『][^“”\"‘’「」『』]{0,500}[”\"’」』]\\s*${'$'}")

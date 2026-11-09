@@ -50,11 +50,11 @@ class ChapterSplitter {
         const val MAX_TITLE_LENGTH = 50
 
         private const val CHAPTER_PATTERN =
-            "^(?:第\\s*([零一二三四五六七八九十百千万两\\d]+)\\s*[章卷节回部]|Chapter\\s+(\\d+))\\s*(.*)$"
+            "^(?:第\\s*([零一二三四五六七八九十百千万两0-9]+)\\s*[章卷节回部]|Chapter\\s+([0-9]+))\\s*(.*)$"
 
         private val CHAPTER_RE: Regex = Pattern.compile(
             CHAPTER_PATTERN,
-            Pattern.CASE_INSENSITIVE or Pattern.UNICODE_CHARACTER_CLASS,
+            Pattern.CASE_INSENSITIVE,
         ).toRegex()
     }
 }

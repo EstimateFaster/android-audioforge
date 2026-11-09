@@ -190,7 +190,6 @@ class CoverageChecker(
 
         private val NORM_STRIP = Pattern.compile(
             "[\\s“”\"‘’「」『』]+",
-            Pattern.UNICODE_CHARACTER_CLASS,
         ).toRegex()
     }
 }
