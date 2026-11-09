@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Expressive 任务页/设置页新增文案；通用 key 继续复用 strings.xml。 -->
+<resources>
+    <string name="ux_tasks_progress_label">整体进度</string>
+    <string name="ux_tasks_progress_content_description">任务进度 %1$d%%</string>
+    <string name="ux_tasks_stop_hint">停止会在当前片段收尾后生效，已完成的章节会保留。</string>
+    <string name="ux_tasks_no_running_title">暂无运行任务</string>
+
+    <string name="ux_settings_theme_apply_hint">选择后点保存，主题与动态取色会立即生效。</string>
+    <string name="ux_settings_save_hint">保存后立即生效，无需重启应用。</string>
+</resources>

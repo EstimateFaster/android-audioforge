@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class)
+
 package com.estimatefaster.audioforge.feature.settings
 
 import android.content.res.Configuration
@@ -11,6 +13,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -18,15 +21,15 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -47,7 +50,6 @@ import androidx.compose.ui.semantics.error
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
@@ -59,16 +61,23 @@ import com.estimatefaster.audioforge.core.settings.AppSettings
 import com.estimatefaster.audioforge.core.settings.ThemeMode
 import com.estimatefaster.audioforge.ui.components.AdaptiveFieldRow
 import com.estimatefaster.audioforge.ui.components.ErrorBanner
+import com.estimatefaster.audioforge.ui.components.ExpressiveCard
+import com.estimatefaster.audioforge.ui.components.ExpressivePrimaryButton
+import com.estimatefaster.audioforge.ui.components.ExpressiveTextButton
+import com.estimatefaster.audioforge.ui.components.ExpressiveTonalButton
 import com.estimatefaster.audioforge.ui.components.ScreenState
 import com.estimatefaster.audioforge.ui.components.SectionHeader
 import com.estimatefaster.audioforge.ui.theme.AudioForgeTheme
+import com.estimatefaster.audioforge.ui.theme.spacing
 
-/**
- * 全局设置页（P4-09 / 执行计划 §7.4、§12.4 S11）。
- *
- * 有状态入口：收集 [SettingsViewModel.state] 后委托给无状态版本。
- * 保存回调只通过 ViewModel 触达仓库，UI 不直接读写 DataStore。
- */
+// 全局设置页（P4-09 / 执行计划 §7.4、§12.4 S11）。
+//
+// 有状态入口：收集 [SettingsViewModel.state] 后委托给无状态版本。
+// 保存回调只通过 ViewModel 触达仓库，UI 不直接读写 DataStore。
+//
+// Expressive 改版把七组设置放进独立的 [ExpressiveCard]（API / 生成 / 网络 / 设备 /
+// 外观 / 存储 / 关于），卡片内统一 [SectionHeader] 与主题间距；页面底部只保留
+// 一个主色保存按钮，其余操作都是 text/tonal 次级按钮。
 @Composable
 fun SettingsScreen(
     viewModel: SettingsViewModel,
@@ -99,14 +108,13 @@ fun SettingsScreen(
     )
 }
 
-/**
- * 无状态设置页。
- *
- * - 分组：API / 生成 / 网络 / 设备 / 外观 / 存储 / 关于；
- * - 输入即时校验（[SettingsUiState.errors] / [SettingsUiState.formatErrors]）；
- * - 保存按钮只在“有改动且无错误”时可点，点击后由 ViewModel 调用仓库；
- * - Key 只展示末 4 位，设置/清除都走独立对话框，输入框使用密码样式、不回显已存值。
- */
+// 无状态设置页。
+//
+// - 分组：API / 生成 / 网络 / 设备 / 外观 / 存储 / 关于；
+// - 输入即时校验（[SettingsUiState.errors] / [SettingsUiState.formatErrors]）；
+// - 保存按钮只在“有改动且无错误”时可点，点击后由 ViewModel 调用仓库；
+// - Key 只展示末 4 位，设置/清除都走独立对话框，输入框使用密码样式、不回显已存值；
+// - 主题与动态取色保存后由 MainActivity 的 settings Flow 立即重组，页面不自行改主题。
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
@@ -134,6 +142,16 @@ fun SettingsScreen(
     val keyDialogTarget = keyTargetByName(keyDialogTargetName)
     val clearTarget = keyTargetByName(clearTargetName)
 
+    val screenState = when {
+        state.loading -> ScreenState.Loading(stringResource(R.string.settings_loading))
+        state.loadError != null -> ScreenState.Error(
+            message = stringResource(R.string.settings_load_error, state.loadError),
+            onRetry = onRetry,
+        )
+
+        else -> ScreenState.Content
+    }
+
     Scaffold(
         modifier = modifier,
         containerColor = MaterialTheme.colorScheme.background,
@@ -148,50 +166,24 @@ fun SettingsScreen(
                     }
                 },
                 title = {
-                    Column {
-                        Text(
-                            text = stringResource(R.string.settings_title),
-                            modifier = Modifier.semantics { heading() },
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.SemiBold,
-                        )
-                        if (state.saved) {
-                            Text(
-                                text = stringResource(R.string.settings_saved),
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.primary,
-                            )
-                        }
-                    }
-                },
-                actions = {
-                    TextButton(
-                        onClick = onSave,
-                        enabled = state.canSave,
-                        modifier = Modifier.heightIn(min = 48.dp),
-                    ) {
-                        Text(stringResource(R.string.action_save))
-                    }
+                    Text(
+                        text = stringResource(R.string.settings_title),
+                        modifier = Modifier.semantics { heading() },
+                        style = MaterialTheme.typography.titleLargeEmphasized,
+                        maxLines = 1,
+                    )
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background,
                 ),
             )
         },
+        bottomBar = {
+            if (screenState == ScreenState.Content) {
+                SaveBar(canSave = state.canSave, onSave = onSave)
+            }
+        },
     ) { padding ->
-        val screenState = when {
-            state.loading -> ScreenState.Loading(stringResource(R.string.settings_loading))
-
-            state.loadError != null -> ScreenState.Error(
-                message = stringResource(
-                    R.string.settings_load_error,
-                    state.loadError,
-                ),
-                onRetry = onRetry,
-            )
-
-            else -> ScreenState.Content
-        }
         ScreenState(
             state = screenState,
             modifier = Modifier.padding(padding),
@@ -250,6 +242,31 @@ fun SettingsScreen(
 }
 
 @Composable
+private fun SaveBar(
+    canSave: Boolean,
+    onSave: () -> Unit,
+) {
+    Surface(color = MaterialTheme.colorScheme.surface) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .padding(
+                    horizontal = MaterialTheme.spacing.lg,
+                    vertical = MaterialTheme.spacing.sm,
+                ),
+        ) {
+            ExpressivePrimaryButton(
+                text = stringResource(R.string.action_save),
+                onClick = onSave,
+                enabled = canSave,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+    }
+}
+
+@Composable
 private fun SettingsContent(
     state: SettingsUiState,
     versionName: String,
@@ -270,8 +287,11 @@ private fun SettingsContent(
         modifier = Modifier
             .fillMaxSize()
             .padding(contentPadding),
-        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
+        contentPadding = PaddingValues(
+            horizontal = MaterialTheme.spacing.lg,
+            vertical = MaterialTheme.spacing.md,
+        ),
+        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.md),
     ) {
         if (state.saving || state.saved || state.saveError != null) {
             item(key = "save-status") {
@@ -293,6 +313,7 @@ private fun SettingsContent(
                 )
             }
         }
+
         item(key = "api") {
             ApiSection(
                 state = state,
@@ -348,6 +369,13 @@ private fun SettingsContent(
                 onRestartOnboarding = onRestartOnboarding,
             )
         }
+        item(key = "save-hint") {
+            Text(
+                text = stringResource(R.string.ux_settings_save_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
     }
 }
 
@@ -359,7 +387,7 @@ private fun SaveStatus(state: SettingsUiState, onSave: () -> Unit) {
                 .fillMaxWidth()
                 .semantics { liveRegion = LiveRegionMode.Polite },
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.md),
         ) {
             LinearProgressIndicator(modifier = Modifier.weight(1f))
             Text(
@@ -377,31 +405,28 @@ private fun SaveStatus(state: SettingsUiState, onSave: () -> Unit) {
         else -> Text(
             text = stringResource(R.string.settings_saved),
             modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
-            style = MaterialTheme.typography.labelLarge,
+            style = MaterialTheme.typography.labelLargeEmphasized,
             color = MaterialTheme.colorScheme.primary,
         )
     }
 }
 
+// 每个分组都是一张 Expressive 大圆角卡片：SectionHeader + 主题间距的内容槽。
 @Composable
 private fun SettingsSection(
     title: String,
     subtitle: String,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+    ExpressiveCard(
+        contentPadding = PaddingValues(MaterialTheme.spacing.lg),
     ) {
+        SectionHeader(title = title, subtitle = subtitle)
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            SectionHeader(title = title, subtitle = subtitle)
-            content()
-        }
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.md),
+            content = content,
+        )
     }
 }
 
@@ -443,7 +468,7 @@ private fun ApiSection(
             onClear = { onRequestClearKey(SettingsKeyTarget.LLM) },
         )
 
-        HorizontalDivider()
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
         SectionLabel(text = stringResource(R.string.settings_api_fish))
 
@@ -694,22 +719,27 @@ private fun AppearanceSection(
         Text(
             text = stringResource(R.string.settings_theme_title),
             modifier = Modifier.semantics { heading() },
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.SemiBold,
+            style = MaterialTheme.typography.titleSmallEmphasized,
+            color = MaterialTheme.colorScheme.primary,
         )
         Row(
             modifier = Modifier.horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm),
         ) {
             ThemeMode.entries.forEach { mode ->
-                FilterChip(
+                ThemeChip(
                     selected = state.draft.themeMode == mode.wire,
-                    onClick = { onFieldChange(SettingsField.THEME_MODE, mode.wire) },
                     enabled = enabled,
-                    label = { Text(themeLabel(mode)) },
+                    label = themeLabel(mode),
+                    onClick = { onFieldChange(SettingsField.THEME_MODE, mode.wire) },
                 )
             }
         }
+        Text(
+            text = stringResource(R.string.ux_settings_theme_apply_hint),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
         SettingsSwitchRow(
             title = stringResource(R.string.settings_switch_dynamic_color),
             description = stringResource(R.string.settings_switch_dynamic_color_desc),
@@ -740,12 +770,12 @@ private fun StorageSection(
             enabled = enabled,
             onFieldChange = onFieldChange,
         )
-        TextButton(
+        ExpressiveTonalButton(
+            text = stringResource(R.string.settings_action_open_storage),
             onClick = onOpenStorage,
-            modifier = Modifier.heightIn(min = 48.dp),
-        ) {
-            Text(stringResource(R.string.settings_action_open_storage))
-        }
+            enabled = enabled,
+            modifier = Modifier.fillMaxWidth(),
+        )
     }
 }
 
@@ -765,29 +795,23 @@ private fun AboutSection(
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        TextButton(
+        ExpressiveTextButton(
+            text = stringResource(R.string.settings_action_open_about),
             onClick = onOpenAbout,
-            modifier = Modifier.heightIn(min = 48.dp),
-        ) {
-            Text(stringResource(R.string.settings_action_open_about))
-        }
-        TextButton(
+        )
+        ExpressiveTextButton(
+            text = stringResource(R.string.settings_about_licenses),
             onClick = onOpenLicenses,
-            modifier = Modifier.heightIn(min = 48.dp),
-        ) {
-            Text(stringResource(R.string.settings_about_licenses))
-        }
+        )
         Text(
             text = stringResource(R.string.settings_about_licenses_desc),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        TextButton(
+        ExpressiveTextButton(
+            text = stringResource(R.string.settings_action_restart_onboarding),
             onClick = onRestartOnboarding,
-            modifier = Modifier.heightIn(min = 48.dp),
-        ) {
-            Text(stringResource(R.string.settings_action_restart_onboarding))
-        }
+        )
     }
 }
 
@@ -796,9 +820,30 @@ private fun SectionLabel(text: String) {
     Text(
         text = text,
         modifier = Modifier.semantics { heading() },
-        style = MaterialTheme.typography.titleSmall,
-        fontWeight = FontWeight.SemiBold,
+        style = MaterialTheme.typography.titleSmallEmphasized,
         color = MaterialTheme.colorScheme.primary,
+    )
+}
+
+@Composable
+private fun ThemeChip(
+    selected: Boolean,
+    enabled: Boolean,
+    label: String,
+    onClick: () -> Unit,
+) {
+    FilterChip(
+        selected = selected,
+        onClick = onClick,
+        enabled = enabled,
+        label = { Text(label, style = MaterialTheme.typography.labelLarge) },
+        modifier = Modifier.heightIn(min = 48.dp),
+        shape = MaterialTheme.shapes.large,
+        colors = FilterChipDefaults.filterChipColors(
+            selectedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
+            selectedLabelColor = MaterialTheme.colorScheme.onSecondaryContainer,
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+        ),
     )
 }
 
@@ -839,6 +884,7 @@ private fun SettingsTextField(
         label = { Text(label) },
         singleLine = true,
         isError = errorText != null,
+        shape = MaterialTheme.shapes.large,
         keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
         supportingText = supportingText,
     )
@@ -853,59 +899,56 @@ private fun ApiKeyRow(
     onSet: () -> Unit,
     onClear: () -> Unit,
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(min = 48.dp),
-        verticalAlignment = Alignment.CenterVertically,
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.xs),
     ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-            )
-            Text(
-                text = when {
-                    !key.configured -> stringResource(R.string.settings_key_unset)
-                    key.last4.isNotBlank() -> stringResource(
-                        R.string.settings_key_mask,
-                        key.last4,
-                    )
-                    else -> stringResource(R.string.settings_key_masked_short)
-                },
-                style = MaterialTheme.typography.bodySmall,
-                color = if (key.configured) {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                } else {
-                    MaterialTheme.colorScheme.error
-                },
-            )
-        }
-        Spacer(Modifier.width(8.dp))
-        TextButton(
-            onClick = onSet,
-            enabled = enabled && !busy,
-            modifier = Modifier.heightIn(min = 48.dp),
-        ) {
-            Text(
-                text = if (key.configured) {
-                    stringResource(R.string.settings_key_change)
-                } else {
-                    stringResource(R.string.settings_key_set)
-                },
-            )
-        }
-        if (key.configured) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleSmallEmphasized,
+        )
+        Text(
+            text = when {
+                !key.configured -> stringResource(R.string.settings_key_unset)
+                key.last4.isNotBlank() -> stringResource(
+                    R.string.settings_key_mask,
+                    key.last4,
+                )
+
+                else -> stringResource(R.string.settings_key_masked_short)
+            },
+            style = MaterialTheme.typography.bodySmall,
+            color = if (key.configured) {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            } else {
+                MaterialTheme.colorScheme.error
+            },
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm)) {
             TextButton(
-                onClick = onClear,
+                onClick = onSet,
                 enabled = enabled && !busy,
                 modifier = Modifier.heightIn(min = 48.dp),
             ) {
                 Text(
-                    text = stringResource(R.string.settings_key_clear),
-                    color = MaterialTheme.colorScheme.error,
+                    text = if (key.configured) {
+                        stringResource(R.string.settings_key_change)
+                    } else {
+                        stringResource(R.string.settings_key_set)
+                    },
                 )
+            }
+            if (key.configured) {
+                TextButton(
+                    onClick = onClear,
+                    enabled = enabled && !busy,
+                    modifier = Modifier.heightIn(min = 48.dp),
+                ) {
+                    Text(
+                        text = stringResource(R.string.settings_key_clear),
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
             }
         }
     }
@@ -929,7 +972,7 @@ private fun SettingsSwitchRow(
                 role = Role.Switch,
                 onValueChange = onCheckedChange,
             )
-            .padding(vertical = 8.dp),
+            .padding(vertical = MaterialTheme.spacing.sm),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f)) {
@@ -943,7 +986,7 @@ private fun SettingsSwitchRow(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        Spacer(Modifier.width(12.dp))
+        Spacer(Modifier.width(MaterialTheme.spacing.md))
         Switch(
             checked = checked,
             onCheckedChange = null,
@@ -965,13 +1008,14 @@ private fun KeyInputDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.settings_key_dialog_title, title)) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm)) {
                 OutlinedTextField(
                     value = value,
                     onValueChange = onValueChange,
                     modifier = Modifier.fillMaxWidth(),
                     label = { Text(stringResource(R.string.settings_key_dialog_label)) },
                     singleLine = true,
+                    shape = MaterialTheme.shapes.large,
                     visualTransformation = PasswordVisualTransformation(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                 )
@@ -986,12 +1030,16 @@ private fun KeyInputDialog(
             TextButton(
                 onClick = onConfirm,
                 enabled = value.isNotBlank(),
+                modifier = Modifier.heightIn(min = 48.dp),
             ) {
                 Text(stringResource(R.string.action_save))
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            TextButton(
+                onClick = onDismiss,
+                modifier = Modifier.heightIn(min = 48.dp),
+            ) {
                 Text(stringResource(R.string.action_cancel))
             }
         },
@@ -1010,7 +1058,10 @@ private fun ClearKeyDialog(
         title = { Text(stringResource(R.string.settings_key_clear_title)) },
         text = { Text(stringResource(R.string.settings_key_clear_message, title)) },
         confirmButton = {
-            TextButton(onClick = onConfirm) {
+            TextButton(
+                onClick = onConfirm,
+                modifier = Modifier.heightIn(min = 48.dp),
+            ) {
                 Text(
                     text = stringResource(R.string.settings_key_clear),
                     color = MaterialTheme.colorScheme.error,
@@ -1018,7 +1069,10 @@ private fun ClearKeyDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            TextButton(
+                onClick = onDismiss,
+                modifier = Modifier.heightIn(min = 48.dp),
+            ) {
                 Text(stringResource(R.string.action_cancel))
             }
         },
@@ -1056,7 +1110,7 @@ private fun formatErrorLabel(error: FieldFormatError): String = when (error) {
 private fun keyTargetByName(name: String): SettingsKeyTarget? =
     SettingsKeyTarget.entries.firstOrNull { it.name == name }
 
-/** 草稿的字符串视图；只读 UI 使用，写路径统一走 [SettingsDraft.withField]。 */
+// 草稿的字符串视图；只读 UI 使用，写路径统一走 [SettingsDraft.withField]。
 private fun SettingsDraft.textOf(field: SettingsField): String = when (field) {
     SettingsField.LLM_BASE_URL -> llmBaseUrl
     SettingsField.LLM_MODEL -> llmModel
@@ -1084,7 +1138,7 @@ private fun SettingsDraft.textOf(field: SettingsField): String = when (field) {
 }
 
 // ---------------------------------------------------------------------------
-// Preview：浅色默认态 / 深色带字段错误。文案全部来自 strings.xml。
+// Preview：浅色默认态 / 深色带字段错误 200%。文案全部来自 strings.xml。
 // ---------------------------------------------------------------------------
 
 private fun previewState(): SettingsUiState = SettingsUiState.from(
@@ -1095,11 +1149,7 @@ private fun previewState(): SettingsUiState = SettingsUiState.from(
     ),
 )
 
-@Preview(
-    name = "SettingsScreen Light",
-    showBackground = true,
-    backgroundColor = 0xFFF7F8FC,
-)
+@Preview(name = "SettingsScreen Light", showBackground = true)
 @Composable
 private fun SettingsScreenLightPreview() {
     AudioForgeTheme(darkTheme = false, dynamicColor = false) {
@@ -1111,11 +1161,10 @@ private fun SettingsScreenLightPreview() {
 }
 
 @Preview(
-    name = "SettingsScreen Dark Errors",
+    name = "SettingsScreen Dark Errors 200%",
     showBackground = true,
-    backgroundColor = 0xFF0F1220,
     uiMode = Configuration.UI_MODE_NIGHT_YES,
-    fontScale = 1.3f,
+    fontScale = 2f,
 )
 @Composable
 private fun SettingsScreenDarkPreview() {
