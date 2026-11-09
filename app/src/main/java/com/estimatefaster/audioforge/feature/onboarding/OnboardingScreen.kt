@@ -1,11 +1,18 @@
+@file:OptIn(
+    androidx.compose.foundation.layout.ExperimentalLayoutApi::class,
+    androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class,
+)
+
 package com.estimatefaster.audioforge.feature.onboarding
 
 import android.content.res.Configuration
 import androidx.annotation.StringRes
-import androidx.compose.foundation.background
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -16,16 +23,11 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -33,6 +35,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.toShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -44,16 +47,21 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.estimatefaster.audioforge.R
 import com.estimatefaster.audioforge.ui.components.ErrorBanner
-import com.estimatefaster.audioforge.ui.components.SectionHeader
+import com.estimatefaster.audioforge.ui.components.ExpressiveCard
+import com.estimatefaster.audioforge.ui.components.ExpressivePrimaryButton
+import com.estimatefaster.audioforge.ui.components.ExpressiveTonalButton
+import com.estimatefaster.audioforge.ui.components.StatusPill
+import com.estimatefaster.audioforge.ui.components.StatusTone
 import com.estimatefaster.audioforge.ui.theme.AudioForgeTheme
+import com.estimatefaster.audioforge.ui.theme.spacing
 
 /**
  * 首次引导页（P4-10 / 执行计划 §12.4 S01）。
@@ -122,8 +130,9 @@ fun OnboardingScreen(
                     Text(
                         text = stringResource(R.string.onboarding_title),
                         modifier = Modifier.semantics { heading() },
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.SemiBold,
+                        style = MaterialTheme.typography.titleLargeEmphasized,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 },
                 actions = {
@@ -132,7 +141,10 @@ fun OnboardingScreen(
                         enabled = state.canSkip,
                         modifier = Modifier.heightIn(min = 48.dp),
                     ) {
-                        Text(stringResource(R.string.onboarding_skip))
+                        Text(
+                            text = stringResource(R.string.onboarding_skip),
+                            style = MaterialTheme.typography.labelLarge,
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -153,22 +165,30 @@ fun OnboardingScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
-                .padding(horizontal = 20.dp),
+                .padding(padding),
         ) {
-            StepProgress(step = state.step)
+            StepRail(
+                step = state.step,
+                modifier = Modifier.padding(
+                    start = MaterialTheme.spacing.xl,
+                    top = MaterialTheme.spacing.md,
+                    end = MaterialTheme.spacing.xl,
+                ),
+            )
 
             Column(
                 modifier = Modifier
                     .weight(1f)
                     .verticalScroll(rememberScrollState())
-                    .padding(top = 16.dp, bottom = 20.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
+                    .padding(horizontal = MaterialTheme.spacing.xl)
+                    .padding(top = MaterialTheme.spacing.lg, bottom = MaterialTheme.spacing.xl),
+                verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.lg),
             ) {
-                // 保存失败可能发生在任意步骤；放在内容顶部，避免被长表单挤出屏幕。
                 if (state.saveError != null) {
                     SaveErrorBanner(error = state.saveError)
                 }
+
+                OnboardingHero(step = state.step)
 
                 when (state.step) {
                     OnboardingStep.Welcome -> WelcomeStep()
@@ -187,63 +207,149 @@ fun OnboardingScreen(
 }
 
 // ---------------------------------------------------------------------------
-// 步骤内容
+// 步骤进度与 hero
 // ---------------------------------------------------------------------------
 
 @Composable
-private fun StepProgress(step: OnboardingStep) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(
-            text = stringResource(
-                R.string.onboarding_step_indicator,
-                step.number,
-                OnboardingStep.entries.size,
-            ),
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            OnboardingStep.entries.forEach { entry ->
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(4.dp)
-                        // 步骤文字已说明第几步；色条只是视觉辅助，不单独进入读屏。
-                        .clearAndSetSemantics { }
-                        .background(
-                            color = if (entry.ordinal <= step.ordinal) {
-                                MaterialTheme.colorScheme.primary
-                            } else {
-                                MaterialTheme.colorScheme.surfaceVariant
-                            },
-                            shape = CircleShape,
-                        ),
+private fun StepRail(
+    step: OnboardingStep,
+    modifier: Modifier = Modifier,
+) {
+    val inactiveShape = MaterialShapes.Pill.toShape()
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.xs),
+    ) {
+        OnboardingStep.entries.forEach { entry ->
+            val current = entry == step
+            val railHeight by animateDpAsState(
+                targetValue = if (current) 10.dp else 6.dp,
+                label = "onboardingStepRailHeight",
+            )
+            val railColor = if (entry.ordinal <= step.ordinal) {
+                MaterialTheme.colorScheme.primary
+            } else {
+                MaterialTheme.colorScheme.surfaceContainerHighest
+            }
+            Surface(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(railHeight)
+                    // 步骤文字已由 hero 提供；色条只是视觉辅助，不单独进入读屏。
+                    .clearAndSetSemantics { },
+                shape = if (current) MaterialShapes.Cookie4Sided.toShape() else inactiveShape,
+                color = railColor,
+            ) {}
+        }
+    }
+}
+
+@Composable
+private fun OnboardingHero(step: OnboardingStep) {
+    val heroShape = MaterialShapes.Cookie9Sided.toShape(startAngle = 8)
+    val badgeShape = MaterialShapes.Cookie6Sided.toShape()
+    val onContainer = MaterialTheme.colorScheme.onPrimaryContainer
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = heroShape,
+        color = MaterialTheme.colorScheme.primaryContainer,
+        contentColor = onContainer,
+    ) {
+        Row(
+            modifier = Modifier.padding(MaterialTheme.spacing.xl),
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.lg),
+            verticalAlignment = Alignment.Top,
+        ) {
+            Surface(
+                modifier = Modifier.size(64.dp),
+                shape = badgeShape,
+                color = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Text(
+                        text = step.number.toString().padStart(length = 2, padChar = '0'),
+                        style = MaterialTheme.typography.titleLargeEmphasized,
+                    )
+                }
+            }
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.xs),
+            ) {
+                Text(
+                    text = stringResource(
+                        R.string.onboarding_step_indicator,
+                        step.number,
+                        OnboardingStep.entries.size,
+                    ),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = onContainer.copy(alpha = 0.7f),
+                )
+                Text(
+                    text = stringResource(step.taglineRes()),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = onContainer.copy(alpha = 0.75f),
+                )
+                Text(
+                    text = stringResource(step.titleRes()),
+                    modifier = Modifier.semantics { heading() },
+                    style = MaterialTheme.typography.headlineSmallEmphasized,
+                )
+                Text(
+                    text = stringResource(step.subtitleRes()),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = onContainer.copy(alpha = 0.82f),
                 )
             }
         }
     }
 }
 
+@StringRes
+private fun OnboardingStep.titleRes(): Int = when (this) {
+    OnboardingStep.Welcome -> R.string.onboarding_welcome_title
+    OnboardingStep.Keys -> R.string.onboarding_keys_title
+    OnboardingStep.Permissions -> R.string.onboarding_permissions_title
+}
+
+@StringRes
+private fun OnboardingStep.subtitleRes(): Int = when (this) {
+    OnboardingStep.Welcome -> R.string.onboarding_welcome_subtitle
+    OnboardingStep.Keys -> R.string.onboarding_keys_subtitle
+    OnboardingStep.Permissions -> R.string.onboarding_permissions_subtitle
+}
+
+@StringRes
+private fun OnboardingStep.taglineRes(): Int = when (this) {
+    OnboardingStep.Welcome -> R.string.onboarding_hero_tagline_welcome
+    OnboardingStep.Keys -> R.string.onboarding_hero_tagline_keys
+    OnboardingStep.Permissions -> R.string.onboarding_hero_tagline_permissions
+}
+
+// ---------------------------------------------------------------------------
+// 步骤内容
+// ---------------------------------------------------------------------------
+
 @Composable
 private fun WelcomeStep() {
-    StepTitle(
-        title = stringResource(R.string.onboarding_welcome_title),
-        subtitle = stringResource(R.string.onboarding_welcome_subtitle),
-    )
     Text(
         text = stringResource(R.string.onboarding_welcome_intro),
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
     FeatureCard(
+        index = 1,
         title = stringResource(R.string.onboarding_feature_byok_title),
         body = stringResource(R.string.onboarding_feature_byok_body),
     )
     FeatureCard(
+        index = 2,
         title = stringResource(R.string.onboarding_feature_sideload_title),
         body = stringResource(R.string.onboarding_feature_sideload_body),
     )
     FeatureCard(
+        index = 3,
         title = stringResource(R.string.onboarding_feature_local_title),
         body = stringResource(R.string.onboarding_feature_local_body),
     )
@@ -257,11 +363,6 @@ private fun KeysStep(
     onModelChange: (OnboardingKeyKind, String) -> Unit,
     onTestKey: (OnboardingKeyKind) -> Unit,
 ) {
-    StepTitle(
-        title = stringResource(R.string.onboarding_keys_title),
-        subtitle = stringResource(R.string.onboarding_keys_subtitle),
-    )
-
     ProviderKeyCard(
         kind = OnboardingKeyKind.Llm,
         state = state,
@@ -293,15 +394,13 @@ private fun KeysStep(
 
 @Composable
 private fun PermissionsStep() {
-    StepTitle(
-        title = stringResource(R.string.onboarding_permissions_title),
-        subtitle = stringResource(R.string.onboarding_permissions_subtitle),
-    )
     FeatureCard(
+        index = 1,
         title = stringResource(R.string.onboarding_notifications_title),
         body = stringResource(R.string.onboarding_notifications_body),
     )
     FeatureCard(
+        index = 2,
         title = stringResource(R.string.onboarding_battery_title),
         body = stringResource(R.string.onboarding_battery_body),
     )
@@ -317,44 +416,40 @@ private fun PermissionsStep() {
 // ---------------------------------------------------------------------------
 
 @Composable
-private fun StepTitle(title: String, subtitle: String) {
-    Column(
-        modifier = Modifier.semantics { heading() },
-        verticalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.SemiBold,
-        )
-        Text(
-            text = subtitle,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
-}
-
-@Composable
-private fun FeatureCard(title: String, body: String) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
+private fun FeatureCard(index: Int, title: String, body: String) {
+    val badgeShape = MaterialShapes.Cookie4Sided.toShape()
+    ExpressiveCard(contentPadding = PaddingValues(MaterialTheme.spacing.lg)) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.md),
+            verticalAlignment = Alignment.Top,
         ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-            )
-            Text(
-                text = body,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            Surface(
+                modifier = Modifier.size(48.dp),
+                shape = badgeShape,
+                color = MaterialTheme.colorScheme.secondaryContainer,
+                contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Text(
+                        text = index.toString(),
+                        style = MaterialTheme.typography.titleMediumEmphasized,
+                    )
+                }
+            }
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.xxs),
+            ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleSmallEmphasized,
+                )
+                Text(
+                    text = body,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
     }
 }
@@ -394,103 +489,87 @@ private fun ProviderKeyCard(
         null
     }
 
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+    ExpressiveCard(contentPadding = PaddingValues(MaterialTheme.spacing.lg)) {
+        Text(
+            text = stringResource(titleRes),
+            style = MaterialTheme.typography.titleMediumEmphasized,
+        )
+        Text(
+            text = stringResource(subtitleRes),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+
+        OutlinedTextField(
+            value = state.keyFor(kind),
+            onValueChange = { value -> onKeyChange(kind, value) },
+            modifier = Modifier.fillMaxWidth(),
+            shape = MaterialTheme.shapes.large,
+            label = { Text(stringResource(R.string.onboarding_api_key)) },
+            placeholder = {
+                Text(stringResource(R.string.onboarding_api_key_placeholder))
+            },
+            singleLine = true,
+            enabled = !state.saving,
+            visualTransformation = PasswordVisualTransformation(),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+        )
+
+        OutlinedTextField(
+            value = state.baseUrlFor(kind),
+            onValueChange = { value -> onBaseUrlChange(kind, value) },
+            modifier = Modifier.fillMaxWidth(),
+            shape = MaterialTheme.shapes.large,
+            label = { Text(stringResource(R.string.onboarding_base_url)) },
+            singleLine = true,
+            enabled = !state.saving,
+            isError = urlError != null,
+            supportingText = urlSupportingText,
+        )
+
+        OutlinedTextField(
+            value = state.modelFor(kind),
+            onValueChange = { value -> onModelChange(kind, value) },
+            modifier = Modifier.fillMaxWidth(),
+            shape = MaterialTheme.shapes.large,
+            label = { Text(stringResource(R.string.onboarding_model)) },
+            singleLine = true,
+            enabled = !state.saving,
+            isError = modelError != null,
+            supportingText = modelSupportingText,
+        )
+
+        FlowRow(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm),
+            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm),
         ) {
-            SectionHeader(
-                title = stringResource(titleRes),
-                subtitle = stringResource(subtitleRes),
+            ExpressiveTonalButton(
+                text = stringResource(R.string.onboarding_test_connection),
+                onClick = { onTestKey(kind) },
+                enabled = !state.saving && testState != OnboardingTestState.Testing,
             )
-
-            OutlinedTextField(
-                value = state.keyFor(kind),
-                onValueChange = { value -> onKeyChange(kind, value) },
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text(stringResource(R.string.onboarding_api_key)) },
-                placeholder = {
-                    Text(stringResource(R.string.onboarding_api_key_placeholder))
-                },
-                singleLine = true,
-                enabled = !state.saving,
-                visualTransformation = PasswordVisualTransformation(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-            )
-
-            OutlinedTextField(
-                value = state.baseUrlFor(kind),
-                onValueChange = { value -> onBaseUrlChange(kind, value) },
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text(stringResource(R.string.onboarding_base_url)) },
-                singleLine = true,
-                enabled = !state.saving,
-                isError = urlError != null,
-                supportingText = urlSupportingText,
-            )
-
-            OutlinedTextField(
-                value = state.modelFor(kind),
-                onValueChange = { value -> onModelChange(kind, value) },
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text(stringResource(R.string.onboarding_model)) },
-                singleLine = true,
-                enabled = !state.saving,
-                isError = modelError != null,
-                supportingText = modelSupportingText,
-            )
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                OutlinedButton(
-                    onClick = { onTestKey(kind) },
-                    enabled = !state.saving && testState != OnboardingTestState.Testing,
-                    modifier = Modifier.heightIn(min = 48.dp),
-                ) {
-                    Text(stringResource(R.string.onboarding_test_connection))
-                }
-                TestStatus(state = testState)
-            }
+            TestStatus(state = testState)
         }
     }
 }
 
 @Composable
 private fun TestStatus(state: OnboardingTestState) {
+    val liveModifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }
     when (state) {
         OnboardingTestState.Idle -> Unit
 
-        OnboardingTestState.Testing -> Row(
-            modifier = Modifier.semantics {
-                liveRegion = LiveRegionMode.Polite
-            },
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            CircularProgressIndicator(
-                modifier = Modifier.size(16.dp),
-                strokeWidth = 2.dp,
-            )
-            Text(
-                text = stringResource(R.string.onboarding_testing),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
+        OnboardingTestState.Testing -> StatusPill(
+            text = stringResource(R.string.onboarding_testing),
+            tone = StatusTone.Running,
+            modifier = liveModifier,
+        )
 
-        OnboardingTestState.Ok -> Text(
+        OnboardingTestState.Ok -> StatusPill(
             text = stringResource(R.string.onboarding_test_passed),
-            modifier = Modifier.semantics {
-                liveRegion = LiveRegionMode.Polite
-            },
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.primary,
+            tone = StatusTone.Success,
+            modifier = liveModifier,
         )
 
         is OnboardingTestState.Failed -> {
@@ -499,13 +578,10 @@ private fun TestStatus(state: OnboardingTestState) {
             } else {
                 stringResource(R.string.onboarding_test_failed)
             }
-            Text(
+            StatusPill(
                 text = message,
-                modifier = Modifier.semantics {
-                    liveRegion = LiveRegionMode.Polite
-                },
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.error,
+                tone = StatusTone.Danger,
+                modifier = liveModifier,
             )
         }
     }
@@ -530,81 +606,81 @@ private fun OnboardingBottomBar(
     onSaveAndContinue: () -> Unit,
     onFinish: () -> Unit,
 ) {
-    Surface(tonalElevation = 3.dp) {
+    val primaryText = when (state.step) {
+        OnboardingStep.Welcome -> stringResource(R.string.onboarding_action_start)
+        OnboardingStep.Keys -> if (state.saving) {
+            stringResource(R.string.action_saving)
+        } else {
+            stringResource(R.string.onboarding_action_save_and_continue)
+        }
+        OnboardingStep.Permissions -> if (state.saving) {
+            stringResource(R.string.onboarding_action_finishing)
+        } else {
+            stringResource(R.string.onboarding_action_finish)
+        }
+    }
+    val primaryAction = when (state.step) {
+        OnboardingStep.Welcome -> onNext
+        OnboardingStep.Keys -> onSaveAndContinue
+        OnboardingStep.Permissions -> onFinish
+    }
+    val showBack = !state.step.isFirst
+    val showLater = state.step == OnboardingStep.Keys
+
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        tonalElevation = 0.dp,
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .navigationBarsPadding()
-                .padding(horizontal = 20.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
+                .padding(MaterialTheme.spacing.lg),
+            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm),
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                if (!state.step.isFirst) {
-                    OutlinedButton(
-                        onClick = onBack,
-                        enabled = state.canSkip,
-                        modifier = Modifier.heightIn(min = 48.dp),
-                    ) {
-                        Text(stringResource(R.string.onboarding_action_back))
-                    }
-                }
-                Spacer(Modifier.weight(1f))
-
-                when (state.step) {
-                    OnboardingStep.Welcome -> Button(
-                        onClick = onNext,
-                        enabled = state.canAdvance,
-                        modifier = Modifier.heightIn(min = 48.dp),
-                    ) {
-                        Text(stringResource(R.string.onboarding_action_start))
-                    }
-
-                    OnboardingStep.Keys -> Button(
-                        onClick = onSaveAndContinue,
-                        enabled = state.canAdvance,
-                        modifier = Modifier.heightIn(min = 48.dp),
-                    ) {
-                        Text(
-                            text = if (state.saving) {
-                                stringResource(R.string.action_saving)
-                            } else {
-                                stringResource(R.string.onboarding_action_save_and_continue)
-                            },
-                        )
-                    }
-
-                    OnboardingStep.Permissions -> Button(
-                        onClick = onFinish,
-                        enabled = state.canFinish,
-                        modifier = Modifier.heightIn(min = 48.dp),
-                    ) {
-                        Text(
-                            text = if (state.saving) {
-                                stringResource(R.string.onboarding_action_finishing)
-                            } else {
-                                stringResource(R.string.onboarding_action_finish)
-                            },
-                        )
-                    }
-                }
-            }
-
-            // “稍后设置”只跳过 Key 填写，不结束引导；它不会清空已输入内容。
-            if (state.step == OnboardingStep.Keys) {
-                TextButton(
-                    onClick = onNext,
-                    enabled = state.canAdvance,
-                    modifier = Modifier
-                        .align(Alignment.End)
-                        .heightIn(min = 48.dp),
+            if (showBack || showLater) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(stringResource(R.string.onboarding_action_later))
+                    if (showBack) {
+                        TextButton(
+                            onClick = onBack,
+                            enabled = state.canSkip,
+                            modifier = Modifier.heightIn(min = 48.dp),
+                        ) {
+                            Text(
+                                text = stringResource(R.string.onboarding_action_back),
+                                style = MaterialTheme.typography.labelLarge,
+                            )
+                        }
+                    } else {
+                        Spacer(Modifier.weight(1f))
+                    }
+                    if (showLater) {
+                        TextButton(
+                            onClick = onNext,
+                            enabled = state.canAdvance,
+                            modifier = Modifier.heightIn(min = 48.dp),
+                        ) {
+                            Text(
+                                text = stringResource(R.string.onboarding_action_later),
+                                style = MaterialTheme.typography.labelLarge,
+                            )
+                        }
+                    } else {
+                        Spacer(Modifier.weight(1f))
+                    }
                 }
             }
+
+            ExpressivePrimaryButton(
+                text = primaryText,
+                onClick = primaryAction,
+                enabled = state.canAdvance,
+                modifier = Modifier.fillMaxWidth(),
+            )
         }
     }
 }
@@ -619,7 +695,7 @@ private fun OnboardingFieldError.messageRes(): Int = when (this) {
 }
 
 // ---------------------------------------------------------------------------
-// Preview：欢迎 / Key 填写（含测试结果）/ 权限说明（深色）
+// Preview：欢迎 / Key 填写（含测试结果）/ 权限说明（深色 200%）
 // ---------------------------------------------------------------------------
 
 private fun previewKeysState(): OnboardingUiState = OnboardingUiState(
@@ -655,10 +731,11 @@ private fun OnboardingKeysPreview() {
 }
 
 @Preview(
-    name = "Onboarding · 权限（深色）",
+    name = "Onboarding · 权限（深色 200%）",
     showBackground = true,
     backgroundColor = 0xFF0F1220,
     uiMode = Configuration.UI_MODE_NIGHT_YES,
+    fontScale = 2f,
 )
 @Composable
 private fun OnboardingPermissionsPreview() {
