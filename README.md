@@ -11,7 +11,7 @@
 - 仓库：**https://github.com/EstimateFaster/android-audioforge**
 - 下载：**[GitHub Releases](https://github.com/EstimateFaster/android-audioforge/releases/latest)**（只侧载，不上架 Google Play）
 - 发布说明模板：[docs/release-notes.md](docs/release-notes.md)
-- 当前文档对应 **v1.0.0**；实际可安装版本以 Releases 页为准。
+- 当前文档对应 **v1.1.0**；实际可安装版本以 Releases 页为准。
 
 > **已知未验证项**：32 位设备不支持、真机后台/国产 ROM 未完成验收、真实 LLM/Fish API 链路未在 CI 跑过（均按 BLOCKED/不支持记录）。安装前请先看 [已知问题与限制](#10-已知问题与限制) 和 [docs/release-notes.md](docs/release-notes.md)。
 
@@ -38,6 +38,22 @@ AudioForge 在手机上完成「小说 txt → 章节 → 角色/剧本 → 多�
 - **不是应用商店产品**：只从 GitHub Releases 侧载，不提供 Google Play 自动更新。
 
 ---
+
+## 界面预览（v1.1.0）
+
+Forge v2 全量重做：**青绿 × 石墨** Material 3 Expressive，图标全部来自 **Lucide**，
+所有操作均为图标+文字或图标按钮，不再用文字冒充按钮。
+
+| 书架 | 项目详情 | 任务 |
+|---|---|---|
+| ![书架](docs/screenshots/01-onboarding-bookshelf.png) | ![项目详情](docs/screenshots/02-project.png) | ![任务](docs/screenshots/03-tasks.png) |
+
+| 设置 | 存储 | 关于 |
+|---|---|---|
+| ![设置](docs/screenshots/04-settings.png) | ![存储](docs/screenshots/05-storage.png) | ![关于](docs/screenshots/06-about.png) |
+
+> 截图由 CI emulator screenshot smoke 生成（API 35 / Pixel 6 / 360×780），
+> 与 `docs/prototype/forge-framework.html` 设计稿对应；不在本地构建。
 
 ## 2. BYOK：Key 自备
 
