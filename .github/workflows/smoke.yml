@@ -61,6 +61,9 @@ jobs:
           script: |
             chmod +x ./gradlew
             adb logcat -c
+            ./gradlew --no-daemon :app:installDebug :app:installDebugAndroidTest || true
+            adb shell am instrument -w -e class com.estimatefaster.audioforge.ui.ScreenshotSmokeTest com.estimatefaster.audioforge.debug.test/androidx.test.runner.AndroidJUnitRunner || true
+            adb pull /sdcard/Android/data/com.estimatefaster.audioforge.debug/files/screenshots ./screenshots || true
             ./gradlew --no-daemon --stacktrace connectedDebugAndroidTest; echo $? > test-exit.txt
             ./gradlew --no-daemon :app:installDebug || true
             adb shell input keyevent KEYCODE_WAKEUP || true
