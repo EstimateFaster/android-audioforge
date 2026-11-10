@@ -68,6 +68,7 @@ jobs:
             adb shell am start -W -n com.estimatefaster.audioforge.debug/com.estimatefaster.audioforge.MainActivity || true
             sleep 4
             adb exec-out screencap -p > smoke-home.png || true
+            adb pull /sdcard/Android/data/com.estimatefaster.audioforge.debug/files/screenshots ./screenshots || true
             printf 'model=%s\nandroid=%s\nsdk=%s\nabi=%s\n' "$(adb shell getprop ro.product.model | tr -d '\r')" "$(adb shell getprop ro.build.version.release | tr -d '\r')" "$(adb shell getprop ro.build.version.sdk | tr -d '\r')" "$(adb shell getprop ro.product.cpu.abi | tr -d '\r')" > device-info.txt
             adb logcat -d > logcat-smoke.txt || true
             exit $(cat test-exit.txt || echo 1)
@@ -82,6 +83,7 @@ jobs:
             app/build/outputs/androidTest-results/connected/**
             logcat-smoke.txt
             smoke-home.png
+            screenshots/**
             device-info.txt
             test-exit.txt
           if-no-files-found: warn
