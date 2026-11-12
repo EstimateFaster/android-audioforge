@@ -102,8 +102,8 @@ fun formatWordCount(count: Int): String = String.format(Locale.US, "%,d", count)
 /** 演示数据：全部为原创占位内容，不代表真实作品。 */
 object FakeData {
 
-    private fun seg(i: Int, role: String, text: String, emotion: String?, audio: Boolean = true, dur: Int = 8) =
-        Segment(index = i, role = role, text = text, emotion = emotion, hasAudio = audio, durationSec = dur)
+    private fun seg(i: Int, role: String, text: String, emotion: String?, hasAudio: Boolean = true, dur: Int = 8) =
+        Segment(index = i, role = role, text = text, emotion = emotion, hasAudio = hasAudio, durationSec = dur)
 
     private val chapterOneSegments = listOf(
         seg(0, "旁白", "那一年，凤阳的天像是被谁按住了，一连四个月没有落下一滴雨。", "平静", dur = 9),

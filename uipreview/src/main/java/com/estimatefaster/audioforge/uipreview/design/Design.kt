@@ -167,8 +167,9 @@ fun GroupSurface(
         shape = MaterialTheme.shapes.extraLarge,
         color = MaterialTheme.colorScheme.surfaceContainerLow,
         contentColor = MaterialTheme.colorScheme.onSurface,
-        content = content,
-    )
+    ) {
+        Column(content = content)
+    }
 }
 
 /** 设置/列表行：48dp 触控、图标优先、可带尾随值。 */
