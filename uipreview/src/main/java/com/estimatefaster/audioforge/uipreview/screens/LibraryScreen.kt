@@ -17,6 +17,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHostState
@@ -257,7 +258,7 @@ fun LibraryScreen(navigator: Navigator, player: PlayerState) {
                     SectionLabel(
                         text = stringResource(R.string.library_filter_all),
                         trailing = "${books.size}",
-                        modifier = Modifier.padding(top = 12.dp),
+                        modifier = Modifier.padding(top = 4.dp),
                     )
                 }
                 if (books.isEmpty()) {
@@ -337,18 +338,14 @@ private fun ContinueCard(
                 ProgressLine(progress = book.progress, height = 14.dp)
             }
             Spacer(Modifier.width(12.dp))
-            Box(
-                modifier = Modifier
-                    .size(52.dp)
-                    .clip(CircleShape)
-                    .clickable(onClick = onContinue),
-                contentAlignment = Alignment.Center,
+            FilledTonalIconButton(
+                onClick = onContinue,
+                modifier = Modifier.size(52.dp),
             ) {
                 Icon(
                     painter = painterResource(Ms.PlayArrow),
                     contentDescription = stringResource(R.string.library_continue),
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(32.dp),
+                    modifier = Modifier.size(26.dp),
                 )
             }
         }
@@ -382,11 +379,13 @@ private fun RunningTaskRow(
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        IconAction(
-            icon = Ms.StopCircle,
-            description = stringResource(R.string.task_stop),
-            onClick = onStop,
-            tint = MaterialTheme.colorScheme.error,
+        Icon(
+            painter = painterResource(Ms.ChevronRight),
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+            modifier = Modifier
+                .padding(start = 6.dp, end = 14.dp)
+                .size(18.dp),
         )
     }
 }

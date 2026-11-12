@@ -59,15 +59,12 @@ fun SettingsScreen(navigator: Navigator, player: PlayerState) {
                 .nestedScroll(scrollBehavior.nestedScrollConnection),
             contentPadding = PaddingValues(bottom = 32.dp),
         ) {
-            item(key = "appearance") {
-                SectionLabel(text = stringResource(R.string.settings_group_appearance), spec = "SegmentedButtonRow")
-            }
             item(key = "theme") {
-                Column(modifier = Modifier.padding(horizontal = 20.dp)) {
+                Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)) {
                     Text(
                         text = stringResource(R.string.settings_theme),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.onSurface,
                     )
                     Spacer(Modifier.height(8.dp))
                     SegmentedChoice(
@@ -82,8 +79,8 @@ fun SettingsScreen(navigator: Navigator, player: PlayerState) {
                     Spacer(Modifier.height(16.dp))
                     Text(
                         text = stringResource(R.string.settings_font),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.onSurface,
                     )
                     Spacer(Modifier.height(8.dp))
                     SegmentedChoice(

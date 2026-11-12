@@ -144,10 +144,10 @@ private fun PlayerContent(
         Spacer(Modifier.height(12.dp))
         CoverArt(
             title = player.book.title,
-            modifier = Modifier.size(if (largeFont) 180.dp else 236.dp),
+            modifier = Modifier.size(if (largeFont) 160.dp else 200.dp),
             textStyle = MaterialTheme.typography.displaySmallEmphasized,
         )
-        Spacer(Modifier.height(30.dp))
+        Spacer(Modifier.height(22.dp))
         Text(
             text = player.book.title,
             style = MaterialTheme.typography.headlineSmallEmphasized,
@@ -162,7 +162,7 @@ private fun PlayerContent(
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        Spacer(Modifier.height(32.dp))
+        Spacer(Modifier.height(20.dp))
         if (segment != null) {
             Column(
                 modifier = Modifier.padding(horizontal = 36.dp),
@@ -185,11 +185,11 @@ private fun PlayerContent(
                 )
             }
         }
-        Spacer(Modifier.height(32.dp))
+        Spacer(Modifier.height(20.dp))
         ProgressSeek(player = player, modifier = Modifier.padding(horizontal = 28.dp))
         Spacer(Modifier.height(12.dp))
         Transport(player = player)
-        Spacer(Modifier.height(28.dp))
+        Spacer(Modifier.height(18.dp))
         SecondaryBar(
             player = player,
             onSpeed = onSpeed,
@@ -209,15 +209,14 @@ private fun ProgressSeek(player: PlayerState, modifier: Modifier = Modifier) {
                 .height(44.dp),
             contentAlignment = Alignment.Center,
         ) {
-            ProgressLine(progress = player.progress, height = 18.dp)
             Slider(
                 value = player.progress,
                 onValueChange = { player.seekToFraction(it) },
                 modifier = Modifier.fillMaxWidth(),
                 colors = SliderDefaults.colors(
                     thumbColor = MaterialTheme.colorScheme.primary,
-                    activeTrackColor = Color.Transparent,
-                    inactiveTrackColor = Color.Transparent,
+                    activeTrackColor = MaterialTheme.colorScheme.primary,
+                    inactiveTrackColor = MaterialTheme.colorScheme.primaryContainer,
                     activeTickColor = Color.Transparent,
                     inactiveTickColor = Color.Transparent,
                 ),

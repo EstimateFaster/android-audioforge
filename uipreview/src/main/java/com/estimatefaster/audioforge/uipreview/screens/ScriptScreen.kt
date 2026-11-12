@@ -220,15 +220,16 @@ private fun SegmentRow(
     showDivider: Boolean,
 ) {
     val rowModifier = Modifier
-        .fillMaxWidth()
+        .weight(1f)
         .combinedClickable(onClick = onClick, onLongClick = onLongPress)
-        .padding(horizontal = 20.dp, vertical = 16.dp)
+        .padding(start = 20.dp, end = 4.dp, top = 16.dp, bottom = 16.dp)
 
     Column {
         Row(
             modifier = if (isCurrent) {
                 Modifier
                     .fillMaxWidth()
+                    .padding(horizontal = 8.dp)
                     .clip(MaterialTheme.shapes.large)
                     .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f))
             } else {
@@ -275,7 +276,7 @@ private fun SegmentRow(
                 )
             }
             Column(
-                modifier = Modifier.padding(end = 8.dp),
+                modifier = Modifier.padding(end = 4.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
             ) {
