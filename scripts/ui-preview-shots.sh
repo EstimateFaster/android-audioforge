@@ -46,5 +46,11 @@ capture player   dark  100 normal player-dark
 capture settings light 100 normal settings-light
 capture settings dark  100 normal settings-dark
 capture lab      light 100 normal lab-light
+capture characters light 100 normal characters-light
+capture tasks    light 100 normal tasks-light
+capture storage  light 100 normal storage-light
+capture about    light 100 normal about-light
+capture model    light 100 normal model-light
+capture onboarding light 100 normal onboarding-light
 
 ls -lh "$OUT"

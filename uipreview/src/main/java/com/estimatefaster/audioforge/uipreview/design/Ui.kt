@@ -31,6 +31,7 @@ import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MediumFlexibleTopAppBar
 import androidx.compose.material3.Surface
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBarScrollBehavior
@@ -644,8 +645,16 @@ fun EmptyState(
             PrimaryButton(text = actionLabel, icon = actionIcon, onClick = onAction)
         }
         if (secondaryLabel != null && onSecondary != null) {
-            Spacer(Modifier.height(6.dp))
-            SecondaryButton(text = secondaryLabel, icon = Ms.AutoStories, onClick = onSecondary)
+            Spacer(Modifier.height(8.dp))
+            TextButton(onClick = onSecondary) {
+                Icon(
+                    painter = painterResource(Ms.AutoStories),
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(text = secondaryLabel, style = MaterialTheme.typography.labelLarge)
+            }
         }
     }
 }
