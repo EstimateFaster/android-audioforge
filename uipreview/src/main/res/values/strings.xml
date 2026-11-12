@@ -1,4 +1,278 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">AudioForge UI</string>
+
+    <!-- 通用动作 -->
+    <string name="action_back">返回</string>
+    <string name="action_close">关闭</string>
+    <string name="action_more">更多</string>
+    <string name="action_search">搜索</string>
+    <string name="action_filter">筛选</string>
+    <string name="action_retry">重试</string>
+    <string name="action_cancel">取消</string>
+    <string name="action_confirm">确定</string>
+    <string name="action_save">保存</string>
+    <string name="action_delete">删除</string>
+    <string name="action_edit">编辑</string>
+    <string name="action_play">播放</string>
+    <string name="action_pause">暂停</string>
+    <string name="action_import">导入</string>
+    <string name="action_export">导出</string>
+    <string name="action_share">分享</string>
+    <string name="action_refresh">刷新</string>
+    <string name="action_done">完成</string>
+    <string name="action_stop">停止</string>
+    <string name="action_clear">清除</string>
+    <string name="action_reset">重置</string>
+    <string name="action_copy">复制</string>
+    <string name="action_apply">应用</string>
+    <string name="action_start">开始</string>
+    <string name="action_continue">继续</string>
+    <string name="action_manage">管理</string>
+    <string name="action_select">选择</string>
+    <string name="action_view_all">查看全部</string>
+    <string name="action_open">打开</string>
+    <string name="action_play_chapter">播放本章</string>
+    <string name="action_prev_segment">上一句</string>
+    <string name="action_next_segment">下一句</string>
+    <string name="action_prev_chapter">上一章</string>
+    <string name="action_next_chapter">下一章</string>
+    <string name="action_locate_current">定位到当前句</string>
+    <string name="action_toggle_chapters">章节列表</string>
+
+    <!-- 导航 -->
+    <string name="nav_library">书架</string>
+    <string name="nav_settings">设置</string>
+
+    <!-- 书架 -->
+    <string name="library_title">书架</string>
+    <string name="library_subtitle">%1$d 个项目 · 共 %2$s · 全部数据留在本机</string>
+    <string name="library_continue">继续收听</string>
+    <string name="library_resume_prefix">上次听到</string>
+    <string name="library_filter_all">全部</string>
+    <string name="library_filter_generating">生成中</string>
+    <string name="library_filter_done">已完成</string>
+    <string name="library_filter_pending">未开始</string>
+    <string name="library_search_hint">搜索书名</string>
+    <string name="library_sort">排序</string>
+    <string name="library_sort_recent">最近打开</string>
+    <string name="library_sort_title">书名</string>
+    <string name="library_sort_progress">进度</string>
+    <string name="library_view_list">列表视图</string>
+    <string name="library_view_grid">网格视图</string>
+    <string name="library_empty_title">书架还是空的</string>
+    <string name="library_empty_body">导入一本 TXT 小说，几秒内自动分章。全部解析与合成都在本机完成。</string>
+    <string name="library_empty_action">导入 TXT</string>
+    <string name="library_empty_demo">先看看示例项目</string>
+    <string name="library_loading">正在读取书架…</string>
+    <string name="library_error">书架读取失败</string>
+    <string name="library_error_body">本机数据库暂时不可用。你的项目没有丢失，重试即可。</string>
+    <string name="library_no_result">没有匹配的项目</string>
+    <string name="library_no_result_body">换个关键词，或清空筛选条件。</string>
+    <string name="library_clear_filter">清空筛选</string>
+    <string name="library_item_meta">%1$s · %2$s 字</string>
+    <string name="library_item_progress">%1$d / %2$d 章</string>
+    <string name="library_item_updated">更新于 %1$s</string>
+    <string name="library_fab">导入</string>
+    <string name="library_fab_local">导入 TXT 文件</string>
+    <string name="library_fab_clipboard">从剪贴板导入</string>
+    <string name="library_fab_demo">打开示例项目</string>
+    <string name="library_total_time">%1$s</string>
+
+    <!-- 进行中任务 -->
+    <string name="task_running">正在生成</string>
+    <string name="task_running_chapters">第 %1$d / %2$d 章</string>
+    <string name="task_running_eta">剩余约 %1$s</string>
+    <string name="task_queued">%1$d 个任务排队</string>
+    <string name="task_stop">停止</string>
+    <string name="task_open">查看任务</string>
+
+    <!-- 项目详情 -->
+    <string name="project_title">项目</string>
+    <string name="project_meta">%1$d 章 · %2$s 字</string>
+    <string name="project_progress_label">生成进度</string>
+    <string name="project_stat_chapters">章节</string>
+    <string name="project_stat_segments">片段</string>
+    <string name="project_stat_characters">角色</string>
+    <string name="project_continue">继续生成</string>
+    <string name="project_continue_range">选择生成范围</string>
+    <string name="project_range_rest">剩余章节</string>
+    <string name="project_range_this">仅当前章</string>
+    <string name="project_chapters">章节</string>
+    <string name="project_characters">人物与音色</string>
+    <string name="project_chapter_line">%1$s</string>
+    <string name="project_status_chapter">%1$d 章已完成 · %2$d 章待生成</string>
+    <string name="project_export">导出音频</string>
+    <string name="project_rename">重命名</string>
+    <string name="project_delete">删除项目</string>
+    <string name="project_open_player">打开播放器</string>
+    <string name="project_source">来源 %1$s</string>
+    <string name="project_last_opened">上次打开 %1$s</string>
+    <string name="project_empty_chapters">还没有章节</string>
+    <string name="project_empty_chapters_body">解析完成后，章节会按原文顺序出现在这里。</string>
+    <string name="project_task_hint">预计还需 %1$s</string>
+    <string name="project_ai_note">全部生成由本机发起，Key 只保存在本机 Keystore。</string>
+
+    <!-- 章节 -->
+    <string name="chapters_title">章节</string>
+    <string name="chapters_subtitle">%1$d 章 · 已完成 %2$d</string>
+    <string name="chapters_empty_title">还没有章节</string>
+    <string name="chapters_empty_body">导入小说后会自动分章；也可以手动重新解析。</string>
+    <string name="chapters_no_result">没有匹配的章节</string>
+    <string name="chapters_no_result_body">清空筛选或换个关键词。</string>
+    <string name="chapters_loading_more">正在加载更多…</string>
+    <string name="chapters_loaded_all">已加载全部 %1$d 章</string>
+    <string name="chapters_row_meta">%1$s · %2$d 段</string>
+    <string name="chapters_selected">已选 %1$d 章</string>
+    <string name="chapters_batch">批量生成</string>
+    <string name="chapters_export">导出</string>
+    <string name="chapters_select_all">全选</string>
+    <string name="chapters_search_hint">搜索章节标题</string>
+    <string name="chapters_select_mode">选择</string>
+
+    <!-- 剧本 -->
+    <string name="script_title">剧本</string>
+    <string name="script_subtitle">%1$d 段 · 已生成 %2$d</string>
+    <string name="script_follow">跟随播放</string>
+    <string name="script_empty_title">本章还没有台词</string>
+    <string name="script_empty_body">解析后会把小说拆成逐句台词，并自动分配角色音色。</string>
+    <string name="script_parse">解析本章</string>
+    <string name="script_note">点按任意台词，从此句开始播放；长按复制原文。</string>
+    <string name="script_segment_index">第 %1$d 段</string>
+    <string name="script_has_audio">已有音频</string>
+    <string name="script_no_audio">暂无音频</string>
+    <string name="script_copied">已复制这一段台词</string>
+    <string name="script_filter_all">全部角色</string>
+
+    <!-- 播放器 -->
+    <string name="player_title">正在播放</string>
+    <string name="player_subtitle">%1$s · 第 %2$d 句</string>
+    <string name="player_speed">倍速</string>
+    <string name="player_sleep">睡眠定时</string>
+    <string name="player_continuous">连播</string>
+    <string name="player_chapters">章节</string>
+    <string name="player_speed_title">播放速度</string>
+    <string name="player_sleep_title">睡眠定时</string>
+    <string name="player_sleep_off">关闭</string>
+    <string name="player_sleep_15">15 分钟</string>
+    <string name="player_sleep_30">30 分钟</string>
+    <string name="player_sleep_60">60 分钟</string>
+    <string name="player_sleep_remaining">还剩 %1$s</string>
+    <string name="player_speed_value">%1$s×</string>
+    <string name="player_now">正在播放</string>
+    <string name="player_paused">已暂停</string>
+    <string name="player_progress">%1$s / %2$s</string>
+    <string name="player_cover_desc">《%1$s》封面</string>
+    <string name="player_empty_title">还没有可播放的章节</string>
+    <string name="player_empty_body">先生成至少一章音频，再回到这里收听。</string>
+
+    <!-- 设置 -->
+    <string name="settings_title">设置</string>
+    <string name="settings_subtitle">App 级配置 · 项目内容在项目页修改</string>
+    <string name="settings_group_appearance">外观</string>
+    <string name="settings_theme">主题</string>
+    <string name="settings_theme_system">跟随系统</string>
+    <string name="settings_theme_light">浅色</string>
+    <string name="settings_theme_dark">深色</string>
+    <string name="settings_dynamic">动态取色</string>
+    <string name="settings_dynamic_desc">跟随壁纸生成整套配色，Android 12 以上可用</string>
+    <string name="settings_font">字号预览</string>
+    <string name="settings_font_desc">只影响这次预览，不会改动系统字号</string>
+    <string name="settings_group_model">模型与密钥</string>
+    <string name="settings_llm">文本模型</string>
+    <string name="settings_llm_desc">qwen3.7-flash · 已配置</string>
+    <string name="settings_llm_action">配置模型</string>
+    <string name="settings_tts">语音模型</string>
+    <string name="settings_tts_desc">s2.1-pro-free · 待配置</string>
+    <string name="settings_group_generation">生成默认值</string>
+    <string name="settings_concurrency">并发数</string>
+    <string name="settings_concurrency_desc">文本 1 · 语音 4</string>
+    <string name="settings_segment">分段上限</string>
+    <string name="settings_segment_desc">120 字 / 段</string>
+    <string name="settings_pause">停顿</string>
+    <string name="settings_pause_desc">旁白 350ms · 段落 700ms</string>
+    <string name="settings_group_network">网络与设备</string>
+    <string name="settings_wifi">仅 Wi-Fi 下生成</string>
+    <string name="settings_wifi_desc">移动网络下暂停队列，省流量</string>
+    <string name="settings_charging">仅充电时生成</string>
+    <string name="settings_charging_desc">避免长任务耗电</string>
+    <string name="settings_notify">完成时通知</string>
+    <string name="settings_notify_desc">后台生成结束时提醒</string>
+    <string name="settings_group_data">数据与存储</string>
+    <string name="settings_storage">存储管理</string>
+    <string name="settings_storage_desc">已用 1.8 GB · 音频与导出</string>
+    <string name="settings_backup">备份与恢复</string>
+    <string name="settings_backup_desc">导出 .forge 包，含项目与设置</string>
+    <string name="settings_group_about">关于</string>
+    <string name="settings_about">关于 AudioForge</string>
+    <string name="settings_about_desc">0.1.0-ui · 本地优先的有声书工坊</string>
+    <string name="settings_licenses">开源许可</string>
+    <string name="settings_licenses_desc">Lucide 之外的依赖与许可</string>
+    <string name="settings_lab">设计实验室</string>
+    <string name="settings_lab_desc">状态、字号、主题与规范标注</string>
+    <string name="settings_lab_hint">仅预览构建可见</string>
+    <string name="settings_version">版本</string>
+    <string name="settings_version_value">0.1.0-ui (1) · debug</string>
+
+    <!-- 设计实验室 -->
+    <string name="lab_title">设计实验室</string>
+    <string name="lab_subtitle">仅预览构建 · 用于设计验收</string>
+    <string name="lab_theme">主题模式</string>
+    <string name="lab_dynamic">动态取色</string>
+    <string name="lab_font">字号</string>
+    <string name="lab_specs">显示设计规范</string>
+    <string name="lab_specs_desc">在区块标题旁标注 M3 组件名与关键尺寸</string>
+    <string name="lab_states">页面状态</string>
+    <string name="lab_states_desc">逐页切换 正常 / 加载 / 空 / 错误</string>
+    <string name="lab_phase_normal">正常</string>
+    <string name="lab_phase_loading">加载</string>
+    <string name="lab_phase_empty">空</string>
+    <string name="lab_phase_error">错误</string>
+    <string name="lab_reset">恢复默认</string>
+    <string name="lab_note">状态覆盖只影响预览渲染，不与业务逻辑联动。</string>
+    <string name="lab_font_100">100%</string>
+    <string name="lab_font_130">130%</string>
+    <string name="lab_font_200">200%</string>
+    <string name="lab_current">当前</string>
+
+    <!-- 状态 -->
+    <string name="status_done">已完成</string>
+    <string name="status_generating">生成中</string>
+    <string name="status_pending">待生成</string>
+    <string name="status_failed">失败</string>
+    <string name="status_paused">已暂停</string>
+    <string name="status_queued">排队中</string>
+    <string name="status_ready">就绪</string>
+
+    <!-- Sheet -->
+    <string name="import_title">导入小说</string>
+    <string name="import_subtitle">TXT · 本机解析</string>
+    <string name="import_pick">选择文件</string>
+    <string name="import_pick_desc">支持 UTF-8 / GBK / UTF-16，最大 50 MB</string>
+    <string name="import_start">开始导入</string>
+    <string name="import_progress">正在解析… %1$d%%</string>
+    <string name="import_done">导入完成</string>
+    <string name="import_note">导入在本机完成，不会上传任何内容。</string>
+    <string name="export_title">导出音频</string>
+    <string name="export_subtitle">MP3 · 44.1 kHz</string>
+    <string name="export_range">导出范围</string>
+    <string name="export_all">全部已完成</string>
+    <string name="export_current">当前章</string>
+    <string name="export_custom">起止章节</string>
+    <string name="export_start">开始导出（%1$d 章）</string>
+    <string name="export_estimate">约 %1$s · %2$s</string>
+    <string name="batch_title">批量生成</string>
+    <string name="batch_subtitle">选择要生成的章节</string>
+    <string name="batch_start">开始生成（%1$d 章）</string>
+    <string name="batch_scope_pending">仅未完成</string>
+    <string name="batch_scope_all">全部章节</string>
+    <string name="batch_scope_failed">仅失败章节</string>
+    <string name="sheet_close">关闭面板</string>
+
+    <!-- 无障碍 -->
+    <string name="a11y_book_cover">《%1$s》封面</string>
+    <string name="a11y_progress">生成进度 %1$d%%</string>
+    <string name="a11y_playback_progress">播放进度 %1$s / %2$s</string>
+    <string name="a11y_selected_chip">已选中</string>
+    <string name="a11y_avatar">%1$s 的头像</string>
 </resources>
