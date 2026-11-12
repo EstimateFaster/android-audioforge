@@ -25,6 +25,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -67,11 +68,17 @@ fun OnboardingScreen(navigator: Navigator, player: PlayerState) {
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 StepRail(step = step, modifier = Modifier.weight(1f))
-                SecondaryButton(
-                    text = "跳过",
-                    icon = Ms.SkipNext,
+                TextButton(
                     onClick = { navigator.selectTab(com.estimatefaster.audioforge.uipreview.nav.Dest.Library) },
-                )
+                ) {
+                    Icon(
+                        painter = painterResource(Ms.SkipNext),
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text("跳过", style = MaterialTheme.typography.labelLarge)
+                }
             }
             AnimatedContent(
                 targetState = step,

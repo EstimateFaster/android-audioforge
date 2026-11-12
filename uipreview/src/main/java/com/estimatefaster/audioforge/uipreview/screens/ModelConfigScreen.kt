@@ -88,6 +88,7 @@ fun ModelConfigScreen(navigator: Navigator, player: PlayerState) {
                     ListRow(
                         title = "Base URL",
                         subtitle = "OpenAI 兼容接口",
+                        icon = Ms.Language,
                         trailingText = "已配置",
                         onClick = {
                             editing = EditTarget("Base URL", "文本模型的接口地址", llmBase)
@@ -97,6 +98,7 @@ fun ModelConfigScreen(navigator: Navigator, player: PlayerState) {
                     ListRow(
                         title = "模型",
                         subtitle = llmModel,
+                        icon = Ms.SmartToy,
                         onClick = { editing = EditTarget("模型 ID", "例如 qwen3.7-flash", llmModel) },
                     )
                     RowDivider()
@@ -114,6 +116,7 @@ fun ModelConfigScreen(navigator: Navigator, player: PlayerState) {
                     ListRow(
                         title = "Base URL",
                         subtitle = "Fish Audio 服务地址",
+                        icon = Ms.Language,
                         trailingText = "已配置",
                         onClick = { editing = EditTarget("Fish Base URL", "语音服务的接口地址", ttsBase) },
                     )
@@ -121,6 +124,7 @@ fun ModelConfigScreen(navigator: Navigator, player: PlayerState) {
                     ListRow(
                         title = "TTS 模型",
                         subtitle = ttsModel,
+                        icon = Ms.RecordVoiceOver,
                         onClick = { editing = EditTarget("TTS 模型", "例如 s2.1-pro-free", ttsModel) },
                     )
                     RowDivider()

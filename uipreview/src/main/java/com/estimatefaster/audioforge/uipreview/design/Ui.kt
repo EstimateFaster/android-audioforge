@@ -329,6 +329,7 @@ fun ProgressLine(
         LinearWavyProgressIndicator(
             progress = { progress.coerceIn(0f, 1f) },
             modifier = Modifier.fillMaxWidth(),
+            amplitude = { 2.5f },
         )
     }
 }

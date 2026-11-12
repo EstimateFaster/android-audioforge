@@ -115,7 +115,11 @@ fun StorageScreen(navigator: Navigator, player: PlayerState) {
                     FakeData.books.forEachIndexed { index, book ->
                         ListRow(
                             title = book.title,
-                            subtitle = "${book.chapters.size} 章 · ${book.segmentCount} 段",
+                            subtitle = if (book.segmentCount == 0) {
+                                "${book.chapters.size} 章 · 尚未解析"
+                            } else {
+                                "${book.chapters.size} 章 · ${book.segmentCount} 段"
+                            },
                             trailingText = listOf("1.2 GB", "420 MB", "96 MB", "84 MB")[index % 4],
                             showChevron = false,
                         )

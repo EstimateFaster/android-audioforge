@@ -54,7 +54,7 @@ fun AboutScreen(navigator: Navigator, player: PlayerState) {
         snackbarHostState = snackbarHostState,
         topBar = {
             AppTopBar(
-                title = stringResource(R.string.settings_about),
+                title = "关于",
                 subtitle = "0.1.0-ui (1) · debug",
                 scrollBehavior = scrollBehavior,
                 onBack = { navigator.pop() },
