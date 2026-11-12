@@ -14,3 +14,4 @@ dependencyResolutionManagement {
 }
 rootProject.name = "audioforge"
 include(":app")
+include(":uipreview")

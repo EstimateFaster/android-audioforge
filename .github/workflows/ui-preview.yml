@@ -1,0 +1,79 @@
+name: UI Preview APK
+
+on:
+  push:
+    branches: [ui-builder]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ui-preview-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build & publish :uipreview
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Install SDK 37.0 / Build Tools 37
+        run: |
+          SDK_ROOT="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}"
+          SDKMANAGER="$SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
+          if [ ! -x "$SDKMANAGER" ]; then
+            SDKMANAGER="$(find "$SDK_ROOT/cmdline-tools" -maxdepth 3 -type f -name sdkmanager | sort | tail -1)"
+          fi
+          echo "sdkmanager=$SDKMANAGER"
+          yes | "$SDKMANAGER" --sdk_root="$SDK_ROOT" --licenses >/dev/null
+          "$SDKMANAGER" --sdk_root="$SDK_ROOT" "platform-tools" "platforms;android-37.0" "build-tools;37.0.0"
+
+      - name: Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Assemble UI preview APK
+        run: |
+          chmod +x ./gradlew
+          ./gradlew --no-daemon --stacktrace :uipreview:assembleDebug
+
+      - name: Collect APK
+        run: |
+          mkdir -p dist
+          SRC=$(find uipreview/build/outputs/apk/debug -name "*.apk" | head -1)
+          echo "apk=$SRC"
+          cp "$SRC" dist/AudioForge-UI-Preview.apk
+          ls -lh dist/
+          (command -v aapt2 >/dev/null && aapt2 dump badging dist/AudioForge-UI-Preview.apk | head -5) || true
+
+      - name: Publish to GitHub Release (stable asset name)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release view ui-preview --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 || \
+            gh release create ui-preview \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "AudioForge UI Preview (滚动更新)" \
+              --notes "纯 UI 预览构建，自动覆盖更新。仅用于设计验收，不含业务功能。" \
+              --prerelease
+          gh release upload ui-preview dist/AudioForge-UI-Preview.apk \
+            --repo "$GITHUB_REPOSITORY" --clobber
+          echo "https://github.com/$GITHUB_REPOSITORY/releases/download/ui-preview/AudioForge-UI-Preview.apk"
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: uipreview-apk
+          path: dist/AudioForge-UI-Preview.apk
+          retention-days: 7
