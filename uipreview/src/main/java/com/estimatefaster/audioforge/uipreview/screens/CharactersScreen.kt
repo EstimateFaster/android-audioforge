@@ -51,7 +51,7 @@ fun CharactersScreen(navigator: Navigator, player: PlayerState, bookId: Long) {
         navigator = navigator,
         player = player,
         showNavBar = false,
-        showMiniPlayer = true,
+        showMiniPlayer = false,
         snackbarHostState = snackbarHostState,
         topBar = {
             AppTopBar(

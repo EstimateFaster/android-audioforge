@@ -61,7 +61,7 @@ fun StorageScreen(navigator: Navigator, player: PlayerState) {
         navigator = navigator,
         player = player,
         showNavBar = false,
-        showMiniPlayer = true,
+        showMiniPlayer = false,
         snackbarHostState = snackbarHostState,
         topBar = {
             AppTopBar(

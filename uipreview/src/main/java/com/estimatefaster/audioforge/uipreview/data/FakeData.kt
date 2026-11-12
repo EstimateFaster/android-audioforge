@@ -296,6 +296,10 @@ class PlayerState(initialBook: Book = FakeData.books.first()) {
     var isPlaying by mutableStateOf(false)
         private set
 
+    /** 是否已经真正开始过播放；没有会话时全 App 不显示迷你播放器。 */
+    var hasSession by mutableStateOf(false)
+        private set
+
     var speed by mutableFloatStateOf(1.0f)
         private set
 
@@ -319,6 +323,7 @@ class PlayerState(initialBook: Book = FakeData.books.first()) {
 
     fun toggle() {
         if (!hasAudio) return
+        hasSession = true
         isPlaying = !isPlaying
     }
 
@@ -326,6 +331,7 @@ class PlayerState(initialBook: Book = FakeData.books.first()) {
         val target = segments.getOrNull(index) ?: return
         segmentIndex = index
         elapsedSec = offsetOf(index).toFloat()
+        hasSession = target.hasAudio
         isPlaying = target.hasAudio
     }
 

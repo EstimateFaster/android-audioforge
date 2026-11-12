@@ -46,7 +46,7 @@ fun NetworkScreen(navigator: Navigator, player: PlayerState) {
         navigator = navigator,
         player = player,
         showNavBar = false,
-        showMiniPlayer = true,
+        showMiniPlayer = false,
         topBar = {
             AppTopBar(
                 title = "网络与设备",

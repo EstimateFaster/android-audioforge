@@ -43,7 +43,7 @@ fun SettingsScreen(navigator: Navigator, player: PlayerState) {
         navigator = navigator,
         player = player,
         showNavBar = true,
-        showMiniPlayer = true,
+        showMiniPlayer = false,
         topBar = {
             AppTopBar(
                 title = stringResource(R.string.settings_title),

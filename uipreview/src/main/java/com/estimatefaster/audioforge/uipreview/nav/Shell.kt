@@ -165,9 +165,9 @@ fun AppScaffold(
         bottomBar = {
             if (bottomContent != null) {
                 bottomContent()
-            } else if (showMiniPlayer || showNavBar) {
+            } else if ((showMiniPlayer && player.hasSession) || showNavBar) {
                 Column {
-                    if (showMiniPlayer) {
+                    if (showMiniPlayer && player.hasSession) {
                         MiniPlayerBar(player = player, onOpen = { navigator.push(Dest.Player) })
                     }
                     if (showNavBar) {
