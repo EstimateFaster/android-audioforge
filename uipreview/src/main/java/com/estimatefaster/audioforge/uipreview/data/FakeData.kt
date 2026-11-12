@@ -375,16 +375,16 @@ class PlayerState(initialBook: Book = FakeData.books.first()) {
         }
     }
 
-    fun setSpeed(value: Float) {
+    fun applySpeed(value: Float) {
         speed = value
     }
 
-    fun setSleepMinutes(value: Int) {
+    fun applySleepMinutes(value: Int) {
         sleepMinutes = value
         sleepRemainingSec = value * 60
     }
 
-    fun setContinuous(value: Boolean) {
+    fun applyContinuous(value: Boolean) {
         continuous = value
     }
 

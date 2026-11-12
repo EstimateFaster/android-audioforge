@@ -278,7 +278,7 @@ private fun PlayerContent(
                 },
             )
             AssistChip(
-                onClick = { player.setContinuous(!player.continuous) },
+                onClick = { player.applyContinuous(!player.continuous) },
                 label = { Text(stringResource(R.string.player_continuous)) },
                 leadingIcon = {
                     Icon(

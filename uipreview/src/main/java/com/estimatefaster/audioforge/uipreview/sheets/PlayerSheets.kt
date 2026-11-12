@@ -61,7 +61,7 @@ fun SpeedSheet(player: PlayerState, onDismiss: () -> Unit) {
                 onValueChange = { value = (it * 20f).toInt() / 20f },
                 valueRange = 0.5f..3f,
                 steps = 49,
-                onValueChangeFinished = { player.setSpeed(value) },
+                onValueChangeFinished = { player.applySpeed(value) },
             )
             Spacer(Modifier.height(8.dp))
             SegmentedChoice(
@@ -69,7 +69,7 @@ fun SpeedSheet(player: PlayerState, onDismiss: () -> Unit) {
                 selectedIndex = options.indexOfFirst { it == player.speed }.coerceAtLeast(0),
                 onSelect = {
                     value = options[it]
-                    player.setSpeed(options[it])
+                    player.applySpeed(options[it])
                 },
             )
         }
@@ -99,7 +99,7 @@ fun SleepSheet(player: PlayerState, onDismiss: () -> Unit) {
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable {
-                            player.setSleepMinutes(minutes)
+                            player.applySleepMinutes(minutes)
                             onDismiss()
                         }
                         .padding(vertical = 16.dp),
