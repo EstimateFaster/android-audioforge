@@ -14,13 +14,21 @@ import com.estimatefaster.audioforge.uipreview.lab.ThemeMode
 import com.estimatefaster.audioforge.uipreview.nav.Dest
 import com.estimatefaster.audioforge.uipreview.nav.Navigator
 import com.estimatefaster.audioforge.uipreview.nav.ScreenHost
+import com.estimatefaster.audioforge.uipreview.screens.AboutScreen
 import com.estimatefaster.audioforge.uipreview.screens.ChaptersScreen
+import com.estimatefaster.audioforge.uipreview.screens.CharactersScreen
 import com.estimatefaster.audioforge.uipreview.screens.DesignLabScreen
+import com.estimatefaster.audioforge.uipreview.screens.GenerationScreen
 import com.estimatefaster.audioforge.uipreview.screens.LibraryScreen
+import com.estimatefaster.audioforge.uipreview.screens.ModelConfigScreen
+import com.estimatefaster.audioforge.uipreview.screens.NetworkScreen
+import com.estimatefaster.audioforge.uipreview.screens.OnboardingScreen
 import com.estimatefaster.audioforge.uipreview.screens.PlayerScreen
 import com.estimatefaster.audioforge.uipreview.screens.ProjectScreen
 import com.estimatefaster.audioforge.uipreview.screens.ScriptScreen
 import com.estimatefaster.audioforge.uipreview.screens.SettingsScreen
+import com.estimatefaster.audioforge.uipreview.screens.StorageScreen
+import com.estimatefaster.audioforge.uipreview.screens.TasksScreen
 import com.estimatefaster.audioforge.uipreview.theme.UiPreviewTheme
 import kotlinx.coroutines.delay
 
@@ -28,7 +36,15 @@ private fun startDestFor(screen: String?): Dest = when (screen) {
     "project" -> Dest.Project(1L)
     "chapters" -> Dest.Chapters(1L)
     "script" -> Dest.Script(1L, 101L)
+    "characters" -> Dest.Characters(1L)
     "player" -> Dest.Player
+    "tasks" -> Dest.Tasks
+    "storage" -> Dest.Storage
+    "about" -> Dest.About
+    "model" -> Dest.ModelConfig
+    "generation" -> Dest.Generation
+    "network" -> Dest.Network
+    "onboarding" -> Dest.Onboarding
     "settings" -> Dest.Settings
     "lab" -> Dest.Lab
     else -> Dest.Library
@@ -36,9 +52,6 @@ private fun startDestFor(screen: String?): Dest = when (screen) {
 
 /**
  * 纯 UI 预览的根节点：主题 + 设计实验室状态 + 预览播放器 + 自定义返回栈。
- *
- * 这里没有任何业务依赖：数据来自 [com.estimatefaster.audioforge.uipreview.data.FakeData]，
- * 播放进度由本机 ticker 模拟。
  */
 @Composable
 fun AppRoot(
@@ -98,7 +111,15 @@ fun AppRoot(
                         bookId = dest.bookId,
                         chapterId = dest.chapterId,
                     )
+                    is Dest.Characters -> CharactersScreen(navigator = navigator, player = player, bookId = dest.id)
                     is Dest.Player -> PlayerScreen(navigator = navigator, player = player)
+                    is Dest.Tasks -> TasksScreen(navigator = navigator, player = player)
+                    is Dest.Storage -> StorageScreen(navigator = navigator, player = player)
+                    is Dest.About -> AboutScreen(navigator = navigator, player = player)
+                    is Dest.ModelConfig -> ModelConfigScreen(navigator = navigator, player = player)
+                    is Dest.Generation -> GenerationScreen(navigator = navigator, player = player)
+                    is Dest.Network -> NetworkScreen(navigator = navigator, player = player)
+                    is Dest.Onboarding -> OnboardingScreen(navigator = navigator, player = player)
                     is Dest.Lab -> DesignLabScreen(navigator = navigator, player = player)
                 }
             }

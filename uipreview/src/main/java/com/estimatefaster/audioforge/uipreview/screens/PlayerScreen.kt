@@ -1,6 +1,7 @@
 package com.estimatefaster.audioforge.uipreview.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,22 +14,16 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AssistChip
-import androidx.compose.material3.AssistChipDefaults
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -45,19 +40,19 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.estimatefaster.audioforge.uipreview.R
-import com.estimatefaster.audioforge.uipreview.data.FakeData
 import com.estimatefaster.audioforge.uipreview.data.PlayerState
 import com.estimatefaster.audioforge.uipreview.data.formatTime
 import com.estimatefaster.audioforge.uipreview.design.CoverArt
 import com.estimatefaster.audioforge.uipreview.design.EmptyState
 import com.estimatefaster.audioforge.uipreview.design.IconAction
 import com.estimatefaster.audioforge.uipreview.design.LoadingState
+import com.estimatefaster.audioforge.uipreview.design.ProgressLine
 import com.estimatefaster.audioforge.uipreview.icons.Ms
 import com.estimatefaster.audioforge.uipreview.lab.LocalPreviewSettings
 import com.estimatefaster.audioforge.uipreview.lab.ScreenPhase
 import com.estimatefaster.audioforge.uipreview.nav.Navigator
-import com.estimatefaster.audioforge.uipreview.nav.RoleAvatar
 import com.estimatefaster.audioforge.uipreview.sheets.ChapterPickerSheet
 import com.estimatefaster.audioforge.uipreview.sheets.SleepSheet
 import com.estimatefaster.audioforge.uipreview.sheets.SpeedSheet
@@ -72,13 +67,7 @@ fun PlayerScreen(navigator: Navigator, player: PlayerState) {
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
-        topBar = {
-            PlayerTopBar(
-                onBack = { navigator.pop() },
-                onMore = {},
-                largeFont = largeFont,
-            )
-        },
+        topBar = { PlayerTopBar(onBack = { navigator.pop() }, largeFont = largeFont) },
     ) { padding ->
         when (phase) {
             ScreenPhase.Loading -> LoadingState(
@@ -86,27 +75,26 @@ fun PlayerScreen(navigator: Navigator, player: PlayerState) {
                 modifier = Modifier.padding(padding),
             )
 
-            ScreenPhase.Normal, ScreenPhase.Empty, ScreenPhase.Error ->
-                if (player.segments.isEmpty()) {
-                    EmptyState(
-                        icon = Ms.Headphones,
-                        title = stringResource(R.string.player_empty_title),
-                        body = stringResource(R.string.player_empty_body),
-                        actionLabel = stringResource(R.string.action_back),
-                        actionIcon = Ms.ArrowBack,
-                        onAction = { navigator.pop() },
-                        modifier = Modifier.padding(padding),
-                    )
-                } else {
-                    PlayerContent(
-                        player = player,
-                        largeFont = largeFont,
-                        modifier = Modifier.padding(padding),
-                        onSpeed = { showSpeed = true },
-                        onSleep = { showSleep = true },
-                        onChapters = { showChapters = true },
-                    )
-                }
+            else -> if (player.segments.isEmpty()) {
+                EmptyState(
+                    icon = Ms.Headphones,
+                    title = stringResource(R.string.player_empty_title),
+                    body = stringResource(R.string.player_empty_body),
+                    actionLabel = stringResource(R.string.action_back),
+                    actionIcon = Ms.ArrowBack,
+                    onAction = { navigator.pop() },
+                    modifier = Modifier.padding(padding),
+                )
+            } else {
+                PlayerContent(
+                    player = player,
+                    largeFont = largeFont,
+                    modifier = Modifier.padding(padding),
+                    onSpeed = { showSpeed = true },
+                    onSleep = { showSleep = true },
+                    onChapters = { showChapters = true },
+                )
+            }
         }
     }
 
@@ -116,29 +104,23 @@ fun PlayerScreen(navigator: Navigator, player: PlayerState) {
 }
 
 @Composable
-private fun PlayerTopBar(onBack: () -> Unit, onMore: () -> Unit, largeFont: Boolean) {
+private fun PlayerTopBar(onBack: () -> Unit, largeFont: Boolean) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .statusBarsPadding()
-            .padding(horizontal = 8.dp, vertical = 4.dp),
+            .padding(horizontal = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        IconAction(Ms.ExpandMore, stringResource(R.string.action_close), onBack)
+        IconAction(Ms.KeyboardArrowDown, stringResource(R.string.action_close), onBack)
         Spacer(Modifier.weight(1f))
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-                text = stringResource(R.string.player_title),
-                style = MaterialTheme.typography.labelLargeEmphasized,
-            )
-            Text(
-                text = "本地音频 · 不耗流量",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
+        Text(
+            text = stringResource(R.string.player_title),
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
         Spacer(Modifier.weight(1f))
-        IconAction(Ms.MoreVert, stringResource(R.string.action_more), onMore)
+        IconAction(Ms.MoreVert, stringResource(R.string.action_more), {})
     }
 }
 
@@ -156,167 +138,65 @@ private fun PlayerContent(
         modifier = modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .navigationBarsPadding()
-            .padding(bottom = 24.dp),
+            .navigationBarsPadding(),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Box(
-            modifier = Modifier
-                .padding(top = 8.dp)
-                .size(if (largeFont) 180.dp else 240.dp)
-                .clip(MaterialTheme.shapes.extraLarge)
-                .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)),
-            contentAlignment = Alignment.Center,
-        ) {
-            CoverArt(
-                title = player.book.title,
-                modifier = Modifier.size(if (largeFont) 160.dp else 216.dp),
-            )
-        }
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(12.dp))
+        CoverArt(
+            title = player.book.title,
+            modifier = Modifier.size(if (largeFont) 180.dp else 236.dp),
+            textStyle = MaterialTheme.typography.displaySmallEmphasized,
+        )
+        Spacer(Modifier.height(30.dp))
         Text(
             text = player.book.title,
             style = MaterialTheme.typography.headlineSmallEmphasized,
             textAlign = TextAlign.Center,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(horizontal = 24.dp),
+            modifier = Modifier.padding(horizontal = 32.dp),
         )
-        Spacer(Modifier.height(4.dp))
+        Spacer(Modifier.height(6.dp))
         Text(
-            text = "${player.chapter.title} · 第 ${player.segmentIndex + 1} / ${player.segments.size} 句",
-            style = MaterialTheme.typography.bodyMedium,
+            text = "${player.chapter.title} · ${player.chapter.number}/${player.chapters.size}",
+            style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
         )
-        Spacer(Modifier.height(20.dp))
+        Spacer(Modifier.height(32.dp))
         if (segment != null) {
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp),
-                shape = MaterialTheme.shapes.extraLarge,
-                color = MaterialTheme.colorScheme.surfaceContainerLow,
+            Column(
+                modifier = Modifier.padding(horizontal = 36.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        RoleAvatar(name = segment.role, size = 28)
-                        Spacer(Modifier.width(8.dp))
-                        Text(
-                            text = segment.role,
-                            style = MaterialTheme.typography.labelLargeEmphasized,
-                        )
-                        if (segment.emotion != null) {
-                            Spacer(Modifier.width(8.dp))
-                            Text(
-                                text = "· ${segment.emotion}",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                    }
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        text = segment.text,
-                        style = MaterialTheme.typography.bodyLarge,
-                    )
-                }
+                Text(
+                    text = buildString {
+                        append(segment.role)
+                        if (segment.emotion != null) append(" · ${segment.emotion}")
+                    },
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                Spacer(Modifier.height(10.dp))
+                Text(
+                    text = segment.text,
+                    style = MaterialTheme.typography.bodyLarge.copy(lineHeight = 28.sp),
+                    textAlign = TextAlign.Center,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
             }
         }
-        Spacer(Modifier.height(20.dp))
-        ProgressSeek(player = player, modifier = Modifier.padding(horizontal = 24.dp))
-        Spacer(Modifier.height(8.dp))
-        Transport(
+        Spacer(Modifier.height(32.dp))
+        ProgressSeek(player = player, modifier = Modifier.padding(horizontal = 28.dp))
+        Spacer(Modifier.height(12.dp))
+        Transport(player = player)
+        Spacer(Modifier.height(28.dp))
+        SecondaryBar(
             player = player,
-            onPrevChapter = { player.previousChapter() },
-            onNextChapter = { player.nextChapter() },
+            onSpeed = onSpeed,
+            onSleep = onSleep,
+            onChapters = onChapters,
         )
-        Spacer(Modifier.height(12.dp))
-        Row(
-            modifier = Modifier.padding(horizontal = 24.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            AssistChip(
-                onClick = onSpeed,
-                label = { Text(stringResource(R.string.player_speed_value, player.speed.toString())) },
-                leadingIcon = {
-                    Icon(
-                        painter = painterResource(Ms.Speed),
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp),
-                    )
-                },
-                shape = CircleShape,
-            )
-            AssistChip(
-                onClick = onSleep,
-                label = {
-                    Text(
-                        if (player.sleepMinutes == 0) {
-                            stringResource(R.string.player_sleep)
-                        } else {
-                            formatTime(player.sleepRemainingSec)
-                        },
-                    )
-                },
-                leadingIcon = {
-                    Icon(
-                        painter = painterResource(Ms.Bedtime),
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp),
-                    )
-                },
-                shape = CircleShape,
-                colors = if (player.sleepMinutes > 0) {
-                    AssistChipDefaults.assistChipColors(
-                        containerColor = MaterialTheme.colorScheme.tertiaryContainer,
-                        labelColor = MaterialTheme.colorScheme.onTertiaryContainer,
-                        leadingIconContentColor = MaterialTheme.colorScheme.onTertiaryContainer,
-                    )
-                } else {
-                    AssistChipDefaults.assistChipColors()
-                },
-            )
-            AssistChip(
-                onClick = { player.applyContinuous(!player.continuous) },
-                label = { Text(stringResource(R.string.player_continuous)) },
-                leadingIcon = {
-                    Icon(
-                        painter = painterResource(Ms.Repeat),
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp),
-                    )
-                },
-                shape = CircleShape,
-                colors = if (player.continuous) {
-                    AssistChipDefaults.assistChipColors(
-                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                        labelColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                        leadingIconContentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                    )
-                } else {
-                    AssistChipDefaults.assistChipColors()
-                },
-            )
-            AssistChip(
-                onClick = onChapters,
-                label = { Text("${player.chapters.size} 章") },
-                leadingIcon = {
-                    Icon(
-                        painter = painterResource(Ms.FormatListNumbered),
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp),
-                    )
-                },
-                shape = CircleShape,
-            )
-        }
-        Spacer(Modifier.height(12.dp))
-        Text(
-            text = "音频由本机合成 · ${FakeData.storage.usedLabel} 已用",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        Spacer(Modifier.height(24.dp))
     }
 }
 
@@ -326,13 +206,10 @@ private fun ProgressSeek(player: PlayerState, modifier: Modifier = Modifier) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(48.dp),
+                .height(44.dp),
             contentAlignment = Alignment.Center,
         ) {
-            LinearWavyProgressIndicator(
-                progress = { player.progress },
-                modifier = Modifier.fillMaxWidth(),
-            )
+            ProgressLine(progress = player.progress, height = 18.dp)
             Slider(
                 value = player.progress,
                 onValueChange = { player.seekToFraction(it) },
@@ -365,64 +242,117 @@ private fun ProgressSeek(player: PlayerState, modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun Transport(
-    player: PlayerState,
-    onPrevChapter: () -> Unit,
-    onNextChapter: () -> Unit,
-) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
+private fun Transport(player: PlayerState) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(20.dp),
+    ) {
+        FilledTonalIconButton(
+            onClick = { player.previousSegment() },
+            modifier = Modifier.size(52.dp),
         ) {
-            FilledTonalIconButton(
-                onClick = { player.previousSegment() },
-                modifier = Modifier.size(56.dp),
-            ) {
-                Icon(
-                    painter = painterResource(Ms.SkipPrevious),
-                    contentDescription = stringResource(R.string.action_prev_segment),
-                    modifier = Modifier.size(26.dp),
-                )
-            }
-            FloatingActionButton(
-                onClick = { player.toggle() },
-                modifier = Modifier.size(72.dp),
-                shape = CircleShape,
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary,
-            ) {
-                Icon(
-                    painter = painterResource(if (player.isPlaying) Ms.Pause else Ms.PlayArrow),
-                    contentDescription = stringResource(
-                        if (player.isPlaying) R.string.action_pause else R.string.action_play,
-                    ),
-                    modifier = Modifier.size(34.dp),
-                )
-            }
-            FilledTonalIconButton(
-                onClick = { player.nextSegment() },
-                modifier = Modifier.size(56.dp),
-            ) {
-                Icon(
-                    painter = painterResource(Ms.SkipNext),
-                    contentDescription = stringResource(R.string.action_next_segment),
-                    modifier = Modifier.size(26.dp),
-                )
-            }
+            Icon(
+                painter = painterResource(Ms.SkipPrevious),
+                contentDescription = stringResource(R.string.action_prev_segment),
+                modifier = Modifier.size(24.dp),
+            )
         }
-        Spacer(Modifier.height(8.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            FilledTonalButton(onClick = onPrevChapter, shape = CircleShape) {
-                Icon(painterResource(Ms.ChevronLeft), contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(4.dp))
-                Text(stringResource(R.string.action_prev_chapter), style = MaterialTheme.typography.labelMedium)
-            }
-            FilledTonalButton(onClick = onNextChapter, shape = CircleShape) {
-                Text(stringResource(R.string.action_next_chapter), style = MaterialTheme.typography.labelMedium)
-                Spacer(Modifier.width(4.dp))
-                Icon(painterResource(Ms.ChevronRight), contentDescription = null, modifier = Modifier.size(18.dp))
-            }
+        FloatingActionButton(
+            onClick = { player.toggle() },
+            modifier = Modifier.size(72.dp),
+            shape = CircleShape,
+            containerColor = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary,
+        ) {
+            Icon(
+                painter = painterResource(if (player.isPlaying) Ms.Pause else Ms.PlayArrow),
+                contentDescription = stringResource(
+                    if (player.isPlaying) R.string.action_pause else R.string.action_play,
+                ),
+                modifier = Modifier.size(34.dp),
+            )
         }
+        FilledTonalIconButton(
+            onClick = { player.nextSegment() },
+            modifier = Modifier.size(52.dp),
+        ) {
+            Icon(
+                painter = painterResource(Ms.SkipNext),
+                contentDescription = stringResource(R.string.action_next_segment),
+                modifier = Modifier.size(24.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun SecondaryBar(
+    player: PlayerState,
+    onSpeed: () -> Unit,
+    onSleep: () -> Unit,
+    onChapters: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp),
+        horizontalArrangement = Arrangement.SpaceEvenly,
+    ) {
+        SecondaryAction(
+            icon = Ms.Speed,
+            label = stringResource(R.string.player_speed_value, player.speed.toString()),
+            onClick = onSpeed,
+        )
+        SecondaryAction(
+            icon = Ms.Bedtime,
+            label = if (player.sleepMinutes == 0) {
+                stringResource(R.string.player_sleep)
+            } else {
+                formatTime(player.sleepRemainingSec)
+            },
+            onClick = onSleep,
+            active = player.sleepMinutes > 0,
+        )
+        SecondaryAction(
+            icon = Ms.Repeat,
+            label = stringResource(R.string.player_continuous),
+            onClick = { player.applyContinuous(!player.continuous) },
+            active = player.continuous,
+        )
+        SecondaryAction(
+            icon = Ms.FormatListNumbered,
+            label = stringResource(R.string.player_chapters),
+            onClick = onChapters,
+        )
+    }
+}
+
+@Composable
+private fun SecondaryAction(
+    icon: Int,
+    label: String,
+    onClick: () -> Unit,
+    active: Boolean = false,
+) {
+    Column(
+        modifier = Modifier
+            .clip(MaterialTheme.shapes.medium)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 10.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Icon(
+            painter = painterResource(icon),
+            contentDescription = label,
+            tint = if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(22.dp),
+        )
+        Spacer(Modifier.height(6.dp))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+        )
     }
 }

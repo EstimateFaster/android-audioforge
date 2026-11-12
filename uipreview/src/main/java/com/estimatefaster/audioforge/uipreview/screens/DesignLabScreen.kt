@@ -40,7 +40,11 @@ private val labPages = listOf(
     "project" to "项目详情",
     "chapters" to "章节",
     "script" to "剧本",
+    "characters" to "人物",
     "player" to "播放器",
+    "tasks" to "任务",
+    "storage" to "存储",
+    "about" to "关于",
     "settings" to "设置",
 )
 

@@ -2,12 +2,7 @@ package com.estimatefaster.audioforge.uipreview.icons
 
 import com.estimatefaster.audioforge.uipreview.R
 
-/**
- * Material Symbols（Rounded, 400, 24dp）统一入口。
- *
- * 资源由 fonts.gstatic.com 的官方 symbols 端点导出为 VectorDrawable，
- * 名字与 Material Symbols 官网一致（snake_case → PascalCase）。
- */
+/** Material Symbols（Rounded, 400, 24dp）统一入口。 */
 object Ms {
     val Accessibility = R.drawable.accessibility
     val Add = R.drawable.add
@@ -56,6 +51,7 @@ object Ms {
     val DataUsage = R.drawable.data_usage
     val Database = R.drawable.database
     val Delete = R.drawable.delete
+    val DeleteSweep = R.drawable.delete_sweep
     val Description = R.drawable.description
     val DisplaySettings = R.drawable.display_settings
     val DoneAll = R.drawable.done_all
@@ -193,6 +189,7 @@ object Ms {
     val Sync = R.drawable.sync
     val SyncDisabled = R.drawable.sync_disabled
     val TextFields = R.drawable.text_fields
+    val Thermostat = R.drawable.thermostat
     val Timer = R.drawable.timer
     val Timer10 = R.drawable.timer_10
     val Timer3 = R.drawable.timer_3

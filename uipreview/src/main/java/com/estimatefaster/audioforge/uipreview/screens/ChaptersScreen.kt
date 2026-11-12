@@ -1,7 +1,6 @@
 package com.estimatefaster.audioforge.uipreview.screens
 
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -22,7 +21,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTopAppBarState
@@ -56,9 +54,8 @@ import com.estimatefaster.audioforge.uipreview.design.IconAction
 import com.estimatefaster.audioforge.uipreview.design.InlineSearchField
 import com.estimatefaster.audioforge.uipreview.design.LoadingState
 import com.estimatefaster.audioforge.uipreview.design.RowDivider
-import com.estimatefaster.audioforge.uipreview.design.SectionHeader
-import com.estimatefaster.audioforge.uipreview.design.StatusChip
 import com.estimatefaster.audioforge.uipreview.design.Tone
+import com.estimatefaster.audioforge.uipreview.design.ToneColors
 import com.estimatefaster.audioforge.uipreview.icons.Ms
 import com.estimatefaster.audioforge.uipreview.lab.LocalPreviewSettings
 import com.estimatefaster.audioforge.uipreview.lab.ScreenPhase
@@ -132,10 +129,7 @@ fun ChaptersScreen(navigator: Navigator, player: PlayerState, bookId: Long) {
                         expanded = true,
                         content = {
                             IconButton(onClick = { selection = emptySet() }) {
-                                Icon(
-                                    painter = painterResource(Ms.Close),
-                                    contentDescription = stringResource(R.string.action_cancel),
-                                )
+                                Icon(painterResource(Ms.Close), contentDescription = stringResource(R.string.action_cancel))
                             }
                             Text(
                                 text = stringResource(R.string.chapters_selected, selection.size),
@@ -143,40 +137,27 @@ fun ChaptersScreen(navigator: Navigator, player: PlayerState, bookId: Long) {
                                 modifier = Modifier.padding(horizontal = 4.dp),
                             )
                             IconButton(onClick = { selection = chapters.map { it.id }.toSet() }) {
-                                Icon(
-                                    painter = painterResource(Ms.DoneAll),
-                                    contentDescription = stringResource(R.string.chapters_select_all),
-                                )
+                                Icon(painterResource(Ms.DoneAll), contentDescription = stringResource(R.string.chapters_select_all))
                             }
                             IconButton(
                                 onClick = {
                                     scope.launch {
-                                        snackbarHostState.showSnackbar(
-                                            "预览构建：已提交 ${selection.size} 章的批量生成",
-                                        )
+                                        snackbarHostState.showSnackbar("预览构建：已提交 ${selection.size} 章的批量生成")
                                     }
                                     selection = emptySet()
                                 },
                             ) {
-                                Icon(
-                                    painter = painterResource(Ms.AutoAwesome),
-                                    contentDescription = stringResource(R.string.chapters_batch),
-                                )
+                                Icon(painterResource(Ms.AutoAwesome), contentDescription = stringResource(R.string.chapters_batch))
                             }
                             IconButton(
                                 onClick = {
                                     scope.launch {
-                                        snackbarHostState.showSnackbar(
-                                            "预览构建：导出 ${selection.size} 章",
-                                        )
+                                        snackbarHostState.showSnackbar("预览构建：导出 ${selection.size} 章")
                                     }
                                     selection = emptySet()
                                 },
                             ) {
-                                Icon(
-                                    painter = painterResource(Ms.Download),
-                                    contentDescription = stringResource(R.string.chapters_export),
-                                )
+                                Icon(painterResource(Ms.Download), contentDescription = stringResource(R.string.chapters_export))
                             }
                         },
                     )
@@ -188,11 +169,7 @@ fun ChaptersScreen(navigator: Navigator, player: PlayerState, bookId: Long) {
         topBar = {
             AppTopBar(
                 title = stringResource(R.string.chapters_title),
-                subtitle = stringResource(
-                    R.string.chapters_subtitle,
-                    book.chapters.size,
-                    book.completedChapters,
-                ),
+                subtitle = stringResource(R.string.chapters_subtitle, book.chapters.size, book.completedChapters),
                 scrollBehavior = scrollBehavior,
                 onBack = { navigator.pop() },
                 actions = {
@@ -210,11 +187,7 @@ fun ChaptersScreen(navigator: Navigator, player: PlayerState, bookId: Long) {
                         onClick = {
                             selection = if (selecting) emptySet() else setOf(chapters.firstOrNull()?.id ?: 0L)
                         },
-                        tint = if (selecting) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        },
+                        tint = if (selecting) MaterialTheme.colorScheme.primary else null,
                     )
                 },
             )
@@ -254,26 +227,18 @@ fun ChaptersScreen(navigator: Navigator, player: PlayerState, bookId: Long) {
                         onValueChange = { query = it },
                         hint = stringResource(R.string.chapters_search_hint),
                         focusRequester = searchFocus,
-                        modifier = Modifier.padding(horizontal = 16.dp),
+                        modifier = Modifier.padding(horizontal = 20.dp),
                     )
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(10.dp))
                 }
                 FilterChipRow(
                     options = filters,
                     selectedId = filterId,
                     onSelect = { filterId = it },
-                    contentPadding = PaddingValues(horizontal = 16.dp),
+                    contentPadding = PaddingValues(horizontal = 20.dp),
+                    modifier = Modifier.padding(top = 4.dp),
                 )
-                SectionHeader(
-                    title = if (filterId == "all" && query.isBlank()) {
-                        "全部章节"
-                    } else {
-                        "筛选结果"
-                    },
-                    subtitle = "${chapters.size} 章",
-                    spec = "ListItem + StatusChip · 72dp",
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                )
+                Spacer(Modifier.height(8.dp))
                 if (chapters.isEmpty()) {
                     EmptyState(
                         icon = Ms.SearchOff,
@@ -291,25 +256,16 @@ fun ChaptersScreen(navigator: Navigator, player: PlayerState, bookId: Long) {
                         modifier = Modifier
                             .fillMaxSize()
                             .nestedScroll(scrollBehavior.nestedScrollConnection),
-                        contentPadding = PaddingValues(bottom = 32.dp),
+                        contentPadding = PaddingValues(bottom = 24.dp),
                     ) {
                         items(chapters, key = { it.id }) { chapter ->
-                            ChapterListRow(
+                            ChapterItem(
                                 chapter = chapter,
                                 selected = chapter.id in selection,
-                                selecting = selecting,
                                 onClick = { navigator.push(Dest.Script(book.id, chapter.id)) },
                                 onLongClick = { selection = selection + chapter.id },
                             )
-                            RowDivider(startIndent = 72.dp)
-                        }
-                        item(key = "footer") {
-                            Text(
-                                text = stringResource(R.string.chapters_loaded_all, chapters.size),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(16.dp),
-                            )
+                            RowDivider()
                         }
                     }
                 }
@@ -319,43 +275,49 @@ fun ChaptersScreen(navigator: Navigator, player: PlayerState, bookId: Long) {
 }
 
 @Composable
-private fun ChapterListRow(
+private fun ChapterItem(
     chapter: Chapter,
     selected: Boolean,
-    selecting: Boolean,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
 ) {
+    val (container, content) = ToneColors(
+        when (chapter.status) {
+            ChapterStatus.Done -> Tone.Success
+            ChapterStatus.Generating -> Tone.Info
+            ChapterStatus.Failed -> Tone.Error
+            ChapterStatus.Pending -> Tone.Neutral
+        },
+    )
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .combinedClickable(onClick = onClick, onLongClick = onLongClick)
-            .padding(horizontal = 16.dp, vertical = 14.dp),
+            .padding(horizontal = 20.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Surface(
-            shape = CircleShape,
-            color = if (selected) {
-                MaterialTheme.colorScheme.primary
-            } else {
-                MaterialTheme.colorScheme.surfaceContainerHighest
-            },
-            modifier = Modifier.size(40.dp),
+        Box(
+            modifier = Modifier.size(32.dp),
+            contentAlignment = Alignment.Center,
         ) {
-            Box(contentAlignment = Alignment.Center) {
-                if (selected) {
+            if (selected) {
+                Box(
+                    modifier = Modifier.size(24.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
                     Icon(
-                        painter = painterResource(Ms.Check),
+                        painterResource(Ms.CheckCircle),
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onPrimary,
-                        modifier = Modifier.size(20.dp),
-                    )
-                } else {
-                    Text(
-                        text = chapter.number.toString().padStart(2, '0'),
-                        style = MaterialTheme.typography.labelMedium,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(22.dp),
                     )
                 }
+            } else {
+                Text(
+                    text = chapter.number.toString().padStart(2, '0'),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         }
         Spacer(Modifier.width(14.dp))
@@ -370,28 +332,23 @@ private fun ChapterListRow(
                 text = if (chapter.segments.isEmpty()) {
                     "尚未解析"
                 } else {
-                    "${chapter.segments.size} 段 · ${formatTime(chapter.durationSec)} · ${chapter.generatedCount} 段有音频"
+                    "${chapter.segments.size} 段 · ${formatTime(chapter.durationSec)}"
                 },
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
             )
         }
-        Spacer(Modifier.width(8.dp))
-        StatusChip(
+        Text(
             text = when (chapter.status) {
                 ChapterStatus.Done -> stringResource(R.string.status_done)
                 ChapterStatus.Generating -> stringResource(R.string.status_generating)
                 ChapterStatus.Failed -> stringResource(R.string.status_failed)
                 ChapterStatus.Pending -> stringResource(R.string.status_pending)
             },
-            tone = when (chapter.status) {
-                ChapterStatus.Done -> Tone.Success
-                ChapterStatus.Generating -> Tone.Info
-                ChapterStatus.Failed -> Tone.Error
-                ChapterStatus.Pending -> Tone.Neutral
-            },
+            style = MaterialTheme.typography.labelMedium,
+            color = content,
+            modifier = Modifier.padding(start = 12.dp),
         )
     }
 }
