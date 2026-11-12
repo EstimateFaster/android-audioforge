@@ -256,7 +256,7 @@ fun LibraryScreen(navigator: Navigator, player: PlayerState) {
                 }
                 item(key = "label") {
                     SectionLabel(
-                        text = stringResource(R.string.library_filter_all),
+                        text = stringResource(R.string.library_section),
                         trailing = "${books.size}",
                         modifier = Modifier.padding(top = 4.dp),
                     )

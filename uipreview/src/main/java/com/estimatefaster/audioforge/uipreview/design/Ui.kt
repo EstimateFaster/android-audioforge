@@ -392,6 +392,10 @@ fun SecondaryButton(
         modifier = modifier.heightIn(min = 52.dp),
         enabled = enabled,
         shape = CircleShape,
+        colors = ButtonDefaults.filledTonalButtonColors(
+            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+            contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+        ),
         contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
     ) {
         Icon(painterResource(icon), contentDescription = null, modifier = Modifier.size(20.dp))
