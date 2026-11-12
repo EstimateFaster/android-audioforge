@@ -220,7 +220,6 @@ private fun SegmentRow(
     showDivider: Boolean,
 ) {
     val rowModifier = Modifier
-        .weight(1f)
         .combinedClickable(onClick = onClick, onLongClick = onLongPress)
         .padding(start = 20.dp, end = 4.dp, top = 16.dp, bottom = 16.dp)
 
@@ -236,7 +235,7 @@ private fun SegmentRow(
                 Modifier.fillMaxWidth()
             },
         ) {
-            Column(modifier = rowModifier) {
+            Column(modifier = rowModifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     RoleAvatar(
                         name = segment.role,
