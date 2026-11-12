@@ -12,7 +12,9 @@ adb install -r -t "$APK_DIR/AudioForge-UI-Preview.apk" >/dev/null
 adb shell settings put global animator_duration_scale 0
 adb shell settings put global transition_animation_scale 0
 adb shell settings put global window_animation_scale 0
+adb shell wm size 1080x2340 >/dev/null 2>&1 || true
 adb shell wm density 420 >/dev/null 2>&1 || true
+sleep 2
 
 capture() {
   local screen="$1" theme="$2" font="$3" phase="$4" name="$5"

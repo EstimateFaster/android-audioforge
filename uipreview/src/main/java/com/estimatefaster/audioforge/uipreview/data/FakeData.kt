@@ -247,7 +247,7 @@ object FakeData {
         chapterIndex = 6,
         chapterCount = 12,
         percent = 62,
-        etaLabel = "约 4 分钟",
+        etaLabel = "4 分钟",
         queued = 2,
     )
 
