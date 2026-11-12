@@ -22,10 +22,5 @@ internal val ExpressiveShapes = Shapes(
     extraExtraLarge = RoundedCornerShape(40.dp),
 )
 
-/** 封面/插图用的不对称圆角，避免所有容器都是同一个圆。 */
-internal val CoverShape: CornerBasedShape = RoundedCornerShape(
-    topStart = 28.dp,
-    topEnd = 12.dp,
-    bottomEnd = 28.dp,
-    bottomStart = 12.dp,
-)
+/** 封面统一圆角：所有尺寸共用，保证缩略图与播放器封面是同一种「书」的轮廓。 */
+internal val CoverShape: CornerBasedShape = RoundedCornerShape(14.dp)

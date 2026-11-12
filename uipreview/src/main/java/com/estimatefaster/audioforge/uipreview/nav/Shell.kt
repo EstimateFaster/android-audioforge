@@ -250,7 +250,7 @@ fun MiniPlayerBar(
         ) {
             CoverArt(
                 title = player.book.title,
-                modifier = Modifier.size(36.dp),
+                modifier = Modifier.size(40.dp),
                 shape = CoverShape,
                 textStyle = MaterialTheme.typography.labelLarge,
             )

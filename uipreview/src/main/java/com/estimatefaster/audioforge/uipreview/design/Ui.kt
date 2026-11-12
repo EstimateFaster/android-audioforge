@@ -567,17 +567,13 @@ fun CoverArt(
     Box(
         modifier = modifier
             .clip(shape)
-            .background(
-                Brush.linearGradient(
-                    listOf(scheme.primaryContainer, scheme.secondaryContainer, scheme.tertiaryContainer),
-                ),
-            ),
+            .background(scheme.secondaryContainer),
         contentAlignment = Alignment.Center,
     ) {
         Text(
             text = title.take(1),
             style = textStyle ?: MaterialTheme.typography.headlineMediumEmphasized,
-            color = scheme.onPrimaryContainer,
+            color = scheme.onSecondaryContainer,
         )
         if (label != null) {
             Surface(
