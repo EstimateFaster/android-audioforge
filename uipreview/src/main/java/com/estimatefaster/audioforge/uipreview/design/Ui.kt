@@ -78,6 +78,33 @@ fun SpecTag(text: String, modifier: Modifier = Modifier) {
     }
 }
 
+/** 圆形 tonal 图标底（设置行、空态等复用）。 */
+@Composable
+fun IconBubble(
+    icon: Int,
+    modifier: Modifier = Modifier,
+    size: Dp = 36.dp,
+    container: Color = MaterialTheme.colorScheme.secondaryContainer,
+    content: Color = MaterialTheme.colorScheme.onSecondaryContainer,
+    iconSize: Dp = 19.dp,
+    description: String? = null,
+) {
+    Box(
+        modifier = modifier
+            .size(size)
+            .clip(CircleShape)
+            .background(container),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            painter = painterResource(icon),
+            contentDescription = description,
+            tint = content,
+            modifier = Modifier.size(iconSize),
+        )
+    }
+}
+
 /**
  * 区块标签：小而安静，只用来分组。
  * 大标题交给顶栏，页面里不再堆 22sp 的「区域标题」。

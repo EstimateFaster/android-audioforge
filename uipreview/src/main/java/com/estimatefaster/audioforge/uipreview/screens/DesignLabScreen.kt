@@ -104,7 +104,7 @@ fun DesignLabScreen(navigator: Navigator, player: PlayerState) {
                                 onSelect = { settings.fontScale = FontScaleOption.entries[it] },
                             )
                         }
-                        RowDivider(startIndent = 0.dp)
+                        RowDivider()
                         SwitchRow(
                             icon = Ms.Palette,
                             title = stringResource(R.string.lab_dynamic),
@@ -149,7 +149,7 @@ fun DesignLabScreen(navigator: Navigator, player: PlayerState) {
                                         onSelect = { settings.setPhase(key, ScreenPhase.entries[it]) },
                                     )
                                 }
-                                if (index != labPages.lastIndex) RowDivider(startIndent = 16.dp)
+                                if (index != labPages.lastIndex) RowDivider()
                             }
                         }
                     }
