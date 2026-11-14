@@ -39,7 +39,7 @@ private val emotions = listOf("平静", "低沉", "克制", "疲惫", "严厉", 
 fun SegmentEditSheet(
     segment: Segment,
     onDismiss: () -> Unit,
-    onSave: () -> Unit,
+    onSave: (role: String, emotion: String?, text: String) -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var role by remember { mutableStateOf(segment.role) }
@@ -112,7 +112,7 @@ fun SegmentEditSheet(
                     text = stringResource(R.string.action_save),
                     icon = Ms.Check,
                     enabled = text.isNotBlank(),
-                    onClick = onSave,
+                    onClick = { onSave(role, emotion, text.trim()) },
                 )
             }
         }

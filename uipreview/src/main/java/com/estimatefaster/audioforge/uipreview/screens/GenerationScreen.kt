@@ -20,6 +20,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -43,11 +44,11 @@ fun GenerationScreen(navigator: Navigator, player: PlayerState) {
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
-    var llmConcurrency by remember { mutableFloatStateOf(1f) }
-    var ttsConcurrency by remember { mutableFloatStateOf(4f) }
-    var segmentLimit by remember { mutableFloatStateOf(120f) }
-    var coverage by remember { mutableFloatStateOf(0.97f) }
-    var pause by remember { mutableFloatStateOf(350f) }
+    var llmConcurrency by rememberSaveable { mutableStateOf(1f) }
+    var ttsConcurrency by rememberSaveable { mutableStateOf(4f) }
+    var segmentLimit by rememberSaveable { mutableStateOf(120f) }
+    var coverage by rememberSaveable { mutableStateOf(0.97f) }
+    var pause by rememberSaveable { mutableStateOf(350f) }
 
     AppScaffold(
         navigator = navigator,

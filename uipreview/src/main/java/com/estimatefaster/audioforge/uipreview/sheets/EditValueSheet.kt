@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -11,16 +12,20 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.estimatefaster.audioforge.uipreview.design.PrimaryButton
 import com.estimatefaster.audioforge.uipreview.design.SheetHeader
 import com.estimatefaster.audioforge.uipreview.icons.Ms
+import kotlinx.coroutines.delay
 
 @Composable
 fun EditValueSheet(
@@ -35,11 +40,18 @@ fun EditValueSheet(
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var value by remember { mutableStateOf(initial) }
+    val focus = remember { FocusRequester() }
+
+    LaunchedEffect(Unit) {
+        delay(120)
+        focus.requestFocus()
+    }
 
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .imePadding()
                 .padding(horizontal = 24.dp)
                 .padding(bottom = 32.dp),
         ) {
@@ -48,7 +60,9 @@ fun EditValueSheet(
             OutlinedTextField(
                 value = value,
                 onValueChange = { value = it.trim() },
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .focusRequester(focus),
                 label = { Text(title) },
                 placeholder = { Text(placeholder) },
                 singleLine = true,

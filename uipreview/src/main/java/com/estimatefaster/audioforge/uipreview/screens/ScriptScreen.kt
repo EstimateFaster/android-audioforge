@@ -32,6 +32,7 @@ import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -39,7 +40,13 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -81,15 +88,26 @@ fun ScriptScreen(navigator: Navigator, player: PlayerState, bookId: Long, chapte
     val listState = rememberLazyListState()
 
     var roleFilter by rememberSaveable { mutableStateOf("all") }
-    var follow by rememberSaveable { mutableStateOf(true) }
+    var follow by rememberSaveable { mutableStateOf(false) }
     var editing by remember { mutableStateOf<Segment?>(null) }
+    val overrides = remember { mutableStateMapOf<Int, Segment>() }
+
+    val stopFollow = remember {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                if (available.y < -2f) follow = false
+                return Offset.Zero
+            }
+        }
+    }
 
     val roles = remember(chapter.id) {
         listOf("all" to "全部") + chapter.segments.map { it.role }.distinct().map { it to it }
     }
-    val segments = remember(chapter.id, roleFilter) {
-        if (roleFilter == "all") chapter.segments else chapter.segments.filter { it.role == roleFilter }
-    }
+    // 直接读 snapshot map，编辑保存后列表立即更新
+    val segments = chapter.segments
+        .filter { roleFilter == "all" || it.role == roleFilter }
+        .map { overrides[it.index] ?: it }
     val currentIndex = segments.indexOfFirst { it.index == player.segmentIndex }
 
     LaunchedEffect(player.segmentIndex, follow, roleFilter) {
@@ -174,27 +192,42 @@ fun ScriptScreen(navigator: Navigator, player: PlayerState, bookId: Long, chapte
                             state = listState,
                             modifier = Modifier
                                 .fillMaxSize()
+                                .nestedScroll(stopFollow)
                                 .nestedScroll(scrollBehavior.nestedScrollConnection),
                             contentPadding = PaddingValues(bottom = 32.dp),
                         ) {
                             itemsIndexed(segments, key = { _, segment -> segment.index }) { _, segment ->
                                 val isCurrent = segment.index == player.segmentIndex
-                                SegmentRow(
-                                    segment = segment,
-                                    isCurrent = isCurrent,
-                                    isPlaying = isCurrent && player.isPlaying,
-                                    onClick = { player.playSegment(segment.index) },
-                                    onTogglePlay = {
-                                        if (isCurrent) player.toggle() else player.playSegment(segment.index)
-                                    },
-                                    onEdit = { editing = segment },
-                                    onLongPress = {
-                                        val manager = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                        manager.setPrimaryClip(ClipData.newPlainText("script", segment.text))
-                                        scope.launch { snackbarHostState.showSnackbar(copiedMessage) }
-                                    },
-                                    showDivider = !isCurrent,
-                                )
+                            Column(modifier = Modifier.animateItem()) {
+                                        SegmentRow(
+                                            segment = segment,
+                                            isCurrent = isCurrent,
+                                            isPlaying = isCurrent && player.isPlaying,
+                                            onClick = {
+                                                if (segment.hasAudio) player.playSegment(segment.index)
+                                            },
+                                            onTogglePlay = {
+                                                if (isCurrent) {
+                                                    player.toggle()
+                                                } else {
+                                                    player.playSegment(segment.index)
+                                                }
+                                            },
+                                            onEdit = { editing = segment },
+                                            onLongPress = {
+                                                val manager = context.getSystemService(
+                                                    Context.CLIPBOARD_SERVICE,
+                                                ) as ClipboardManager
+                                                manager.setPrimaryClip(
+                                                    ClipData.newPlainText("script", segment.text),
+                                                )
+                                                scope.launch {
+                                                    snackbarHostState.showSnackbar(copiedMessage)
+                                                }
+                                            },
+                                            showDivider = !isCurrent,
+                                        )
+                                    }
                             }
                         }
                     }
@@ -207,7 +240,8 @@ fun ScriptScreen(navigator: Navigator, player: PlayerState, bookId: Long, chapte
         SegmentEditSheet(
             segment = segment,
             onDismiss = { editing = null },
-            onSave = {
+            onSave = { role, emotion, text ->
+                overrides[segment.index] = segment.copy(role = role, emotion = emotion, text = text)
                 editing = null
                 scope.launch { snackbarHostState.showSnackbar("已保存这一段") }
             },
@@ -228,19 +262,24 @@ private fun SegmentRow(
 ) {
     val rowModifier = Modifier
         .combinedClickable(onClick = onClick, onLongClick = onLongPress)
-        .padding(start = if (isCurrent) 8.dp else 20.dp, end = 4.dp, top = 16.dp, bottom = 16.dp)
+        .padding(start = 8.dp, end = 4.dp, top = 16.dp, bottom = 16.dp)
+
+    val background by animateColorAsState(
+        targetValue = if (isCurrent) {
+            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)
+        } else {
+            Color.Transparent
+        },
+        label = "segment-current",
+    )
 
     Column {
         Row(
-            modifier = if (isCurrent) {
-                Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 12.dp)
-                    .clip(MaterialTheme.shapes.large)
-                    .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f))
-            } else {
-                Modifier.fillMaxWidth()
-            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp)
+                .clip(MaterialTheme.shapes.large)
+                .background(background),
         ) {
             Column(modifier = rowModifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -286,7 +325,11 @@ private fun SegmentRow(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
             ) {
-                IconButton(onClick = onTogglePlay, modifier = Modifier.size(40.dp), enabled = segment.hasAudio) {
+                IconButton(
+                    onClick = onTogglePlay,
+                    modifier = Modifier.size(48.dp),
+                    enabled = segment.hasAudio,
+                ) {
                     Icon(
                         painter = painterResource(
                             when {
@@ -306,15 +349,19 @@ private fun SegmentRow(
                         modifier = Modifier.size(22.dp),
                     )
                 }
-                if (isCurrent) {
-                    IconButton(onClick = onEdit, modifier = Modifier.size(40.dp)) {
-                        Icon(
-                            painter = painterResource(Ms.Edit),
-                            contentDescription = stringResource(R.string.action_edit),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(18.dp),
-                        )
-                    }
+                IconButton(
+                    onClick = onEdit,
+                    modifier = Modifier
+                        .size(48.dp)
+                        .alpha(if (isCurrent) 1f else 0f),
+                    enabled = isCurrent,
+                ) {
+                    Icon(
+                        painter = painterResource(Ms.Edit),
+                        contentDescription = stringResource(R.string.action_edit),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(18.dp),
+                    )
                 }
             }
         }

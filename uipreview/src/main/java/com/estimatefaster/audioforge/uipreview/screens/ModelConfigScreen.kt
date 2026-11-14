@@ -19,6 +19,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -52,12 +53,12 @@ fun ModelConfigScreen(navigator: Navigator, player: PlayerState) {
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
-    var llmBase by remember { mutableStateOf("https://dashscope.aliyuncs.com/compatible-mode/v1") }
-    var llmModel by remember { mutableStateOf("qwen3.7-flash") }
-    var llmKey by remember { mutableStateOf("sk-demo-7f2a") }
-    var ttsBase by remember { mutableStateOf("https://api.fish.audio") }
-    var ttsModel by remember { mutableStateOf("s2.1-pro-free") }
-    var ttsKey by remember { mutableStateOf("") }
+    var llmBase by rememberSaveable { mutableStateOf("https://dashscope.aliyuncs.com/compatible-mode/v1") }
+    var llmModel by rememberSaveable { mutableStateOf("qwen3.7-flash") }
+    var llmKey by rememberSaveable { mutableStateOf("sk-demo-7f2a") }
+    var ttsBase by rememberSaveable { mutableStateOf("https://api.fish.audio") }
+    var ttsModel by rememberSaveable { mutableStateOf("s2.1-pro-free") }
+    var ttsKey by rememberSaveable { mutableStateOf("") }
     var editing by remember { mutableStateOf<EditTarget?>(null) }
 
     AppScaffold(

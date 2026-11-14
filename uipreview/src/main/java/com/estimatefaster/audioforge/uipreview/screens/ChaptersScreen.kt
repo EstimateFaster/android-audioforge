@@ -1,5 +1,7 @@
 package com.estimatefaster.audioforge.uipreview.screens
 
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -35,7 +37,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -77,8 +81,12 @@ fun ChaptersScreen(navigator: Navigator, player: PlayerState, bookId: Long) {
     var query by rememberSaveable { mutableStateOf("") }
     var filterId by rememberSaveable { mutableStateOf("all") }
     var searchOpen by rememberSaveable { mutableStateOf(false) }
+    var filterOpen by rememberSaveable { mutableStateOf(false) }
     var selection by remember { mutableStateOf(emptySet<Long>()) }
     val searchFocus = remember { FocusRequester() }
+    val haptics = LocalHapticFeedback.current
+
+    BackHandler(enabled = selection.isNotEmpty()) { selection = emptySet() }
 
     LaunchedEffect(searchOpen) {
         if (searchOpen) {
@@ -88,11 +96,11 @@ fun ChaptersScreen(navigator: Navigator, player: PlayerState, bookId: Long) {
     }
 
     val filters = listOf(
-        "all" to "全部 ${book.chapters.size}",
-        "done" to "已生成 ${book.chapters.count { it.status == ChapterStatus.Done }}",
-        "generating" to "生成中 ${book.chapters.count { it.status == ChapterStatus.Generating }}",
-        "pending" to "待生成 ${book.chapters.count { it.status == ChapterStatus.Pending }}",
-        "failed" to "失败 ${book.chapters.count { it.status == ChapterStatus.Failed }}",
+        "all" to stringResource(R.string.library_filter_all),
+        "done" to "已生成",
+        "generating" to stringResource(R.string.library_filter_generating),
+        "pending" to stringResource(R.string.library_filter_pending),
+        "failed" to "失败",
     )
 
     val chapters = remember(query, filterId) {
@@ -183,12 +191,18 @@ fun ChaptersScreen(navigator: Navigator, player: PlayerState, bookId: Long) {
                         },
                     )
                     IconAction(
+                        icon = if (filterOpen) Ms.FilterAltOff else Ms.FilterAlt,
+                        description = stringResource(R.string.action_filter),
+                        onClick = { filterOpen = !filterOpen },
+                        tint = if (filterOpen) MaterialTheme.colorScheme.primary else null,
+                    )
+                    IconAction(
                         icon = Ms.DoneAll,
                         description = stringResource(R.string.chapters_select_mode),
                         onClick = {
-                            selection = if (selecting) emptySet() else setOf(chapters.firstOrNull()?.id ?: 0L)
+                            selection = if (selecting) emptySet() else emptySet()
                         },
-                        tint = if (selecting) MaterialTheme.colorScheme.primary else null,
+                        tint = if (selection.isNotEmpty()) MaterialTheme.colorScheme.primary else null,
                     )
                 },
             )
@@ -237,14 +251,18 @@ fun ChaptersScreen(navigator: Navigator, player: PlayerState, bookId: Long) {
                         )
                         Spacer(Modifier.height(10.dp))
                     }
-                    FilterChipRow(
-                        options = filters,
-                        selectedId = filterId,
-                        onSelect = { filterId = it },
-                        contentPadding = PaddingValues(horizontal = 20.dp),
-                        modifier = Modifier.padding(top = 4.dp),
-                    )
-                    Spacer(Modifier.height(8.dp))
+                    AnimatedVisibility(visible = filterOpen) {
+                        Column {
+                            FilterChipRow(
+                                options = filters,
+                                selectedId = filterId,
+                                onSelect = { filterId = it },
+                                contentPadding = PaddingValues(horizontal = 20.dp),
+                                modifier = Modifier.padding(top = 4.dp),
+                            )
+                            Spacer(Modifier.height(8.dp))
+                        }
+                    }
                     if (chapters.isEmpty()) {
                         EmptyState(
                             icon = Ms.SearchOff,
@@ -265,13 +283,28 @@ fun ChaptersScreen(navigator: Navigator, player: PlayerState, bookId: Long) {
                             contentPadding = PaddingValues(bottom = 24.dp),
                         ) {
                             items(chapters, key = { it.id }) { chapter ->
-                                ChapterItem(
-                                    chapter = chapter,
-                                    selected = chapter.id in selection,
-                                    onClick = { navigator.push(Dest.Script(book.id, chapter.id)) },
-                                    onLongClick = { selection = selection + chapter.id },
-                                )
-                                RowDivider()
+                                Column(modifier = Modifier.animateItem()) {
+                                    ChapterItem(
+                                        chapter = chapter,
+                                        selected = chapter.id in selection,
+                                        onClick = {
+                                            if (selecting) {
+                                                selection = if (chapter.id in selection) {
+                                                    selection - chapter.id
+                                                } else {
+                                                    selection + chapter.id
+                                                }
+                                            } else {
+                                                navigator.push(Dest.Script(book.id, chapter.id))
+                                            }
+                                        },
+                                        onLongClick = {
+                                            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                            selection = selection + chapter.id
+                                        },
+                                    )
+                                    RowDivider()
+                                }
                             }
                         }
                     }

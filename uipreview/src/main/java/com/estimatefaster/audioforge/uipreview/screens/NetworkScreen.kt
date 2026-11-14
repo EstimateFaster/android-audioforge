@@ -18,6 +18,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -36,11 +37,11 @@ import kotlin.math.roundToInt
 @Composable
 fun NetworkScreen(navigator: Navigator, player: PlayerState) {
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
-    var wifiOnly by remember { mutableStateOf(true) }
-    var chargingOnly by remember { mutableStateOf(false) }
-    var notify by remember { mutableStateOf(true) }
-    var thermal by remember { mutableStateOf(true) }
-    var batteryThreshold by remember { mutableFloatStateOf(15f) }
+    var wifiOnly by rememberSaveable { mutableStateOf(true) }
+    var chargingOnly by rememberSaveable { mutableStateOf(false) }
+    var notify by rememberSaveable { mutableStateOf(true) }
+    var thermal by rememberSaveable { mutableStateOf(true) }
+    var batteryThreshold by rememberSaveable { mutableStateOf(15f) }
 
     AppScaffold(
         navigator = navigator,

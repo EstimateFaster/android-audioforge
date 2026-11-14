@@ -91,6 +91,12 @@ fun LibraryScreen(
     var showImport by remember { mutableStateOf(false) }
     val searchFocus = remember { FocusRequester() }
 
+    BackHandler(enabled = searchOpen) {
+        searchOpen = false
+        query = ""
+        filterId = "all"
+    }
+
     LaunchedEffect(searchOpen) {
         if (searchOpen) {
             delay(80)
@@ -260,13 +266,17 @@ fun LibraryScreen(
                             )
                         }
                     } else {
-                        item(key = "continue") {
-                            ContinueCard(
-                                book = continueBook,
-                                onContinue = { navigator.push(Dest.Player) },
-                                onOpen = { navigator.push(Dest.Project(continueBook.id)) },
-                                modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 8.dp),
-                            )
+                        // 有播放会话时由迷你播放器承接，不再重复一张「继续收听」卡
+                        if (!player.hasSession) {
+                            item(key = "continue") {
+                                ContinueCard(
+                                    book = continueBook,
+                                    player = player,
+                                    onContinue = { navigator.push(Dest.Player) },
+                                    onOpen = { navigator.push(Dest.Project(continueBook.id)) },
+                                    modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 8.dp),
+                                )
+                            }
                         }
                         item(key = "task") {
                             RunningTaskRow(
@@ -325,6 +335,7 @@ fun LibraryScreen(
 @Composable
 private fun ContinueCard(
     book: Book,
+    player: PlayerState,
     onContinue: () -> Unit,
     onOpen: () -> Unit,
     modifier: Modifier = Modifier,
@@ -355,7 +366,7 @@ private fun ContinueCard(
                     overflow = TextOverflow.Ellipsis,
                 )
                 Text(
-                    text = "第 4 章 · 皇觉寺",
+                    text = "第 ${player.chapter.number} 章 · ${player.chapter.title}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,

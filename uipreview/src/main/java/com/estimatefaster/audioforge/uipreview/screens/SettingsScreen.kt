@@ -110,7 +110,7 @@ fun SettingsScreen(navigator: Navigator, player: PlayerState) {
                 ListRow(
                     icon = Ms.VpnKey,
                     title = stringResource(R.string.settings_llm),
-                    subtitle = "文本 qwen3.7-flash · 语音待配置",
+                    subtitle = "文本模型与语音模型 · Key 存本机",
                     onClick = { navigator.push(Dest.ModelConfig) },
                 )
                 RowDivider()
@@ -119,7 +119,7 @@ fun SettingsScreen(navigator: Navigator, player: PlayerState) {
                 ListRow(
                     icon = Ms.Tune,
                     title = stringResource(R.string.settings_group_generation),
-                    subtitle = "并发 1 / 4 · 分段 120 字 · 停顿 350 ms",
+                    subtitle = "并发、分段长度与停顿",
                     onClick = { navigator.push(Dest.Generation) },
                 )
                 RowDivider()
@@ -128,7 +128,7 @@ fun SettingsScreen(navigator: Navigator, player: PlayerState) {
                 ListRow(
                     icon = Ms.Wifi,
                     title = stringResource(R.string.settings_group_network),
-                    subtitle = "仅 Wi-Fi · 仅充电 · 完成通知",
+                    subtitle = "下载条件、通知与温控",
                     onClick = { navigator.push(Dest.Network) },
                 )
                 RowDivider()
@@ -137,7 +137,7 @@ fun SettingsScreen(navigator: Navigator, player: PlayerState) {
                 ListRow(
                     icon = Ms.Storage,
                     title = stringResource(R.string.settings_storage),
-                    subtitle = "已用 1.8 GB · 1,284 个文件",
+                    subtitle = "占用、保留期与清理",
                     onClick = { navigator.push(Dest.Storage) },
                 )
                 RowDivider()
@@ -146,7 +146,7 @@ fun SettingsScreen(navigator: Navigator, player: PlayerState) {
                 ListRow(
                     icon = Ms.Info,
                     title = stringResource(R.string.settings_about),
-                    subtitle = "版本 0.1.0-ui · 许可与诊断",
+                    subtitle = "版本、许可与运行检查",
                     onClick = { navigator.push(Dest.About) },
                 )
             }

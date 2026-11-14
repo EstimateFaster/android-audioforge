@@ -142,13 +142,15 @@ fun ChapterPickerSheet(player: PlayerState, onDismiss: () -> Unit) {
         LazyColumn(modifier = Modifier.padding(bottom = 24.dp)) {
             items(player.chapters, key = { it.id }) { chapter ->
                 val current = chapter.id == player.chapter.id
+                val available = chapter.segments.isNotEmpty()
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable {
-                            player.selectChapter(chapter.id)
-                            player.playSegment(0)
-                            onDismiss()
+                        .clickable(enabled = available) {
+                            if (player.selectChapter(chapter.id)) {
+                                player.playSegment(0)
+                                onDismiss()
+                            }
                         }
                         .padding(horizontal = 24.dp, vertical = 14.dp),
                     verticalAlignment = Alignment.CenterVertically,

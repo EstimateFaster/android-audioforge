@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -32,6 +34,7 @@ import androidx.compose.ui.unit.dp
 import com.estimatefaster.audioforge.uipreview.R
 import com.estimatefaster.audioforge.uipreview.data.Character
 import com.estimatefaster.audioforge.uipreview.data.FakeData
+import com.estimatefaster.audioforge.uipreview.design.EmptyState
 import com.estimatefaster.audioforge.uipreview.design.InlineSearchField
 import com.estimatefaster.audioforge.uipreview.design.ListRow
 import com.estimatefaster.audioforge.uipreview.design.PrimaryButton
@@ -60,12 +63,13 @@ fun VoicePickerSheet(
     }
 
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
-        Column(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.fillMaxWidth().imePadding()) {
             SheetHeader(
                 icon = Ms.RecordVoiceOver,
                 title = "选择音色",
                 subtitle = "为 ${character.name} 选择声音",
                 onClose = onDismiss,
+                modifier = Modifier.padding(horizontal = 24.dp),
             )
             Row(
                 modifier = Modifier.padding(horizontal = 24.dp),
@@ -93,7 +97,17 @@ fun VoicePickerSheet(
                 modifier = Modifier.padding(horizontal = 24.dp),
             )
             Spacer(Modifier.height(8.dp))
-            LazyColumn(modifier = Modifier.height(320.dp)) {
+            LazyColumn(modifier = Modifier.heightIn(max = 340.dp)) {
+                if (voices.isEmpty()) {
+                    item(key = "empty") {
+                        EmptyState(
+                            icon = Ms.SearchOff,
+                            title = "没有匹配的音色",
+                            body = "换个关键词再试，或直接使用默认音色。",
+                            modifier = Modifier.padding(horizontal = 24.dp, vertical = 24.dp),
+                        )
+                    }
+                }
                 items(voices, key = { it.first }) { (name, desc) ->
                     ListRow(
                         title = name,

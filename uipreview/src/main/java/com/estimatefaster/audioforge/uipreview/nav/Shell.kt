@@ -51,7 +51,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.estimatefaster.audioforge.uipreview.R
 import com.estimatefaster.audioforge.uipreview.data.PlayerState
@@ -291,7 +290,7 @@ fun MiniPlayerBar(
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable(role = Role.Button, onClick = onOpen)
-                .padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
+                .padding(start = 16.dp, end = 4.dp, top = 6.dp, bottom = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             CoverArt(
@@ -318,7 +317,7 @@ fun MiniPlayerBar(
             }
             FilledTonalIconButton(
                 onClick = { player.toggle() },
-                modifier = Modifier.size(40.dp),
+                modifier = Modifier.size(48.dp),
             ) {
                 Icon(
                     painter = painterResource(if (player.isPlaying) Ms.Pause else Ms.PlayArrow),
@@ -328,7 +327,7 @@ fun MiniPlayerBar(
                     modifier = Modifier.size(20.dp),
                 )
             }
-            IconButton(onClick = { player.nextSegment() }, modifier = Modifier.size(40.dp)) {
+            IconButton(onClick = { player.nextSegment() }, modifier = Modifier.size(48.dp)) {
                 Icon(
                     painter = painterResource(Ms.SkipNext),
                     contentDescription = stringResource(R.string.action_next_segment),
@@ -346,7 +345,6 @@ fun ScreenHost(
     modifier: Modifier = Modifier,
     content: @Composable (Dest) -> Unit,
 ) {
-    val spatial = MaterialTheme.motionScheme.defaultSpatialSpec<IntOffset>()
     val stateHolder = rememberSaveableStateHolder()
     val screen = ScreenState(
         tab = navigator.currentTab,
@@ -366,12 +364,12 @@ fun ScreenHost(
                         ) togetherWith fadeOut(tween(durationMillis = 90))
 
                 targetState.depth > initialState.depth ->
-                    (slideInHorizontally(spatial) { it } + fadeIn()) togetherWith
-                        (slideOutHorizontally(spatial) { -it / 5 } + fadeOut())
+                    (slideInHorizontally(tween(280)) { it } + fadeIn(tween(280))) togetherWith
+                        (slideOutHorizontally(tween(220)) { -it / 5 } + fadeOut(tween(180)))
 
                 targetState.depth < initialState.depth ->
-                    (slideInHorizontally(spatial) { -it / 5 } + fadeIn()) togetherWith
-                        (slideOutHorizontally(spatial) { it } + fadeOut())
+                    (slideInHorizontally(tween(280)) { -it / 5 } + fadeIn(tween(280))) togetherWith
+                        (slideOutHorizontally(tween(220)) { it } + fadeOut(tween(180)))
 
                 else ->
                     fadeIn(tween(200)) togetherWith fadeOut(tween(120))

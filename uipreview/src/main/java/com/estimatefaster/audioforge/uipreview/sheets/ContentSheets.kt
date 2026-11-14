@@ -236,7 +236,11 @@ fun ExportSheet(book: Book, onDismiss: () -> Unit) {
 }
 
 @Composable
-fun BatchSheet(book: Book, onDismiss: () -> Unit) {
+fun BatchSheet(
+    book: Book,
+    onDismiss: () -> Unit,
+    onStart: (Int) -> Unit = {},
+) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var scope by rememberSaveable { mutableStateOf("pending") }
     val pending = book.chapters.filter { it.status != ChapterStatus.Done }
@@ -297,7 +301,7 @@ fun BatchSheet(book: Book, onDismiss: () -> Unit) {
                 text = stringResource(R.string.batch_start, selected.size),
                 icon = Ms.PlaylistPlay,
                 enabled = selected.isNotEmpty(),
-                onClick = onDismiss,
+                onClick = { onStart(selected.size) },
                 modifier = Modifier.fillMaxWidth(),
             )
         }

@@ -14,9 +14,12 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -32,10 +35,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -68,7 +73,17 @@ fun PlayerScreen(navigator: Navigator, player: PlayerState) {
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
-        topBar = { PlayerTopBar(onBack = { navigator.pop() }, largeFont = largeFont) },
+        topBar = {
+            PlayerTopBar(
+                onBack = { navigator.pop() },
+                speedLabel = stringResource(R.string.player_speed_value, player.speed.toString()),
+                sleepActive = player.sleepMinutes > 0,
+                continuous = player.continuous,
+                onSpeed = { showSpeed = true },
+                onSleep = { showSleep = true },
+                onToggleContinuous = { player.applyContinuous(!player.continuous) },
+            )
+        },
     ) { padding ->
         FadeThrough(
             target = phase,
@@ -96,8 +111,6 @@ fun PlayerScreen(navigator: Navigator, player: PlayerState) {
                         player = player,
                         largeFont = largeFont,
                         modifier = Modifier.padding(padding),
-                        onSpeed = { showSpeed = true },
-                        onSleep = { showSleep = true },
                         onChapters = { showChapters = true },
                     )
                 }
@@ -111,7 +124,16 @@ fun PlayerScreen(navigator: Navigator, player: PlayerState) {
 }
 
 @Composable
-private fun PlayerTopBar(onBack: () -> Unit, largeFont: Boolean) {
+private fun PlayerTopBar(
+    onBack: () -> Unit,
+    speedLabel: String,
+    sleepActive: Boolean,
+    continuous: Boolean,
+    onSpeed: () -> Unit,
+    onSleep: () -> Unit,
+    onToggleContinuous: () -> Unit,
+) {
+    var menuOpen by remember { mutableStateOf(false) }
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -127,7 +149,29 @@ private fun PlayerTopBar(onBack: () -> Unit, largeFont: Boolean) {
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(Modifier.weight(1f))
-        IconAction(Ms.MoreVert, stringResource(R.string.action_more), {})
+        Box {
+            IconAction(Ms.MoreVert, stringResource(R.string.action_more), { menuOpen = true })
+            DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                DropdownMenuItem(
+                    text = { Text("播放速度 · $speedLabel") },
+                    leadingIcon = { Icon(painterResource(Ms.Speed), contentDescription = null) },
+                    onClick = { menuOpen = false; onSpeed() },
+                )
+                DropdownMenuItem(
+                    text = { Text(if (sleepActive) "睡眠定时 · 已开启" else "睡眠定时") },
+                    leadingIcon = { Icon(painterResource(Ms.Bedtime), contentDescription = null) },
+                    onClick = { menuOpen = false; onSleep() },
+                )
+                DropdownMenuItem(
+                    text = { Text("连播模式") },
+                    leadingIcon = { Icon(painterResource(Ms.Repeat), contentDescription = null) },
+                    trailingIcon = {
+                        if (continuous) Icon(painterResource(Ms.Check), contentDescription = null)
+                    },
+                    onClick = { menuOpen = false; onToggleContinuous() },
+                )
+            }
+        }
     }
 }
 
@@ -136,8 +180,6 @@ private fun PlayerContent(
     player: PlayerState,
     largeFont: Boolean,
     modifier: Modifier = Modifier,
-    onSpeed: () -> Unit,
-    onSleep: () -> Unit,
     onChapters: () -> Unit,
 ) {
     val segment = player.currentSegment
@@ -163,12 +205,27 @@ private fun PlayerContent(
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.padding(horizontal = 32.dp),
         )
-        Spacer(Modifier.height(6.dp))
-        Text(
-            text = "${player.chapter.title} · ${player.chapter.number}/${player.chapters.size}",
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        Spacer(Modifier.height(2.dp))
+        Row(
+            modifier = Modifier
+                .clip(MaterialTheme.shapes.large)
+                .clickable(role = Role.Button, onClick = onChapters)
+                .padding(horizontal = 14.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = "${player.chapter.title} · ${player.chapter.number}/${player.chapters.size}",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.width(4.dp))
+            Icon(
+                painter = painterResource(Ms.ExpandMore),
+                contentDescription = stringResource(R.string.player_chapters),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(18.dp),
+            )
+        }
         Spacer(Modifier.height(20.dp))
         if (segment != null) {
             Column(
@@ -194,15 +251,8 @@ private fun PlayerContent(
         }
         Spacer(Modifier.height(20.dp))
         ProgressSeek(player = player, modifier = Modifier.padding(horizontal = 28.dp))
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(10.dp))
         Transport(player = player)
-        Spacer(Modifier.height(18.dp))
-        SecondaryBar(
-            player = player,
-            onSpeed = onSpeed,
-            onSleep = onSleep,
-            onChapters = onChapters,
-        )
         Spacer(Modifier.height(24.dp))
     }
 }
@@ -263,9 +313,12 @@ private fun Transport(player: PlayerState) {
                 modifier = Modifier.size(24.dp),
             )
         }
+        val canPlay = player.currentSegment?.hasAudio == true
         FloatingActionButton(
-            onClick = { player.toggle() },
-            modifier = Modifier.size(72.dp),
+            onClick = { if (canPlay) player.toggle() },
+            modifier = Modifier
+                .size(72.dp)
+                .alpha(if (canPlay) 1f else 0.45f),
             shape = CircleShape,
             containerColor = MaterialTheme.colorScheme.primary,
             contentColor = MaterialTheme.colorScheme.onPrimary,
@@ -288,77 +341,5 @@ private fun Transport(player: PlayerState) {
                 modifier = Modifier.size(24.dp),
             )
         }
-    }
-}
-
-@Composable
-private fun SecondaryBar(
-    player: PlayerState,
-    onSpeed: () -> Unit,
-    onSleep: () -> Unit,
-    onChapters: () -> Unit,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 24.dp),
-        horizontalArrangement = Arrangement.SpaceEvenly,
-    ) {
-        SecondaryAction(
-            icon = Ms.Speed,
-            label = stringResource(R.string.player_speed_value, player.speed.toString()),
-            onClick = onSpeed,
-        )
-        SecondaryAction(
-            icon = Ms.Bedtime,
-            label = if (player.sleepMinutes == 0) {
-                stringResource(R.string.player_sleep)
-            } else {
-                formatTime(player.sleepRemainingSec)
-            },
-            onClick = onSleep,
-            active = player.sleepMinutes > 0,
-        )
-        SecondaryAction(
-            icon = Ms.Repeat,
-            label = stringResource(R.string.player_continuous),
-            onClick = { player.applyContinuous(!player.continuous) },
-            active = player.continuous,
-        )
-        SecondaryAction(
-            icon = Ms.FormatListNumbered,
-            label = stringResource(R.string.player_chapters),
-            onClick = onChapters,
-        )
-    }
-}
-
-@Composable
-private fun SecondaryAction(
-    icon: Int,
-    label: String,
-    onClick: () -> Unit,
-    active: Boolean = false,
-) {
-    Column(
-        modifier = Modifier
-            .clip(MaterialTheme.shapes.medium)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 14.dp, vertical = 10.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Icon(
-            painter = painterResource(icon),
-            contentDescription = label,
-            tint = if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(22.dp),
-        )
-        Spacer(Modifier.height(6.dp))
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall,
-            color = if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 1,
-        )
     }
 }

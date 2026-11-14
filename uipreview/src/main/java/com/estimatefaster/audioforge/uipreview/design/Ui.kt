@@ -499,7 +499,7 @@ fun SheetHeader(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(start = 24.dp, end = 12.dp, top = 4.dp, bottom = 8.dp),
+            .padding(top = 4.dp, bottom = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(

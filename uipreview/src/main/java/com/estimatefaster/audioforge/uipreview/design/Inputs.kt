@@ -83,7 +83,7 @@ fun InlineSearchField(
             if (value.isNotEmpty()) {
                 IconButton(
                     onClick = { onValueChange("") },
-                    modifier = Modifier.size(44.dp),
+                    modifier = Modifier.size(48.dp),
                 ) {
                     Icon(
                         painter = painterResource(Ms.Close),

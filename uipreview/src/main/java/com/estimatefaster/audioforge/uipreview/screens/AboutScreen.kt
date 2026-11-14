@@ -1,5 +1,6 @@
 package com.estimatefaster.audioforge.uipreview.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -13,38 +14,58 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.estimatefaster.audioforge.uipreview.R
 import com.estimatefaster.audioforge.uipreview.data.PlayerState
 import com.estimatefaster.audioforge.uipreview.design.AppTopBar
 import com.estimatefaster.audioforge.uipreview.design.ListRow
 import com.estimatefaster.audioforge.uipreview.design.RowDivider
 import com.estimatefaster.audioforge.uipreview.design.SecondaryButton
-import com.estimatefaster.audioforge.uipreview.design.SectionLabel
+import com.estimatefaster.audioforge.uipreview.design.SheetHeader
 import com.estimatefaster.audioforge.uipreview.icons.Ms
 import com.estimatefaster.audioforge.uipreview.nav.AppScaffold
 import com.estimatefaster.audioforge.uipreview.nav.Navigator
 import kotlinx.coroutines.launch
+
+/** 运行检查明细：版本、状态都收进 Sheet，主页只留一行入口。 */
+private val runtimeChecks = listOf(
+    Triple("Room", "2.8.5 · schema 1 · 8 张表", Ms.Database),
+    Triple("FFmpegKit", "8.1.9 · 音频拼接与响度", Ms.GraphicEq),
+    Triple("WorkManager", "2.12.0 · dataSync 前台服务", Ms.Sync),
+    Triple("存储", "10.6 GB 可用 · 1,284 个文件", Ms.Storage),
+)
+
+private val openSourceLicenses = listOf(
+    "Jetpack Compose" to "AndroidX · Apache-2.0",
+    "Material 3" to "AndroidX · Apache-2.0",
+    "Kotlin & Coroutines" to "JetBrains · Apache-2.0",
+    "Material Symbols" to "Google · Apache-2.0",
+)
 
 @Composable
 fun AboutScreen(navigator: Navigator, player: PlayerState) {
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    var showDiagnostics by remember { mutableStateOf(false) }
+    var showLicenses by remember { mutableStateOf(false) }
 
     AppScaffold(
         navigator = navigator,
@@ -78,95 +99,125 @@ fun AboutScreen(navigator: Navigator, player: PlayerState) {
                     Box(
                         modifier = Modifier
                             .size(76.dp)
-                            .clip(MaterialTheme.shapes.extraLarge)
-                            .clip(CircleShape),
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primaryContainer),
                         contentAlignment = Alignment.Center,
                     ) {
                         Icon(
                             painter = painterResource(Ms.AutoStories),
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(40.dp),
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                            modifier = Modifier.size(36.dp),
                         )
                     }
                     Spacer(Modifier.height(16.dp))
                     Text("AudioForge", style = MaterialTheme.typography.headlineSmallEmphasized)
                     Text(
-                        text = "把小说变成多人演播的有声书。全部数据留在本机。",
+                        text = "把小说变成多人演播的有声书。",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center,
                     )
                 }
             }
-            item(key = "diag-label") {
-                SectionLabel(text = "诊断", trailing = "刚刚")
-            }
-            item(key = "diag") {
-                Column {
+            item(key = "checks") {
+                Column(modifier = Modifier.padding(top = 4.dp)) {
                     ListRow(
-                        title = "Room",
-                        subtitle = "2.8.5 · schema 1 · 8 张表",
-                        icon = Ms.Database,
-                        showChevron = false,
-                        trailingText = "正常",
+                        title = "运行检查",
+                        subtitle = "8 项检查全部正常",
+                        icon = Ms.CheckCircle,
+                        onClick = { showDiagnostics = true },
                     )
                     RowDivider()
                     ListRow(
-                        title = "FFmpegKit",
-                        subtitle = "8.1.9 · 音频拼接与响度",
-                        icon = Ms.GraphicEq,
-                        showChevron = false,
-                        trailingText = "正常",
-                    )
-                    RowDivider()
-                    ListRow(
-                        title = "WorkManager",
-                        subtitle = "2.12.0 · dataSync 前台服务",
-                        icon = Ms.Sync,
-                        showChevron = false,
-                        trailingText = "正常",
-                    )
-                    RowDivider()
-                    ListRow(
-                        title = "存储",
-                        subtitle = "可用 12.4 GB · 1,284 个文件",
-                        icon = Ms.Storage,
-                        showChevron = false,
-                        trailingText = "正常",
+                        title = "开源许可",
+                        subtitle = "4 个第三方组件 · Apache-2.0",
+                        icon = Ms.Code,
+                        onClick = { showLicenses = true },
                     )
                 }
             }
-            item(key = "license-label") {
-                SectionLabel(text = "开源许可")
-            }
-            item(key = "license") {
-                Column {
-                    listOf(
-                        "Jetpack Compose" to "AndroidX · Apache-2.0",
-                        "Material 3" to "AndroidX · Apache-2.0",
-                        "Kotlin & Coroutines" to "JetBrains · Apache-2.0",
-                        "Material Symbols" to "Google · Apache-2.0",
-                    ).forEach { (title, subtitle) ->
-                        ListRow(
-                            title = title,
-                            subtitle = subtitle,
-                            icon = Ms.Code,
-                            showChevron = false,
-                        )
-                        RowDivider()
-                    }
-                }
-            }
-            item(key = "actions") {
-                SecondaryButton(
-                    text = "复制诊断信息",
-                    icon = Ms.ContentCopy,
-                    onClick = { scope.launch { snackbarHostState.showSnackbar("诊断信息已复制") } },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 20.dp),
+        }
+    }
+
+    if (showDiagnostics) {
+        DiagnosticsSheet(
+            onCopy = {
+                showDiagnostics = false
+                scope.launch { snackbarHostState.showSnackbar("诊断信息已复制") }
+            },
+            onDismiss = { showDiagnostics = false },
+        )
+    }
+    if (showLicenses) {
+        LicensesSheet(onDismiss = { showLicenses = false })
+    }
+}
+
+@Composable
+private fun DiagnosticsSheet(onCopy: () -> Unit, onDismiss: () -> Unit) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 32.dp),
+        ) {
+            SheetHeader(
+                icon = Ms.CheckCircle,
+                title = "运行检查",
+                subtitle = "8 项检查全部正常",
+                onClose = onDismiss,
+                modifier = Modifier.padding(horizontal = 24.dp),
+            )
+            Spacer(Modifier.height(4.dp))
+            runtimeChecks.forEach { (title, subtitle, icon) ->
+                ListRow(
+                    title = title,
+                    subtitle = subtitle,
+                    icon = icon,
+                    trailingText = "正常",
+                    showChevron = false,
                 )
+                RowDivider()
+            }
+            SecondaryButton(
+                text = "复制诊断信息",
+                icon = Ms.ContentCopy,
+                onClick = onCopy,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp)
+                    .padding(top = 20.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun LicensesSheet(onDismiss: () -> Unit) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 32.dp),
+        ) {
+            SheetHeader(
+                icon = Ms.Code,
+                title = "开源许可",
+                subtitle = "第三方组件与许可",
+                onClose = onDismiss,
+                modifier = Modifier.padding(horizontal = 24.dp),
+            )
+            Spacer(Modifier.height(4.dp))
+            openSourceLicenses.forEach { (title, subtitle) ->
+                ListRow(
+                    title = title,
+                    subtitle = subtitle,
+                    showChevron = false,
+                )
+                RowDivider()
             }
         }
     }

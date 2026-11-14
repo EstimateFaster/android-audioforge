@@ -1,7 +1,6 @@
 package com.estimatefaster.audioforge.uipreview.screens
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -15,6 +14,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -30,7 +32,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.estimatefaster.audioforge.uipreview.R
@@ -46,6 +50,7 @@ import com.estimatefaster.audioforge.uipreview.design.SectionLabel
 import com.estimatefaster.audioforge.uipreview.design.SegmentedChoice
 import com.estimatefaster.audioforge.uipreview.icons.Ms
 import com.estimatefaster.audioforge.uipreview.nav.AppScaffold
+import com.estimatefaster.audioforge.uipreview.nav.Dest
 import com.estimatefaster.audioforge.uipreview.nav.Navigator
 import kotlinx.coroutines.launch
 
@@ -56,6 +61,7 @@ fun StorageScreen(navigator: Navigator, player: PlayerState) {
     val scope = rememberCoroutineScope()
     var retention by rememberSaveable { mutableStateOf(1) }
     var showCleanup by remember { mutableStateOf<String?>(null) }
+    var menuOpen by remember { mutableStateOf(false) }
 
     AppScaffold(
         navigator = navigator,
@@ -75,6 +81,35 @@ fun StorageScreen(navigator: Navigator, player: PlayerState) {
                         description = stringResource(R.string.action_refresh),
                         onClick = { scope.launch { snackbarHostState.showSnackbar("已重新扫描存储") } },
                     )
+                    Box {
+                        IconAction(
+                            icon = Ms.MoreVert,
+                            description = stringResource(R.string.action_more),
+                            onClick = { menuOpen = true },
+                        )
+                        DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                            DropdownMenuItem(
+                                text = { Text("清理孤儿文件") },
+                                onClick = {
+                                    menuOpen = false
+                                    showCleanup = "orphan"
+                                },
+                                leadingIcon = {
+                                    Icon(painterResource(Ms.DeleteSweep), contentDescription = null)
+                                },
+                            )
+                            DropdownMenuItem(
+                                text = { Text("清理过期缓存") },
+                                onClick = {
+                                    menuOpen = false
+                                    showCleanup = "expired"
+                                },
+                                leadingIcon = {
+                                    Icon(painterResource(Ms.Timer), contentDescription = null)
+                                },
+                            )
+                        }
+                    }
                 },
             )
         },
@@ -89,21 +124,21 @@ fun StorageScreen(navigator: Navigator, player: PlayerState) {
             item(key = "hero") {
                 Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)) {
                     Text(
-                        text = FakeData.storage.usedLabel,
-                        style = MaterialTheme.typography.displaySmallEmphasized,
-                    )
-                    Text(
                         text = "音频 ${FakeData.storage.audioLabel} · 导入 ${FakeData.storage.importLabel} · 导出 ${FakeData.storage.exportLabel}",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Spacer(Modifier.height(16.dp))
-                    PartitionBar()
+                    PartitionBar(usedFraction = 0.15f)
                     Spacer(Modifier.height(10.dp))
-                    Text(
-                        text = "可用空间 12.4 GB · 全部文件在本机",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    LegendItem(
+                        color = MaterialTheme.colorScheme.primary,
+                        label = "已用 ${FakeData.storage.usedLabel}",
+                    )
+                    Spacer(Modifier.height(6.dp))
+                    LegendItem(
+                        color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                        label = "可用 10.6 GB",
                     )
                 }
             }
@@ -121,7 +156,7 @@ fun StorageScreen(navigator: Navigator, player: PlayerState) {
                                 "${book.chapters.size} 章 · ${book.segmentCount} 段"
                             },
                             trailingText = listOf("1.2 GB", "420 MB", "96 MB", "84 MB")[index % 4],
-                            showChevron = false,
+                            onClick = { navigator.push(Dest.Project(book.id)) },
                         )
                         RowDivider()
                     }
@@ -149,35 +184,17 @@ fun StorageScreen(navigator: Navigator, player: PlayerState) {
                     )
                 }
             }
-            item(key = "cleanup-label") {
-                SectionLabel(text = "清理")
-            }
-            item(key = "cleanup") {
-                Column {
-                    ListRow(
-                        icon = Ms.DeleteSweep,
-                        title = "清理孤儿文件",
-                        subtitle = "导入残留与导出临时文件 · 约 24 MB",
-                        onClick = { showCleanup = "orphan" },
-                        showChevron = false,
-                    )
-                    RowDivider()
-                    ListRow(
-                        icon = Ms.Timer,
-                        title = "清理过期缓存",
-                        subtitle = "超过 ${listOf(7, 30, 90)[retention]} 天的片段缓存 · 约 180 MB",
-                        onClick = { showCleanup = "expired" },
-                        showChevron = false,
-                    )
-                }
-            }
         }
     }
 
     showCleanup?.let { kind ->
         ConfirmDialog(
             title = if (kind == "orphan") "清理孤儿文件" else "清理过期缓存",
-            body = "只删除不再被引用的临时文件，不会影响任何章节与已导出音频。",
+            body = if (kind == "orphan") {
+                "只删除导入残留与导出临时文件，不会影响任何章节与已导出音频。"
+            } else {
+                "只删除超过 ${listOf(7, 30, 90)[retention]} 天的片段缓存，章节与音频不受影响。"
+            },
             confirmText = "清理",
             icon = Ms.DeleteSweep,
             danger = true,
@@ -190,9 +207,10 @@ fun StorageScreen(navigator: Navigator, player: PlayerState) {
     }
 }
 
+/** 单色分区条：已用取 primary，其余即可用空间。 */
 @Composable
-private fun PartitionBar() {
-    Row(
+private fun PartitionBar(usedFraction: Float) {
+    Box(
         modifier = Modifier
             .fillMaxWidth()
             .height(10.dp)
@@ -201,23 +219,28 @@ private fun PartitionBar() {
     ) {
         Box(
             modifier = Modifier
-                .weight(0.78f)
-                .fillMaxSize()
+                .fillMaxWidth(usedFraction.coerceIn(0f, 1f))
+                .height(10.dp)
+                .clip(CircleShape)
                 .background(MaterialTheme.colorScheme.primary),
         )
-        Spacer(Modifier.width(2.dp))
+    }
+}
+
+@Composable
+private fun LegendItem(color: Color, label: String) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
         Box(
             modifier = Modifier
-                .weight(0.14f)
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.secondary),
+                .size(8.dp)
+                .clip(CircleShape)
+                .background(color),
         )
-        Spacer(Modifier.width(2.dp))
-        Box(
-            modifier = Modifier
-                .weight(0.08f)
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.tertiary),
+        Spacer(Modifier.width(8.dp))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }

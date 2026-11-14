@@ -15,6 +15,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -27,6 +28,7 @@ import com.estimatefaster.audioforge.uipreview.data.Character
 import com.estimatefaster.audioforge.uipreview.data.FakeData
 import com.estimatefaster.audioforge.uipreview.data.PlayerState
 import com.estimatefaster.audioforge.uipreview.design.AppTopBar
+import com.estimatefaster.audioforge.uipreview.design.ConfirmDialog
 import com.estimatefaster.audioforge.uipreview.design.ListRow
 import com.estimatefaster.audioforge.uipreview.design.RowDivider
 import com.estimatefaster.audioforge.uipreview.icons.Ms
@@ -46,6 +48,10 @@ fun CharactersScreen(navigator: Navigator, player: PlayerState, bookId: Long) {
 
     var voiceTarget by remember { mutableStateOf<Character?>(null) }
     var tuningTarget by remember { mutableStateOf<Character?>(null) }
+    var confirmTarget by remember { mutableStateOf<Character?>(null) }
+    var pendingVoice by remember { mutableStateOf("") }
+    // 本地覆盖层：预览里换音色后列表立即反映（不改 FakeData）
+    val voices = remember { mutableStateMapOf<String, String>() }
 
     AppScaffold(
         navigator = navigator,
@@ -74,7 +80,7 @@ fun CharactersScreen(navigator: Navigator, player: PlayerState, bookId: Long) {
                     ListRow(
                         title = character.name,
                         subtitle = buildString {
-                            append(character.voice ?: "未分配音色")
+                            append(voices[character.name] ?: character.voice ?: "未分配音色")
                             append(" · ")
                             append(character.importance)
                             if (character.locked) append(" · 已锁定")
@@ -114,9 +120,33 @@ fun CharactersScreen(navigator: Navigator, player: PlayerState, bookId: Long) {
             character = character,
             onDismiss = { voiceTarget = null },
             onSave = { voice ->
-                voiceTarget = null
-                scope.launch { snackbarHostState.showSnackbar("已为 ${character.name} 选择 $voice") }
+                if (character.locked) {
+                    pendingVoice = voice
+                    confirmTarget = character
+                    voiceTarget = null
+                } else {
+                    voices[character.name] = voice
+                    voiceTarget = null
+                    scope.launch { snackbarHostState.showSnackbar("已为 ${character.name} 选择 $voice") }
+                }
             },
+        )
+    }
+    confirmTarget?.let { character ->
+        ConfirmDialog(
+            title = "更换已锁定角色的音色？",
+            body = "《${book.title}》里 ${character.name} 已经生成过音频，换音色后需要重新合成相关段落。",
+            confirmText = "仍然更换",
+            icon = Ms.Lock,
+            danger = true,
+            onConfirm = {
+                voices[character.name] = pendingVoice
+                confirmTarget = null
+                scope.launch {
+                    snackbarHostState.showSnackbar("已为 ${character.name} 更换音色，相关段落待重新合成")
+                }
+            },
+            onDismiss = { confirmTarget = null },
         )
     }
     tuningTarget?.let { character ->

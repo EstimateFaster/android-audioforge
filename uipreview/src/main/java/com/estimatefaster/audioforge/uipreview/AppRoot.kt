@@ -99,6 +99,10 @@ fun AppRoot(
             }
 
             BackHandler(enabled = navigator.canGoBack) { navigator.pop() }
+            // 根页再按返回：非书架 tab 先回到书架，而不是直接退出
+            BackHandler(enabled = !navigator.canGoBack && navigator.currentTab != 0) {
+                navigator.selectTab(Dest.Library)
+            }
 
             ScreenHost(navigator = navigator) { dest ->
                 when (dest) {

@@ -189,11 +189,7 @@ fun ProjectScreen(navigator: Navigator, player: PlayerState, bookId: Long) {
                     }
                     item(key = "action") {
                         PrimaryButton(
-                            text = if (book.isGenerating) {
-                                "继续生成 · 第 ${FakeData.runningTask.chapterIndex} 章"
-                            } else {
-                                stringResource(R.string.project_continue)
-                            },
+                            text = stringResource(R.string.project_continue),
                             icon = Ms.AutoAwesome,
                             onClick = { showBatch = true },
                             modifier = Modifier
@@ -205,7 +201,6 @@ fun ProjectScreen(navigator: Navigator, player: PlayerState, bookId: Long) {
                     item(key = "chapters-label") {
                         SectionLabel(
                             text = stringResource(R.string.project_chapters),
-                            trailing = "${book.completedChapters} / ${book.chapters.size}",
                             modifier = Modifier.padding(top = 8.dp),
                         )
                     }
@@ -247,10 +242,7 @@ fun ProjectScreen(navigator: Navigator, player: PlayerState, bookId: Long) {
             danger = true,
             onConfirm = {
                 showDelete = false
-                scope.launch {
-                    snackbarHostState.showSnackbar("预览构建：已模拟删除《${book.title}》")
-                    navigator.pop()
-                }
+                navigator.pop()
             },
             onDismiss = { showDelete = false },
         )
@@ -259,7 +251,16 @@ fun ProjectScreen(navigator: Navigator, player: PlayerState, bookId: Long) {
         ExportSheet(book = book, onDismiss = { showExport = false })
     }
     if (showBatch) {
-        BatchSheet(book = book, onDismiss = { showBatch = false })
+        BatchSheet(
+            book = book,
+            onDismiss = { showBatch = false },
+            onStart = { count ->
+                showBatch = false
+                scope.launch {
+                    snackbarHostState.showSnackbar("预览构建：已提交 $count 章的生成任务")
+                }
+            },
+        )
     }
 }
 
@@ -302,12 +303,7 @@ private fun ProjectHeader(book: Book) {
                     },
                     tone = if (book.isGenerating) Tone.Info else Tone.Neutral,
                 )
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    text = "剩 ${book.chapters.size - book.completedChapters} 章",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+
             }
         }
     }

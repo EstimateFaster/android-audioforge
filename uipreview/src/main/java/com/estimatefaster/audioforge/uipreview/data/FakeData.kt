@@ -327,12 +327,15 @@ class PlayerState(initialBook: Book = FakeData.books.first()) {
         isPlaying = !isPlaying
     }
 
-    fun playSegment(index: Int) {
-        val target = segments.getOrNull(index) ?: return
+    /** 只有真的有音频才切换会话；点到没有音频的段不会清掉正在播的内容。 */
+    fun playSegment(index: Int): Boolean {
+        val target = segments.getOrNull(index) ?: return false
+        if (!target.hasAudio) return false
         segmentIndex = index
         elapsedSec = offsetOf(index).toFloat()
-        hasSession = target.hasAudio
-        isPlaying = target.hasAudio
+        hasSession = true
+        isPlaying = true
+        return true
     }
 
     fun seekToFraction(fraction: Float) {
@@ -372,13 +375,14 @@ class PlayerState(initialBook: Book = FakeData.books.first()) {
         }
     }
 
-    fun selectChapter(id: Long) {
+    fun selectChapter(id: Long): Boolean {
         val index = chapters.indexOfFirst { it.id == id }
-        if (index >= 0) {
-            chapterIndex = index
-            segmentIndex = 0
-            elapsedSec = 0f
-        }
+        if (index < 0) return false
+        if (chapters.getOrNull(index)?.segments.isNullOrEmpty()) return false
+        chapterIndex = index
+        segmentIndex = 0
+        elapsedSec = 0f
+        return true
     }
 
     fun applySpeed(value: Float) {

@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -45,10 +46,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.estimatefaster.audioforge.uipreview.data.PlayerState
 import com.estimatefaster.audioforge.uipreview.design.IconBubble
+import com.estimatefaster.audioforge.uipreview.design.ListRow
 import com.estimatefaster.audioforge.uipreview.design.PrimaryButton
+import com.estimatefaster.audioforge.uipreview.design.RowDivider
 import com.estimatefaster.audioforge.uipreview.design.SecondaryButton
+import com.estimatefaster.audioforge.uipreview.design.SwitchRow
 import com.estimatefaster.audioforge.uipreview.icons.Ms
 import com.estimatefaster.audioforge.uipreview.nav.Dest
+import com.estimatefaster.audioforge.uipreview.sheets.EditValueSheet
 import com.estimatefaster.audioforge.uipreview.nav.Navigator
 
 @Composable
@@ -63,7 +68,8 @@ fun OnboardingScreen(navigator: Navigator, player: PlayerState) {
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(horizontal = 24.dp),
+                .padding(horizontal = 24.dp)
+                .imePadding(),
         ) {
             Row(
                 modifier = Modifier
@@ -73,7 +79,9 @@ fun OnboardingScreen(navigator: Navigator, player: PlayerState) {
             ) {
                 StepRail(step = step, modifier = Modifier.weight(1f))
                 TextButton(
-                    onClick = { navigator.selectTab(Dest.Library) },
+                    onClick = {
+                        if (navigator.canGoBack) navigator.pop() else navigator.selectTab(Dest.Library)
+                    },
                 ) {
                     Icon(
                         painter = painterResource(Ms.SkipNext),
@@ -130,11 +138,15 @@ fun OnboardingScreen(navigator: Navigator, player: PlayerState) {
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 if (step > 0) {
-                    SecondaryButton(
-                        text = "上一步",
-                        icon = Ms.ChevronLeft,
-                        onClick = { step -= 1 },
-                    )
+                    TextButton(onClick = { step -= 1 }) {
+                        Icon(
+                            painter = painterResource(Ms.ChevronLeft),
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        Text("上一步", style = MaterialTheme.typography.labelLarge)
+                    }
                 }
                 Spacer(Modifier.weight(1f))
                 PrimaryButton(
@@ -147,6 +159,8 @@ fun OnboardingScreen(navigator: Navigator, player: PlayerState) {
                     onClick = {
                         if (step < 2) {
                             step += 1
+                        } else if (navigator.canGoBack) {
+                            navigator.pop()
                         } else {
                             navigator.selectTab(Dest.Library)
                         }
@@ -248,72 +262,119 @@ private fun StepKeys(
     key: String,
     onKey: (String) -> Unit,
 ) {
+    var editing by remember { mutableStateOf<String?>(null) }
+
     Text("连接文本模型", style = MaterialTheme.typography.headlineSmallEmphasized)
     Text(
-        text = "用一个兼容 OpenAI 协议的地址即可；Key 只保存在本机 Keystore。",
+        text = "填一个兼容 OpenAI 协议的地址即可；Key 只保存在本机。",
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(top = 8.dp, bottom = 20.dp),
-    )
-    OutlinedTextField(
-        value = baseUrl,
-        onValueChange = onBaseUrl,
-        label = { Text("Base URL") },
-        singleLine = true,
-        shape = MaterialTheme.shapes.large,
-        modifier = Modifier.fillMaxWidth(),
-    )
-    Spacer(Modifier.height(12.dp))
-    OutlinedTextField(
-        value = model,
-        onValueChange = onModel,
-        label = { Text("模型 ID") },
-        singleLine = true,
-        shape = MaterialTheme.shapes.large,
-        modifier = Modifier.fillMaxWidth(),
-    )
-    Spacer(Modifier.height(12.dp))
-    OutlinedTextField(
-        value = key,
-        onValueChange = onKey,
-        label = { Text("API Key") },
-        placeholder = { Text("sk-…") },
-        singleLine = true,
-        visualTransformation = PasswordVisualTransformation(),
-        shape = MaterialTheme.shapes.large,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.padding(top = 8.dp),
     )
     Spacer(Modifier.height(20.dp))
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(MaterialTheme.shapes.extraLarge)
+            .background(MaterialTheme.colorScheme.surfaceContainerLow),
+    ) {
+        ListRow(
+            title = "协议地址",
+            subtitle = baseUrl,
+            icon = Ms.Link,
+            onClick = { editing = "base" },
+        )
+        RowDivider()
+        ListRow(
+            title = "模型 ID",
+            subtitle = model,
+            icon = Ms.Memory,
+            onClick = { editing = "model" },
+        )
+        RowDivider()
+        ListRow(
+            title = "API Key",
+            subtitle = if (key.isBlank()) "未填写，可以稍后在设置里补" else "已保存（仅本机）",
+            icon = Ms.Key,
+            onClick = { editing = "key" },
+        )
+    }
+    Spacer(Modifier.height(16.dp))
     Text(
-        text = "语音模型（Fish Audio）可以在设置里随时修改；这里先跳过也可以。",
+        text = "语音模型（Fish Audio）可以在设置里随时修改。",
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
+
+    when (editing) {
+        "base" -> EditValueSheet(
+            title = "协议地址",
+            subtitle = "兼容 OpenAI 协议的接口地址",
+            initial = baseUrl,
+            onDismiss = { editing = null },
+            onSave = { onBaseUrl(it); editing = null },
+            icon = Ms.Link,
+            placeholder = "https://…",
+        )
+
+        "model" -> EditValueSheet(
+            title = "模型 ID",
+            subtitle = "文本模型的名称",
+            initial = model,
+            onDismiss = { editing = null },
+            onSave = { onModel(it); editing = null },
+            icon = Ms.Memory,
+            placeholder = "qwen…",
+        )
+
+        "key" -> EditValueSheet(
+            title = "API Key",
+            subtitle = "只保存在本机 Keystore",
+            initial = key,
+            onDismiss = { editing = null },
+            onSave = { onKey(it); editing = null },
+            icon = Ms.Key,
+            password = true,
+            placeholder = "sk-…",
+        )
+    }
 }
 
 @Composable
 private fun StepPermissions() {
+    var notify by remember { mutableStateOf(true) }
+    var files by remember { mutableStateOf(false) }
+    var background by remember { mutableStateOf(true) }
+
     Text("还需要三项权限", style = MaterialTheme.typography.headlineSmallEmphasized)
     Text(
-        text = "都只用于本机任务，不会上传内容。",
+        text = "都只用于本机任务，不会上传内容；可以随时在设置里改。",
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(top = 8.dp, bottom = 20.dp),
+        modifier = Modifier.padding(top = 8.dp, bottom = 8.dp),
     )
-    PermissionCard(
+    SwitchRow(
         icon = Ms.Notifications,
         title = "通知",
-        body = "后台生成结束时提醒你；关闭后仍可回到任务页查看。",
+        supporting = "后台生成结束时提醒你",
+        checked = notify,
+        onCheckedChange = { notify = it },
     )
-    PermissionCard(
+    RowDivider()
+    SwitchRow(
         icon = Ms.Folder,
         title = "文件访问",
-        body = "读取你选择的 TXT，写入导出的 MP3；不会扫描其他文件。",
+        supporting = "读取你选择的 TXT，写入导出的 MP3",
+        checked = files,
+        onCheckedChange = { files = it },
     )
-    PermissionCard(
+    RowDivider()
+    SwitchRow(
         icon = Ms.BatteryChargingFull,
         title = "后台运行",
-        body = "长任务需要前台服务，任务期间通知栏会出现进度。",
+        supporting = "长任务用前台服务，通知栏会显示进度",
+        checked = background,
+        onCheckedChange = { background = it },
     )
 }
 
