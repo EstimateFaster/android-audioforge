@@ -193,7 +193,11 @@ private fun PlayerContent(
         Spacer(Modifier.height(12.dp))
         CoverArt(
             title = player.book.title,
-            modifier = Modifier.size(if (largeFont) 160.dp else 200.dp),
+            modifier = if (largeFont) {
+                Modifier.size(width = 120.dp, height = 160.dp)
+            } else {
+                Modifier.size(width = 154.dp, height = 205.dp)
+            },
             textStyle = MaterialTheme.typography.displaySmallEmphasized,
         )
         Spacer(Modifier.height(22.dp))

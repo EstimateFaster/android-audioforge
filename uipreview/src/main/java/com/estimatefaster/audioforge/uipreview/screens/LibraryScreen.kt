@@ -24,6 +24,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTopAppBarState
+import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -169,8 +170,8 @@ fun LibraryScreen(
                     )
                     Box {
                         IconAction(
-                            icon = Ms.MoreVert,
-                            description = stringResource(R.string.action_more),
+                            icon = Ms.Sort,
+                            description = stringResource(R.string.library_sort_recent),
                             onClick = { sortOpen = true },
                         )
                         DropdownMenu(expanded = sortOpen, onDismissRequest = { sortOpen = false }) {

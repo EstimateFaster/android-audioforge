@@ -24,9 +24,12 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
@@ -181,13 +184,46 @@ fun ScriptScreen(navigator: Navigator, player: PlayerState, bookId: Long, chapte
                             .fillMaxSize()
                             .padding(padding),
                     ) {
-                        FilterChipRow(
-                            options = roles,
-                            selectedId = roleFilter,
-                            onSelect = { roleFilter = it },
-                            contentPadding = PaddingValues(horizontal = 20.dp),
-                            modifier = Modifier.padding(top = 4.dp, bottom = 4.dp),
-                        )
+                        Box(modifier = Modifier.padding(start = 12.dp)) {
+                            var roleMenu by remember { mutableStateOf(false) }
+                            TextButton(onClick = { roleMenu = true }) {
+                                Icon(
+                                    painter = painterResource(Ms.FilterAlt),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp),
+                                )
+                                Spacer(Modifier.width(6.dp))
+                                Text(
+                                    text = roles.firstOrNull { it.first == roleFilter }?.second ?: "全部",
+                                    style = MaterialTheme.typography.labelLarge,
+                                )
+                                Spacer(Modifier.width(2.dp))
+                                Icon(
+                                    painter = painterResource(Ms.ExpandMore),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp),
+                                )
+                            }
+                            DropdownMenu(
+                                expanded = roleMenu,
+                                onDismissRequest = { roleMenu = false },
+                            ) {
+                                roles.forEach { (id, label) ->
+                                    DropdownMenuItem(
+                                        text = { Text(label) },
+                                        trailingIcon = {
+                                            if (roleFilter == id) {
+                                                Icon(painterResource(Ms.Check), contentDescription = null)
+                                            }
+                                        },
+                                        onClick = {
+                                            roleFilter = id
+                                            roleMenu = false
+                                        },
+                                    )
+                                }
+                            }
+                        }
                         LazyColumn(
                             state = listState,
                             modifier = Modifier

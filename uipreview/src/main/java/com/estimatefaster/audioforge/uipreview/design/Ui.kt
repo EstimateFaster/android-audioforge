@@ -122,6 +122,9 @@ fun SectionLabel(
     modifier: Modifier = Modifier,
     trailing: String? = null,
     spec: String? = null,
+    actionIcon: Int? = null,
+    actionDescription: String? = null,
+    onAction: (() -> Unit)? = null,
 ) {
     Row(
         modifier = modifier
@@ -146,6 +149,9 @@ fun SectionLabel(
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+        }
+        if (actionIcon != null && onAction != null) {
+            IconAction(actionIcon, actionDescription ?: "", onAction)
         }
     }
 }

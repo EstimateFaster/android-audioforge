@@ -200,7 +200,7 @@ fun ChaptersScreen(navigator: Navigator, player: PlayerState, bookId: Long) {
                         icon = Ms.DoneAll,
                         description = stringResource(R.string.chapters_select_mode),
                         onClick = {
-                            selection = if (selecting) emptySet() else emptySet()
+                            selection = emptySet()
                         },
                         tint = if (selection.isNotEmpty()) MaterialTheme.colorScheme.primary else null,
                     )
