@@ -87,17 +87,16 @@ fun ModelConfigScreen(navigator: Navigator, player: PlayerState) {
             item(key = "llm") {
                 Column {
                     ListRow(
-                        title = "Base URL",
-                        subtitle = "OpenAI 兼容接口",
+                        title = "接口地址",
+                        subtitle = llmBase,
                         icon = Ms.Language,
-                        trailingText = "已配置",
                         onClick = {
-                            editing = EditTarget("Base URL", "文本模型的接口地址", llmBase)
+                            editing = EditTarget("接口地址", "文本模型的接口地址", llmBase)
                         },
                     )
                     RowDivider()
                     ListRow(
-                        title = "模型",
+                        title = "模型 ID",
                         subtitle = llmModel,
                         icon = Ms.SmartToy,
                         onClick = { editing = EditTarget("模型 ID", "例如 qwen3.7-flash", llmModel) },
@@ -115,22 +114,21 @@ fun ModelConfigScreen(navigator: Navigator, player: PlayerState) {
             item(key = "tts") {
                 Column {
                     ListRow(
-                        title = "Base URL",
-                        subtitle = "Fish Audio 服务地址",
+                        title = "接口地址",
+                        subtitle = ttsBase,
                         icon = Ms.Language,
-                        trailingText = "已配置",
-                        onClick = { editing = EditTarget("Fish Base URL", "语音服务的接口地址", ttsBase) },
+                        onClick = { editing = EditTarget("接口地址", "语音服务的接口地址", ttsBase) },
                     )
                     RowDivider()
                     ListRow(
-                        title = "TTS 模型",
+                        title = "模型 ID",
                         subtitle = ttsModel,
                         icon = Ms.RecordVoiceOver,
                         onClick = { editing = EditTarget("TTS 模型", "例如 s2.1-pro-free", ttsModel) },
                     )
                     RowDivider()
                     ListRow(
-                        title = "Fish Audio API Key",
+                        title = "API Key",
                         subtitle = if (ttsKey.isBlank()) "未设置" else "已设置",
                         icon = Ms.VpnKey,
                         trailingContent = {

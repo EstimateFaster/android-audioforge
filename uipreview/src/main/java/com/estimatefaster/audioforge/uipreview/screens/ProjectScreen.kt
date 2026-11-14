@@ -215,17 +215,13 @@ fun ProjectScreen(navigator: Navigator, player: PlayerState, bookId: Long) {
                             onClick = { navigator.push(Dest.Chapters(book.id)) },
                         )
                     }
-                    item(key = "characters-label") {
-                        SectionLabel(
-                            text = stringResource(R.string.project_characters),
-                            trailing = "${book.characters.size} 位",
-                            modifier = Modifier.padding(top = 20.dp),
-                        )
-                    }
                     item(key = "characters") {
-                        CharactersStrip(
-                            book = book,
-                            onManage = { navigator.push(Dest.Characters(book.id)) },
+                        ListRow(
+                            title = stringResource(R.string.project_characters),
+                            subtitle = "${book.characters.size} 位角色 · ${book.characters.count { it.voice != null }} 位已配音",
+                            icon = Ms.Group,
+                            onClick = { navigator.push(Dest.Characters(book.id)) },
+                            modifier = Modifier.padding(top = 16.dp),
                         )
                     }
                 }
