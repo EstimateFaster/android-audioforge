@@ -56,7 +56,7 @@ import com.estimatefaster.audioforge.uipreview.design.IconAction
 import com.estimatefaster.audioforge.uipreview.design.ListRow
 import com.estimatefaster.audioforge.uipreview.design.LoadingState
 import com.estimatefaster.audioforge.uipreview.design.PrimaryButton
-import com.estimatefaster.audioforge.uipreview.design.ProgressLine
+import com.estimatefaster.audioforge.uipreview.design.ProgressBar
 import com.estimatefaster.audioforge.uipreview.design.RowDivider
 import com.estimatefaster.audioforge.uipreview.design.SectionLabel
 import com.estimatefaster.audioforge.uipreview.design.StatusChip
@@ -288,7 +288,7 @@ private fun ProjectHeader(book: Book) {
                 style = MaterialTheme.typography.titleMediumEmphasized,
             )
             Spacer(Modifier.height(10.dp))
-            ProgressLine(progress = book.progress, height = 16.dp)
+            ProgressBar(progress = book.progress, height = 8.dp)
             Spacer(Modifier.height(10.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 StatusChip(

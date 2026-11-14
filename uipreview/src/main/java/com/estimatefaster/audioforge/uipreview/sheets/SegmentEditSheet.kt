@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.FilterChip
@@ -68,6 +69,7 @@ fun SegmentEditSheet(
             ) {
                 FakeData.characters.map { it.name }.forEach { name ->
                     FilterChip(
+                        shape = CircleShape,
                         selected = role == name,
                         onClick = { role = name },
                         label = { Text(name) },
@@ -82,6 +84,7 @@ fun SegmentEditSheet(
             ) {
                 emotions.forEach { item ->
                     FilterChip(
+                        shape = CircleShape,
                         selected = emotion == item,
                         onClick = { emotion = item },
                         label = { Text(item) },

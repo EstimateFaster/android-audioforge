@@ -47,6 +47,9 @@ private data class EditTarget(
     val password: Boolean = false,
 )
 
+private fun hostOf(url: String): String =
+    url.removePrefix("https://").removePrefix("http://").substringBefore("/")
+
 @Composable
 fun ModelConfigScreen(navigator: Navigator, player: PlayerState) {
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
@@ -88,7 +91,7 @@ fun ModelConfigScreen(navigator: Navigator, player: PlayerState) {
                 Column {
                     ListRow(
                         title = "接口地址",
-                        subtitle = llmBase,
+                        subtitle = hostOf(llmBase),
                         icon = Ms.Language,
                         onClick = {
                             editing = EditTarget("接口地址", "文本模型的接口地址", llmBase)
@@ -115,7 +118,7 @@ fun ModelConfigScreen(navigator: Navigator, player: PlayerState) {
                 Column {
                     ListRow(
                         title = "接口地址",
-                        subtitle = ttsBase,
+                        subtitle = hostOf(ttsBase),
                         icon = Ms.Language,
                         onClick = { editing = EditTarget("接口地址", "语音服务的接口地址", ttsBase) },
                     )

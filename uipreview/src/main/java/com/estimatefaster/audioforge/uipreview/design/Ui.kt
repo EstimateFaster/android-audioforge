@@ -814,6 +814,35 @@ fun SectionHeader(
     }
 }
 
+/**
+ * 静态进度条：直线、圆角、单色。用于「已完成多少」这类不需要动效的地方；
+ * 波浪条只留给「正在生成」这种进行中的状态。
+ */
+@Composable
+fun ProgressBar(
+    progress: Float,
+    modifier: Modifier = Modifier,
+    height: Dp = 6.dp,
+    track: Color = MaterialTheme.colorScheme.surfaceContainerHighest,
+    fill: Color = MaterialTheme.colorScheme.primary,
+) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(height)
+            .clip(CircleShape)
+            .background(track),
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth(progress.coerceIn(0f, 1f))
+                .fillMaxHeight()
+                .clip(CircleShape)
+                .background(fill),
+        )
+    }
+}
+
 /** 页面底部留白：保证最后一行不被底栏压住。 */
 @Composable
 fun BottomSpacer(height: Dp = 24.dp) {

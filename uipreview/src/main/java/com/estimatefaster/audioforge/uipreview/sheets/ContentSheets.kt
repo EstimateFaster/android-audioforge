@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.FilterChip
@@ -97,6 +98,7 @@ fun ExportSheet(book: Book, onDismiss: () -> Unit) {
                             "current" to stringResource(R.string.export_current),
                         ).forEach { (id, label) ->
                             FilterChip(
+                                shape = CircleShape,
                                 selected = scope == id,
                                 onClick = { scope = id },
                                 label = { Text(label) },
@@ -272,6 +274,7 @@ fun BatchSheet(
                     "all" to stringResource(R.string.batch_scope_all),
                 ).forEach { (id, label) ->
                     FilterChip(
+                        shape = CircleShape,
                         selected = scope == id,
                         onClick = { scope = id },
                         label = { Text(label) },

@@ -58,7 +58,7 @@ import com.estimatefaster.audioforge.uipreview.design.IconAction
 import com.estimatefaster.audioforge.uipreview.design.InlineSearchField
 import com.estimatefaster.audioforge.uipreview.design.ListRow
 import com.estimatefaster.audioforge.uipreview.design.LoadingState
-import com.estimatefaster.audioforge.uipreview.design.ProgressLine
+import com.estimatefaster.audioforge.uipreview.design.ProgressBar
 import com.estimatefaster.audioforge.uipreview.design.QuietCard
 import com.estimatefaster.audioforge.uipreview.design.RowDivider
 import com.estimatefaster.audioforge.uipreview.design.SectionLabel
@@ -375,7 +375,7 @@ private fun ContinueCard(
                     maxLines = 1,
                 )
                 Spacer(Modifier.height(10.dp))
-                ProgressLine(progress = book.progress, height = 14.dp)
+                ProgressBar(progress = book.progress, height = 8.dp)
             }
             Spacer(Modifier.width(12.dp))
             FilledTonalIconButton(
