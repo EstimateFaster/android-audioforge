@@ -46,6 +46,7 @@ import com.estimatefaster.audioforge.uipreview.data.PlayerState
 import com.estimatefaster.audioforge.uipreview.data.formatTime
 import com.estimatefaster.audioforge.uipreview.design.CoverArt
 import com.estimatefaster.audioforge.uipreview.design.EmptyState
+import com.estimatefaster.audioforge.uipreview.design.FadeThrough
 import com.estimatefaster.audioforge.uipreview.design.IconAction
 import com.estimatefaster.audioforge.uipreview.design.LoadingState
 import com.estimatefaster.audioforge.uipreview.design.ProgressLine
@@ -69,31 +70,37 @@ fun PlayerScreen(navigator: Navigator, player: PlayerState) {
         containerColor = MaterialTheme.colorScheme.background,
         topBar = { PlayerTopBar(onBack = { navigator.pop() }, largeFont = largeFont) },
     ) { padding ->
-        when (phase) {
-            ScreenPhase.Loading -> LoadingState(
-                label = "正在准备播放…",
-                modifier = Modifier.padding(padding),
-            )
+        FadeThrough(
+            target = phase,
+            modifier = Modifier.fillMaxSize(),
+            label = "player-phase",
+        ) { state ->
+            when (state) {
+                ScreenPhase.Loading -> LoadingState(
+                    label = "正在准备播放…",
+                    modifier = Modifier.padding(padding),
+                )
 
-            else -> if (player.segments.isEmpty()) {
-                EmptyState(
-                    icon = Ms.Headphones,
-                    title = stringResource(R.string.player_empty_title),
-                    body = stringResource(R.string.player_empty_body),
-                    actionLabel = stringResource(R.string.action_back),
-                    actionIcon = Ms.ArrowBack,
-                    onAction = { navigator.pop() },
-                    modifier = Modifier.padding(padding),
-                )
-            } else {
-                PlayerContent(
-                    player = player,
-                    largeFont = largeFont,
-                    modifier = Modifier.padding(padding),
-                    onSpeed = { showSpeed = true },
-                    onSleep = { showSleep = true },
-                    onChapters = { showChapters = true },
-                )
+                else -> if (player.segments.isEmpty()) {
+                    EmptyState(
+                        icon = Ms.Headphones,
+                        title = stringResource(R.string.player_empty_title),
+                        body = stringResource(R.string.player_empty_body),
+                        actionLabel = stringResource(R.string.action_back),
+                        actionIcon = Ms.ArrowBack,
+                        onAction = { navigator.pop() },
+                        modifier = Modifier.padding(padding),
+                    )
+                } else {
+                    PlayerContent(
+                        player = player,
+                        largeFont = largeFont,
+                        modifier = Modifier.padding(padding),
+                        onSpeed = { showSpeed = true },
+                        onSleep = { showSleep = true },
+                        onChapters = { showChapters = true },
+                    )
+                }
             }
         }
     }

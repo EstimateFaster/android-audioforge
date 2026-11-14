@@ -2,10 +2,14 @@ package com.estimatefaster.audioforge.uipreview.nav
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
 import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -34,8 +38,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -118,27 +124,63 @@ sealed interface Dest {
     }
 }
 
+/** 目的地归属哪个底部 tab：0 = 书架，1 = 设置。 */
+fun tabOf(dest: Dest): Int = when (dest) {
+    Dest.Settings, Dest.ModelConfig, Dest.Generation, Dest.Network,
+    Dest.Storage, Dest.About, Dest.Lab -> 1
+    else -> 0
+}
+
+/**
+ * 两个 tab 各自一条返回栈，切换 tab 不销毁对方的栈。
+ *
+ * 这是「平行页面」的实现基础：从书架进项目再切到设置，回书架仍然停在项目页。
+ */
 @Stable
-class Navigator(initial: Dest = Dest.Library) {
-    var stack by mutableStateOf(listOf(initial))
+class Navigator(initialStack: List<Dest> = listOf(Dest.Library)) {
+    private val seed = initialStack.ifEmpty { listOf(Dest.Library) }
+
+    var tab by mutableStateOf(tabOf(seed.last()))
         private set
 
+    var stack by mutableStateOf(seed)
+        private set
+
+    /** tab index -> 该 tab 的返回栈。 */
+    private val tabStacks = mutableStateMapOf(tab, seed)
+
     val current: Dest get() = stack.last()
+    val currentTab: Int get() = tab
+    val atRoot: Boolean get() = stack.size == 1
     val canGoBack: Boolean get() = stack.size > 1
 
     fun push(dest: Dest) {
+        if (dest == current) return
         stack = stack + dest
+        tabStacks[tab] = stack
     }
 
     fun pop(): Boolean {
         if (stack.size <= 1) return false
         stack = stack.dropLast(1)
+        tabStacks[tab] = stack
         return true
     }
 
-    fun selectTab(dest: Dest) {
-        if (stack.size == 1 && stack.last() == dest) return
-        stack = listOf(dest)
+    /** 切 tab：保留各自栈；再次点击当前 tab 回到它的根页。 */
+    fun selectTab(root: Dest) {
+        val target = tabOf(root)
+        if (target == tab) {
+            if (stack.size > 1) {
+                val tabRoot = stack.first().takeIf { tabOf(it) == target } ?: root
+                stack = listOf(tabRoot)
+                tabStacks[tab] = stack
+            }
+            return
+        }
+        tab = target
+        stack = tabStacks[target] ?: listOf(root)
+        tabStacks[target] = stack
     }
 }
 
@@ -165,9 +207,13 @@ fun AppScaffold(
         bottomBar = {
             if (bottomContent != null) {
                 bottomContent()
-            } else if ((showMiniPlayer && player.hasSession) || showNavBar) {
+            } else {
                 Column {
-                    if (showMiniPlayer && player.hasSession) {
+                    AnimatedVisibility(
+                        visible = showMiniPlayer && player.hasSession,
+                        enter = slideInVertically(initialOffsetY = { it }) + fadeIn(tween(220)),
+                        exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(tween(160)),
+                    ) {
                         MiniPlayerBar(player = player, onOpen = { navigator.push(Dest.Player) })
                     }
                     if (showNavBar) {
@@ -184,13 +230,13 @@ fun AppScaffold(
 
 @Composable
 fun AppNavigationBar(navigator: Navigator) {
-    val current = navigator.current
+    val currentTab = navigator.currentTab
     NavigationBar(
         containerColor = MaterialTheme.colorScheme.background,
         tonalElevation = 0.dp,
     ) {
         NavigationBarItem(
-            selected = current == Dest.Library,
+            selected = currentTab == 0,
             onClick = { navigator.selectTab(Dest.Library) },
             icon = {
                 Icon(
@@ -209,7 +255,7 @@ fun AppNavigationBar(navigator: Navigator) {
             ),
         )
         NavigationBarItem(
-            selected = current == Dest.Settings,
+            selected = currentTab == 1,
             onClick = { navigator.selectTab(Dest.Settings) },
             icon = {
                 Icon(
@@ -293,7 +339,7 @@ fun MiniPlayerBar(
     }
 }
 
-/** 屏幕内容切换：前进/后退使用共享轴转场，时长来自 MotionScheme。 */
+/** 屏幕内容切换：tab 之间 fade through（平行），栈内前进/后退才是左右位移。 */
 @Composable
 fun ScreenHost(
     navigator: Navigator,
@@ -301,23 +347,47 @@ fun ScreenHost(
     content: @Composable (Dest) -> Unit,
 ) {
     val spatial = MaterialTheme.motionScheme.defaultSpatialSpec<IntOffset>()
+    val stateHolder = rememberSaveableStateHolder()
+    val screen = ScreenState(
+        tab = navigator.currentTab,
+        depth = navigator.stack.size,
+        dest = navigator.current,
+    )
     AnimatedContent(
-        targetState = navigator.current,
+        targetState = screen,
         modifier = modifier,
+        contentKey = { it.dest },
         transitionSpec = {
-            if (targetState.depth >= initialState.depth) {
-                (slideInHorizontally(spatial) { it } + fadeIn()) togetherWith
-                    (slideOutHorizontally(spatial) { -it / 5 } + fadeOut())
-            } else {
-                (slideInHorizontally(spatial) { -it / 5 } + fadeIn()) togetherWith
-                    (slideOutHorizontally(spatial) { it } + fadeOut())
+            when {
+                initialState.tab != targetState.tab ->
+                    // fade through：旧页先淡出，新页再淡入，不做左右位移
+                    (
+                        fadeIn(tween(durationMillis = 210, delayMillis = 90)) +
+                            scaleIn(tween(durationMillis = 210, delayMillis = 90), initialScale = 0.97f)
+                        ) togetherWith fadeOut(tween(durationMillis = 90))
+
+                targetState.depth > initialState.depth ->
+                    (slideInHorizontally(spatial) { it } + fadeIn()) togetherWith
+                        (slideOutHorizontally(spatial) { -it / 5 } + fadeOut())
+
+                targetState.depth < initialState.depth ->
+                    (slideInHorizontally(spatial) { -it / 5 } + fadeIn()) togetherWith
+                        (slideOutHorizontally(spatial) { it } + fadeOut())
+
+                else ->
+                    fadeIn(tween(200)) togetherWith fadeOut(tween(120))
             }
         },
         label = "screen-host",
-    ) { dest ->
-        content(dest)
+    ) { target ->
+        stateHolder.SaveableStateProvider("${target.tab}:${target.dest}") {
+            content(target.dest)
+        }
     }
 }
+
+/** AnimatedContent 的比较键：tab + 栈深度 + 目的地。 */
+private data class ScreenState(val tab: Int, val depth: Int, val dest: Dest)
 
 /** 角色首字头像（列表与台词用）。 */
 @Composable

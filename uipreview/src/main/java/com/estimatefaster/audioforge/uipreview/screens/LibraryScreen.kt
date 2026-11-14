@@ -50,6 +50,7 @@ import com.estimatefaster.audioforge.uipreview.design.AppTopBar
 import com.estimatefaster.audioforge.uipreview.design.CoverArt
 import com.estimatefaster.audioforge.uipreview.design.EmptyState
 import com.estimatefaster.audioforge.uipreview.design.ErrorState
+import com.estimatefaster.audioforge.uipreview.design.FadeThrough
 import com.estimatefaster.audioforge.uipreview.design.FilterChipRow
 import com.estimatefaster.audioforge.uipreview.design.IconAction
 import com.estimatefaster.audioforge.uipreview.design.InlineSearchField
@@ -184,101 +185,122 @@ fun LibraryScreen(navigator: Navigator, player: PlayerState) {
             )
         },
     ) { padding ->
-        when (phase) {
-            ScreenPhase.Loading -> LoadingState(
-                label = stringResource(R.string.library_loading),
-                modifier = Modifier.padding(padding),
-            )
+        FadeThrough(
+            target = phase,
+            modifier = Modifier.fillMaxSize(),
+            label = "library-phase",
+        ) { state ->
+            when (state) {
+                ScreenPhase.Loading -> LoadingState(
+                    label = stringResource(R.string.library_loading),
+                    modifier = Modifier.padding(padding),
+                )
 
-            ScreenPhase.Error -> ErrorState(
-                title = stringResource(R.string.library_error),
-                body = stringResource(R.string.library_error_body),
-                onRetry = {},
-                modifier = Modifier.padding(padding),
-            )
+                ScreenPhase.Error -> ErrorState(
+                    title = stringResource(R.string.library_error),
+                    body = stringResource(R.string.library_error_body),
+                    onRetry = {},
+                    modifier = Modifier.padding(padding),
+                )
 
-            ScreenPhase.Empty -> EmptyState(
-                icon = Ms.LibraryBooks,
-                title = stringResource(R.string.library_empty_title),
-                body = stringResource(R.string.library_empty_body),
-                actionLabel = stringResource(R.string.library_empty_action),
-                actionIcon = Ms.UploadFile,
-                onAction = { showImport = true },
-                secondaryLabel = stringResource(R.string.library_empty_demo),
-                onSecondary = {},
-                modifier = Modifier.padding(padding),
-            )
+                ScreenPhase.Empty -> EmptyState(
+                    icon = Ms.LibraryBooks,
+                    title = stringResource(R.string.library_empty_title),
+                    body = stringResource(R.string.library_empty_body),
+                    actionLabel = stringResource(R.string.library_empty_action),
+                    actionIcon = Ms.UploadFile,
+                    onAction = { showImport = true },
+                    secondaryLabel = stringResource(R.string.library_empty_demo),
+                    onSecondary = {},
+                    modifier = Modifier.padding(padding),
+                )
 
-            ScreenPhase.Normal -> LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .nestedScroll(scrollBehavior.nestedScrollConnection),
-                contentPadding = PaddingValues(bottom = 24.dp),
-            ) {
-                if (!searchOpen && filterId == "all" && query.isBlank()) {
-                    item(key = "continue") {
-                        ContinueCard(
-                            book = continueBook,
-                            onContinue = { navigator.push(Dest.Player) },
-                            onOpen = { navigator.push(Dest.Project(continueBook.id)) },
-                            modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 8.dp),
-                        )
+                ScreenPhase.Normal -> LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding)
+                        .nestedScroll(scrollBehavior.nestedScrollConnection),
+                    contentPadding = PaddingValues(bottom = 24.dp),
+                ) {
+                    // 搜索态：搜索框紧贴标题下方，其余内容让位
+                    if (searchOpen) {
+                        item(key = "search") {
+                            InlineSearchField(
+                                value = query,
+                                onValueChange = { query = it },
+                                hint = stringResource(R.string.library_search_hint),
+                                focusRequester = searchFocus,
+                                modifier = Modifier
+                                    .padding(start = 20.dp, end = 20.dp, top = 4.dp)
+                                    .animateItem(),
+                            )
+                        }
+                        item(key = "filters") {
+                            FilterChipRow(
+                                options = filters,
+                                selectedId = filterId,
+                                onSelect = { filterId = it },
+                                contentPadding = PaddingValues(horizontal = 20.dp),
+                                modifier = Modifier
+                                    .padding(top = 10.dp)
+                                    .animateItem(),
+                            )
+                        }
+                        item(key = "label") {
+                            SectionLabel(
+                                text = stringResource(R.string.library_search_results),
+                                trailing = "${books.size}",
+                                modifier = Modifier
+                                    .padding(top = 8.dp)
+                                    .animateItem(),
+                            )
+                        }
+                    } else {
+                        item(key = "continue") {
+                            ContinueCard(
+                                book = continueBook,
+                                onContinue = { navigator.push(Dest.Player) },
+                                onOpen = { navigator.push(Dest.Project(continueBook.id)) },
+                                modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 8.dp),
+                            )
+                        }
+                        item(key = "task") {
+                            RunningTaskRow(
+                                onOpen = { navigator.push(Dest.Tasks) },
+                                onStop = {
+                                    scope.launch { snackbarHostState.showSnackbar("预览构建：已请求停止生成") }
+                                },
+                            )
+                        }
+                        item(key = "label") {
+                            SectionLabel(
+                                text = stringResource(R.string.library_section),
+                                trailing = "${books.size}",
+                                modifier = Modifier.padding(top = 8.dp),
+                            )
+                        }
                     }
-                }
-                item(key = "task") {
-                    RunningTaskRow(
-                        onOpen = { navigator.push(Dest.Tasks) },
-                        onStop = {
-                            scope.launch { snackbarHostState.showSnackbar("预览构建：已请求停止生成") }
-                        },
-                    )
-                }
-                if (searchOpen) {
-                    item(key = "search") {
-                        InlineSearchField(
-                            value = query,
-                            onValueChange = { query = it },
-                            hint = stringResource(R.string.library_search_hint),
-                            focusRequester = searchFocus,
-                            modifier = Modifier.padding(horizontal = 20.dp),
-                        )
-                    }
-                    item(key = "filters") {
-                        FilterChipRow(
-                            options = filters,
-                            selectedId = filterId,
-                            onSelect = { filterId = it },
-                            contentPadding = PaddingValues(horizontal = 20.dp),
-                            modifier = Modifier.padding(top = 10.dp),
-                        )
-                    }
-                }
-                item(key = "label") {
-                    SectionLabel(
-                        text = stringResource(R.string.library_section),
-                        trailing = "${books.size}",
-                        modifier = Modifier.padding(top = 4.dp),
-                    )
-                }
-                if (books.isEmpty()) {
-                    item(key = "empty") {
-                        EmptyState(
-                            icon = Ms.SearchOff,
-                            title = stringResource(R.string.library_no_result),
-                            body = stringResource(R.string.library_no_result_body),
-                            actionLabel = stringResource(R.string.library_clear_filter),
-                            actionIcon = Ms.FilterAltOff,
-                            onAction = {
-                                query = ""
-                                filterId = "all"
-                            },
-                        )
-                    }
-                } else {
-                    items(books, key = { it.id }) { book ->
-                        BookRow(book = book, onClick = { navigator.push(Dest.Project(book.id)) })
-                        RowDivider()
+                    if (books.isEmpty()) {
+                        item(key = "empty") {
+                            EmptyState(
+                                icon = Ms.SearchOff,
+                                title = stringResource(R.string.library_no_result),
+                                body = stringResource(R.string.library_no_result_body),
+                                actionLabel = stringResource(R.string.library_clear_filter),
+                                actionIcon = Ms.FilterAltOff,
+                                onAction = {
+                                    query = ""
+                                    filterId = "all"
+                                },
+                            )
+                        }
+                    } else {
+                        items(books, key = { it.id }) { book ->
+                            Column(modifier = Modifier.animateItem()) {
+                                BookRow(book = book, onClick = { navigator.push(Dest.Project(book.id)) })
+                                RowDivider()
+                            }
+                        }
                     }
                 }
             }

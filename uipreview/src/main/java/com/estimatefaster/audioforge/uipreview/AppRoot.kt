@@ -32,22 +32,22 @@ import com.estimatefaster.audioforge.uipreview.screens.TasksScreen
 import com.estimatefaster.audioforge.uipreview.theme.UiPreviewTheme
 import kotlinx.coroutines.delay
 
-private fun startDestFor(screen: String?): Dest = when (screen) {
-    "project" -> Dest.Project(1L)
-    "chapters" -> Dest.Chapters(1L)
-    "script" -> Dest.Script(1L, 101L)
-    "characters" -> Dest.Characters(1L)
-    "player" -> Dest.Player
-    "tasks" -> Dest.Tasks
-    "storage" -> Dest.Storage
-    "about" -> Dest.About
-    "model" -> Dest.ModelConfig
-    "generation" -> Dest.Generation
-    "network" -> Dest.Network
-    "onboarding" -> Dest.Onboarding
-    "settings" -> Dest.Settings
-    "lab" -> Dest.Lab
-    else -> Dest.Library
+private fun startStackFor(screen: String?): List<Dest> = when (screen) {
+    "project" -> listOf(Dest.Library, Dest.Project(1L))
+    "chapters" -> listOf(Dest.Library, Dest.Project(1L), Dest.Chapters(1L))
+    "script" -> listOf(Dest.Library, Dest.Project(1L), Dest.Chapters(1L), Dest.Script(1L, 101L))
+    "characters" -> listOf(Dest.Library, Dest.Project(1L), Dest.Characters(1L))
+    "player" -> listOf(Dest.Library, Dest.Player)
+    "tasks" -> listOf(Dest.Library, Dest.Tasks)
+    "onboarding" -> listOf(Dest.Library, Dest.Onboarding)
+    "storage" -> listOf(Dest.Settings, Dest.Storage)
+    "about" -> listOf(Dest.Settings, Dest.About)
+    "model" -> listOf(Dest.Settings, Dest.ModelConfig)
+    "generation" -> listOf(Dest.Settings, Dest.Generation)
+    "network" -> listOf(Dest.Settings, Dest.Network)
+    "settings" -> listOf(Dest.Settings)
+    "lab" -> listOf(Dest.Settings, Dest.Lab)
+    else -> listOf(Dest.Library)
 }
 
 /**
@@ -87,7 +87,7 @@ fun AppRoot(
     }
     CompositionLocalProvider(LocalPreviewSettings provides settings) {
         UiPreviewTheme {
-            val navigator = remember { Navigator(startDestFor(initialScreen)) }
+            val navigator = remember { Navigator(startStackFor(initialScreen)) }
             val player = remember { PlayerState() }
 
             LaunchedEffect(player.isPlaying) {

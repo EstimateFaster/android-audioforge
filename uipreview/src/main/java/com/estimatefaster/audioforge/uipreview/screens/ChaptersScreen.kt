@@ -49,6 +49,7 @@ import com.estimatefaster.audioforge.uipreview.data.formatTime
 import com.estimatefaster.audioforge.uipreview.design.AppTopBar
 import com.estimatefaster.audioforge.uipreview.design.EmptyState
 import com.estimatefaster.audioforge.uipreview.design.ErrorState
+import com.estimatefaster.audioforge.uipreview.design.FadeThrough
 import com.estimatefaster.audioforge.uipreview.design.FilterChipRow
 import com.estimatefaster.audioforge.uipreview.design.IconAction
 import com.estimatefaster.audioforge.uipreview.design.InlineSearchField
@@ -193,79 +194,85 @@ fun ChaptersScreen(navigator: Navigator, player: PlayerState, bookId: Long) {
             )
         },
     ) { padding ->
-        when (phase) {
-            ScreenPhase.Loading -> LoadingState(
-                label = "正在加载章节…",
-                modifier = Modifier.padding(padding),
-            )
-
-            ScreenPhase.Error -> ErrorState(
-                title = "加载章节失败",
-                body = "章节仍在本机，请重试或回到项目页刷新。",
-                onRetry = {},
-                modifier = Modifier.padding(padding),
-            )
-
-            ScreenPhase.Empty -> EmptyState(
-                icon = Ms.FormatListNumbered,
-                title = stringResource(R.string.chapters_empty_title),
-                body = stringResource(R.string.chapters_empty_body),
-                actionLabel = "重新解析",
-                actionIcon = Ms.Refresh,
-                onAction = {},
-                modifier = Modifier.padding(padding),
-            )
-
-            ScreenPhase.Normal -> Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-            ) {
-                if (searchOpen) {
-                    InlineSearchField(
-                        value = query,
-                        onValueChange = { query = it },
-                        hint = stringResource(R.string.chapters_search_hint),
-                        focusRequester = searchFocus,
-                        modifier = Modifier.padding(horizontal = 20.dp),
-                    )
-                    Spacer(Modifier.height(10.dp))
-                }
-                FilterChipRow(
-                    options = filters,
-                    selectedId = filterId,
-                    onSelect = { filterId = it },
-                    contentPadding = PaddingValues(horizontal = 20.dp),
-                    modifier = Modifier.padding(top = 4.dp),
+        FadeThrough(
+            target = phase,
+            modifier = Modifier.fillMaxSize(),
+            label = "chapters-phase",
+        ) { state ->
+            when (state) {
+                ScreenPhase.Loading -> LoadingState(
+                    label = "正在加载章节…",
+                    modifier = Modifier.padding(padding),
                 )
-                Spacer(Modifier.height(8.dp))
-                if (chapters.isEmpty()) {
-                    EmptyState(
-                        icon = Ms.SearchOff,
-                        title = stringResource(R.string.chapters_no_result),
-                        body = stringResource(R.string.chapters_no_result_body),
-                        actionLabel = stringResource(R.string.library_clear_filter),
-                        actionIcon = Ms.FilterAltOff,
-                        onAction = {
-                            query = ""
-                            filterId = "all"
-                        },
+
+                ScreenPhase.Error -> ErrorState(
+                    title = "加载章节失败",
+                    body = "章节仍在本机，请重试或回到项目页刷新。",
+                    onRetry = {},
+                    modifier = Modifier.padding(padding),
+                )
+
+                ScreenPhase.Empty -> EmptyState(
+                    icon = Ms.FormatListNumbered,
+                    title = stringResource(R.string.chapters_empty_title),
+                    body = stringResource(R.string.chapters_empty_body),
+                    actionLabel = "重新解析",
+                    actionIcon = Ms.Refresh,
+                    onAction = {},
+                    modifier = Modifier.padding(padding),
+                )
+
+                ScreenPhase.Normal -> Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding),
+                ) {
+                    if (searchOpen) {
+                        InlineSearchField(
+                            value = query,
+                            onValueChange = { query = it },
+                            hint = stringResource(R.string.chapters_search_hint),
+                            focusRequester = searchFocus,
+                            modifier = Modifier.padding(horizontal = 20.dp),
+                        )
+                        Spacer(Modifier.height(10.dp))
+                    }
+                    FilterChipRow(
+                        options = filters,
+                        selectedId = filterId,
+                        onSelect = { filterId = it },
+                        contentPadding = PaddingValues(horizontal = 20.dp),
+                        modifier = Modifier.padding(top = 4.dp),
                     )
-                } else {
-                    LazyColumn(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .nestedScroll(scrollBehavior.nestedScrollConnection),
-                        contentPadding = PaddingValues(bottom = 24.dp),
-                    ) {
-                        items(chapters, key = { it.id }) { chapter ->
-                            ChapterItem(
-                                chapter = chapter,
-                                selected = chapter.id in selection,
-                                onClick = { navigator.push(Dest.Script(book.id, chapter.id)) },
-                                onLongClick = { selection = selection + chapter.id },
-                            )
-                            RowDivider()
+                    Spacer(Modifier.height(8.dp))
+                    if (chapters.isEmpty()) {
+                        EmptyState(
+                            icon = Ms.SearchOff,
+                            title = stringResource(R.string.chapters_no_result),
+                            body = stringResource(R.string.chapters_no_result_body),
+                            actionLabel = stringResource(R.string.library_clear_filter),
+                            actionIcon = Ms.FilterAltOff,
+                            onAction = {
+                                query = ""
+                                filterId = "all"
+                            },
+                        )
+                    } else {
+                        LazyColumn(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .nestedScroll(scrollBehavior.nestedScrollConnection),
+                            contentPadding = PaddingValues(bottom = 24.dp),
+                        ) {
+                            items(chapters, key = { it.id }) { chapter ->
+                                ChapterItem(
+                                    chapter = chapter,
+                                    selected = chapter.id in selection,
+                                    onClick = { navigator.push(Dest.Script(book.id, chapter.id)) },
+                                    onLongClick = { selection = selection + chapter.id },
+                                )
+                                RowDivider()
+                            }
                         }
                     }
                 }

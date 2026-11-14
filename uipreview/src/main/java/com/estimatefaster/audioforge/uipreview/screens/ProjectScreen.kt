@@ -51,6 +51,7 @@ import com.estimatefaster.audioforge.uipreview.design.ConfirmDialog
 import com.estimatefaster.audioforge.uipreview.design.CoverArt
 import com.estimatefaster.audioforge.uipreview.design.EmptyState
 import com.estimatefaster.audioforge.uipreview.design.ErrorState
+import com.estimatefaster.audioforge.uipreview.design.FadeThrough
 import com.estimatefaster.audioforge.uipreview.design.IconAction
 import com.estimatefaster.audioforge.uipreview.design.ListRow
 import com.estimatefaster.audioforge.uipreview.design.LoadingState
@@ -148,84 +149,90 @@ fun ProjectScreen(navigator: Navigator, player: PlayerState, bookId: Long) {
             )
         },
     ) { padding ->
-        when (phase) {
-            ScreenPhase.Loading -> LoadingState(
-                label = "正在读取项目…",
-                modifier = Modifier.padding(padding),
-            )
+        FadeThrough(
+            target = phase,
+            modifier = Modifier.fillMaxSize(),
+            label = "project-phase",
+        ) { state ->
+            when (state) {
+                ScreenPhase.Loading -> LoadingState(
+                    label = "正在读取项目…",
+                    modifier = Modifier.padding(padding),
+                )
 
-            ScreenPhase.Error -> ErrorState(
-                title = "项目加载失败",
-                body = "本机数据库暂时不可用，项目本身没有损坏。",
-                onRetry = {},
-                modifier = Modifier.padding(padding),
-            )
+                ScreenPhase.Error -> ErrorState(
+                    title = "项目加载失败",
+                    body = "本机数据库暂时不可用，项目本身没有损坏。",
+                    onRetry = {},
+                    modifier = Modifier.padding(padding),
+                )
 
-            ScreenPhase.Empty -> EmptyState(
-                icon = Ms.MenuBook,
-                title = stringResource(R.string.project_empty_chapters),
-                body = stringResource(R.string.project_empty_chapters_body),
-                actionLabel = "重新解析",
-                actionIcon = Ms.RestartAlt,
-                onAction = {},
-                modifier = Modifier.padding(padding),
-            )
+                ScreenPhase.Empty -> EmptyState(
+                    icon = Ms.MenuBook,
+                    title = stringResource(R.string.project_empty_chapters),
+                    body = stringResource(R.string.project_empty_chapters_body),
+                    actionLabel = "重新解析",
+                    actionIcon = Ms.RestartAlt,
+                    onAction = {},
+                    modifier = Modifier.padding(padding),
+                )
 
-            ScreenPhase.Normal -> LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .nestedScroll(scrollBehavior.nestedScrollConnection),
-                contentPadding = PaddingValues(bottom = 32.dp),
-            ) {
-                item(key = "header") {
-                    ProjectHeader(book = book)
-                }
-                item(key = "action") {
-                    PrimaryButton(
-                        text = if (book.isGenerating) {
-                            "继续生成 · 第 ${FakeData.runningTask.chapterIndex} 章"
-                        } else {
-                            stringResource(R.string.project_continue)
-                        },
-                        icon = Ms.AutoAwesome,
-                        onClick = { showBatch = true },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 20.dp)
-                            .padding(top = 20.dp),
-                    )
-                }
-                item(key = "chapters-label") {
-                    SectionLabel(
-                        text = stringResource(R.string.project_chapters),
-                        trailing = "${book.completedChapters} / ${book.chapters.size}",
-                        modifier = Modifier.padding(top = 8.dp),
-                    )
-                }
-                items(book.chapters.take(4), key = { it.id }) { chapter ->
-                    ChapterRow(chapter = chapter, onClick = { navigator.push(Dest.Script(book.id, chapter.id)) })
-                    RowDivider()
-                }
-                item(key = "chapters-all") {
-                    ListRow(
-                        title = "查看全部 ${book.chapters.size} 章",
-                        icon = Ms.FormatListNumbered,
-                        onClick = { navigator.push(Dest.Chapters(book.id)) },
-                    )
-                }
-                item(key = "characters-label") {
-                    SectionLabel(
-                        text = stringResource(R.string.project_characters),
-                        trailing = "${book.characters.size} 位",
-                        modifier = Modifier.padding(top = 20.dp),
-                    )
-                }
-                item(key = "characters") {
-                    CharactersStrip(
-                        book = book,
-                        onManage = { navigator.push(Dest.Characters(book.id)) },
-                    )
+                ScreenPhase.Normal -> LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding)
+                        .nestedScroll(scrollBehavior.nestedScrollConnection),
+                    contentPadding = PaddingValues(bottom = 32.dp),
+                ) {
+                    item(key = "header") {
+                        ProjectHeader(book = book)
+                    }
+                    item(key = "action") {
+                        PrimaryButton(
+                            text = if (book.isGenerating) {
+                                "继续生成 · 第 ${FakeData.runningTask.chapterIndex} 章"
+                            } else {
+                                stringResource(R.string.project_continue)
+                            },
+                            icon = Ms.AutoAwesome,
+                            onClick = { showBatch = true },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 20.dp)
+                                .padding(top = 20.dp),
+                        )
+                    }
+                    item(key = "chapters-label") {
+                        SectionLabel(
+                            text = stringResource(R.string.project_chapters),
+                            trailing = "${book.completedChapters} / ${book.chapters.size}",
+                            modifier = Modifier.padding(top = 8.dp),
+                        )
+                    }
+                    items(book.chapters.take(4), key = { it.id }) { chapter ->
+                        ChapterRow(chapter = chapter, onClick = { navigator.push(Dest.Script(book.id, chapter.id)) })
+                        RowDivider()
+                    }
+                    item(key = "chapters-all") {
+                        ListRow(
+                            title = "查看全部 ${book.chapters.size} 章",
+                            icon = Ms.FormatListNumbered,
+                            onClick = { navigator.push(Dest.Chapters(book.id)) },
+                        )
+                    }
+                    item(key = "characters-label") {
+                        SectionLabel(
+                            text = stringResource(R.string.project_characters),
+                            trailing = "${book.characters.size} 位",
+                            modifier = Modifier.padding(top = 20.dp),
+                        )
+                    }
+                    item(key = "characters") {
+                        CharactersStrip(
+                            book = book,
+                            onManage = { navigator.push(Dest.Characters(book.id)) },
+                        )
+                    }
                 }
             }
         }

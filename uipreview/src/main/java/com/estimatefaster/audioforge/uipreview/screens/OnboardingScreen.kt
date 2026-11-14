@@ -1,8 +1,11 @@
 package com.estimatefaster.audioforge.uipreview.screens
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -45,6 +48,7 @@ import com.estimatefaster.audioforge.uipreview.design.IconBubble
 import com.estimatefaster.audioforge.uipreview.design.PrimaryButton
 import com.estimatefaster.audioforge.uipreview.design.SecondaryButton
 import com.estimatefaster.audioforge.uipreview.icons.Ms
+import com.estimatefaster.audioforge.uipreview.nav.Dest
 import com.estimatefaster.audioforge.uipreview.nav.Navigator
 
 @Composable
@@ -69,7 +73,7 @@ fun OnboardingScreen(navigator: Navigator, player: PlayerState) {
             ) {
                 StepRail(step = step, modifier = Modifier.weight(1f))
                 TextButton(
-                    onClick = { navigator.selectTab(com.estimatefaster.audioforge.uipreview.nav.Dest.Library) },
+                    onClick = { navigator.selectTab(Dest.Library) },
                 ) {
                     Icon(
                         painter = painterResource(Ms.SkipNext),
@@ -82,12 +86,25 @@ fun OnboardingScreen(navigator: Navigator, player: PlayerState) {
             }
             AnimatedContent(
                 targetState = step,
-                transitionSpec = { fadeIn() togetherWith fadeOut() },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+                transitionSpec = {
+                    val forward = targetState > initialState
+                    val direction = if (forward) 1 else -1
+                    (
+                        slideInHorizontally(tween(durationMillis = 260)) { direction * it / 4 } +
+                            fadeIn(tween(durationMillis = 260, delayMillis = 60))
+                        ) togetherWith (
+                        slideOutHorizontally(tween(durationMillis = 160)) { -direction * it / 6 } +
+                            fadeOut(tween(durationMillis = 160))
+                        )
+                },
                 label = "onboarding-step",
             ) { current ->
                 Column(
                     modifier = Modifier
-                        .weight(1f)
+                        .fillMaxSize()
                         .verticalScroll(rememberScrollState()),
                 ) {
                     Spacer(Modifier.height(24.dp))
@@ -108,7 +125,7 @@ fun OnboardingScreen(navigator: Navigator, player: PlayerState) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 16.dp),
+                    .padding(top = 12.dp, bottom = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -131,7 +148,7 @@ fun OnboardingScreen(navigator: Navigator, player: PlayerState) {
                         if (step < 2) {
                             step += 1
                         } else {
-                            navigator.selectTab(com.estimatefaster.audioforge.uipreview.nav.Dest.Library)
+                            navigator.selectTab(Dest.Library)
                         }
                     },
                 )

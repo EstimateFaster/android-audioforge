@@ -1,5 +1,11 @@
 package com.estimatefaster.audioforge.uipreview.design
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -806,4 +812,31 @@ fun SectionHeader(
 @Composable
 fun BottomSpacer(height: Dp = 24.dp) {
     Spacer(Modifier.height(height))
+}
+
+/**
+ * 状态切换（内容 / 加载 / 空 / 错误）统一走 fade through。
+ *
+ * 旧内容先快速淡出，新内容延迟 90ms 淡入并轻微放大，避免生硬跳变。
+ */
+@Composable
+fun <T> FadeThrough(
+    target: T,
+    modifier: Modifier = Modifier,
+    label: String = "fade-through",
+    content: @Composable (T) -> Unit,
+) {
+    AnimatedContent(
+        targetState = target,
+        modifier = modifier,
+        transitionSpec = {
+            (
+                fadeIn(tween(durationMillis = 210, delayMillis = 90)) +
+                    scaleIn(tween(durationMillis = 210, delayMillis = 90), initialScale = 0.98f)
+                ) togetherWith fadeOut(tween(durationMillis = 90))
+        },
+        label = label,
+    ) { state ->
+        content(state)
+    }
 }

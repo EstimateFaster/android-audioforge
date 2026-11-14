@@ -51,6 +51,7 @@
     <string name="library_resume_prefix">上次听到</string>
     <string name="library_filter_all">全部</string>
     <string name="library_section">项目</string>
+    <string name="library_search_results">搜索结果</string>
     <string name="library_filter_generating">生成中</string>
     <string name="library_filter_done">已完成</string>
     <string name="library_filter_pending">未开始</string>

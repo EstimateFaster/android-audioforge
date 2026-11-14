@@ -54,6 +54,7 @@ import com.estimatefaster.audioforge.uipreview.data.Segment
 import com.estimatefaster.audioforge.uipreview.design.AppTopBar
 import com.estimatefaster.audioforge.uipreview.design.EmptyState
 import com.estimatefaster.audioforge.uipreview.design.ErrorState
+import com.estimatefaster.audioforge.uipreview.design.FadeThrough
 import com.estimatefaster.audioforge.uipreview.design.FilterChipRow
 import com.estimatefaster.audioforge.uipreview.design.IconAction
 import com.estimatefaster.audioforge.uipreview.design.LoadingState
@@ -128,67 +129,73 @@ fun ScriptScreen(navigator: Navigator, player: PlayerState, bookId: Long, chapte
             )
         },
     ) { padding ->
-        when (phase) {
-            ScreenPhase.Loading -> LoadingState(
-                label = "正在解析台词…",
-                modifier = Modifier.padding(padding),
-            )
-
-            ScreenPhase.Error -> ErrorState(
-                title = "台词加载失败",
-                body = "解析结果仍在本机，可以重试。",
-                onRetry = {},
-                modifier = Modifier.padding(padding),
-            )
-
-            ScreenPhase.Empty, ScreenPhase.Normal -> if (chapter.segments.isEmpty()) {
-                EmptyState(
-                    icon = Ms.GraphicEq,
-                    title = stringResource(R.string.script_empty_title),
-                    body = stringResource(R.string.script_empty_body),
-                    actionLabel = stringResource(R.string.script_parse),
-                    actionIcon = Ms.AutoAwesome,
-                    onAction = { scope.launch { snackbarHostState.showSnackbar("预览构建：已提交本章解析") } },
+        FadeThrough(
+            target = phase,
+            modifier = Modifier.fillMaxSize(),
+            label = "script-phase",
+        ) { state ->
+            when (state) {
+                ScreenPhase.Loading -> LoadingState(
+                    label = "正在解析台词…",
                     modifier = Modifier.padding(padding),
                 )
-            } else {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(padding),
-                ) {
-                    FilterChipRow(
-                        options = roles,
-                        selectedId = roleFilter,
-                        onSelect = { roleFilter = it },
-                        contentPadding = PaddingValues(horizontal = 20.dp),
-                        modifier = Modifier.padding(top = 4.dp, bottom = 4.dp),
+
+                ScreenPhase.Error -> ErrorState(
+                    title = "台词加载失败",
+                    body = "解析结果仍在本机，可以重试。",
+                    onRetry = {},
+                    modifier = Modifier.padding(padding),
+                )
+
+                ScreenPhase.Empty, ScreenPhase.Normal -> if (chapter.segments.isEmpty()) {
+                    EmptyState(
+                        icon = Ms.GraphicEq,
+                        title = stringResource(R.string.script_empty_title),
+                        body = stringResource(R.string.script_empty_body),
+                        actionLabel = stringResource(R.string.script_parse),
+                        actionIcon = Ms.AutoAwesome,
+                        onAction = { scope.launch { snackbarHostState.showSnackbar("预览构建：已提交本章解析") } },
+                        modifier = Modifier.padding(padding),
                     )
-                    LazyColumn(
-                        state = listState,
+                } else {
+                    Column(
                         modifier = Modifier
                             .fillMaxSize()
-                            .nestedScroll(scrollBehavior.nestedScrollConnection),
-                        contentPadding = PaddingValues(bottom = 32.dp),
+                            .padding(padding),
                     ) {
-                        itemsIndexed(segments, key = { _, segment -> segment.index }) { _, segment ->
-                            val isCurrent = segment.index == player.segmentIndex
-                            SegmentRow(
-                                segment = segment,
-                                isCurrent = isCurrent,
-                                isPlaying = isCurrent && player.isPlaying,
-                                onClick = { player.playSegment(segment.index) },
-                                onTogglePlay = {
-                                    if (isCurrent) player.toggle() else player.playSegment(segment.index)
-                                },
-                                onEdit = { editing = segment },
-                                onLongPress = {
-                                    val manager = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                    manager.setPrimaryClip(ClipData.newPlainText("script", segment.text))
-                                    scope.launch { snackbarHostState.showSnackbar(copiedMessage) }
-                                },
-                                showDivider = !isCurrent,
-                            )
+                        FilterChipRow(
+                            options = roles,
+                            selectedId = roleFilter,
+                            onSelect = { roleFilter = it },
+                            contentPadding = PaddingValues(horizontal = 20.dp),
+                            modifier = Modifier.padding(top = 4.dp, bottom = 4.dp),
+                        )
+                        LazyColumn(
+                            state = listState,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .nestedScroll(scrollBehavior.nestedScrollConnection),
+                            contentPadding = PaddingValues(bottom = 32.dp),
+                        ) {
+                            itemsIndexed(segments, key = { _, segment -> segment.index }) { _, segment ->
+                                val isCurrent = segment.index == player.segmentIndex
+                                SegmentRow(
+                                    segment = segment,
+                                    isCurrent = isCurrent,
+                                    isPlaying = isCurrent && player.isPlaying,
+                                    onClick = { player.playSegment(segment.index) },
+                                    onTogglePlay = {
+                                        if (isCurrent) player.toggle() else player.playSegment(segment.index)
+                                    },
+                                    onEdit = { editing = segment },
+                                    onLongPress = {
+                                        val manager = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                        manager.setPrimaryClip(ClipData.newPlainText("script", segment.text))
+                                        scope.launch { snackbarHostState.showSnackbar(copiedMessage) }
+                                    },
+                                    showDivider = !isCurrent,
+                                )
+                            }
                         }
                     }
                 }
