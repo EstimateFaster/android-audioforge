@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -228,8 +229,24 @@ fun AppScaffold(
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         containerColor = MaterialTheme.colorScheme.background,
-        content = content,
-    )
+    ) { padding ->
+        // Scaffold 只要收到 bottomBar 就不再给内容补导航栏内边距，
+        // 所以没有底部控件时这里自己补一次，避免正文压到手势条上。
+        val noBottom = bottomContent == null &&
+            !showNavBar &&
+            !(showMiniPlayer && player.hasSession)
+        if (noBottom) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .navigationBarsPadding(),
+            ) {
+                content(padding)
+            }
+        } else {
+            content(padding)
+        }
+    }
 }
 
 @Composable
