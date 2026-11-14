@@ -73,7 +73,11 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @Composable
-fun LibraryScreen(navigator: Navigator, player: PlayerState) {
+fun LibraryScreen(
+    navigator: Navigator,
+    player: PlayerState,
+    initialSearch: Boolean = false,
+) {
     val phase = LocalPreviewSettings.current.phase("library")
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
     val snackbarHostState = remember { SnackbarHostState() }
@@ -81,7 +85,7 @@ fun LibraryScreen(navigator: Navigator, player: PlayerState) {
 
     var query by rememberSaveable { mutableStateOf("") }
     var filterId by rememberSaveable { mutableStateOf("all") }
-    var searchOpen by rememberSaveable { mutableStateOf(false) }
+    var searchOpen by rememberSaveable { mutableStateOf(initialSearch) }
     var sortOpen by remember { mutableStateOf(false) }
     var sortId by rememberSaveable { mutableStateOf("recent") }
     var showImport by remember { mutableStateOf(false) }

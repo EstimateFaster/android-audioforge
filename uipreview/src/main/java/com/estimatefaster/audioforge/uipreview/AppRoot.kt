@@ -60,6 +60,7 @@ fun AppRoot(
     forceTheme: String? = null,
     forceFont: String? = null,
     forceDynamicColor: Boolean = true,
+    initialSearch: Boolean = false,
 ) {
     val settings = remember {
         PreviewSettings().apply {
@@ -101,7 +102,11 @@ fun AppRoot(
 
             ScreenHost(navigator = navigator) { dest ->
                 when (dest) {
-                    is Dest.Library -> LibraryScreen(navigator = navigator, player = player)
+                    is Dest.Library -> LibraryScreen(
+                        navigator = navigator,
+                        player = player,
+                        initialSearch = initialSearch,
+                    )
                     is Dest.Settings -> SettingsScreen(navigator = navigator, player = player)
                     is Dest.Project -> ProjectScreen(navigator = navigator, player = player, bookId = dest.id)
                     is Dest.Chapters -> ChaptersScreen(navigator = navigator, player = player, bookId = dest.id)

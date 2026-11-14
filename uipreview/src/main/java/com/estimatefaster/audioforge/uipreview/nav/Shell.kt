@@ -147,7 +147,7 @@ class Navigator(initialStack: List<Dest> = listOf(Dest.Library)) {
         private set
 
     /** tab index -> 该 tab 的返回栈。 */
-    private val tabStacks = mutableStateMapOf(tab, seed)
+    private val tabStacks = mutableStateMapOf(tab to seed)
 
     val current: Dest get() = stack.last()
     val currentTab: Int get() = tab
@@ -356,7 +356,6 @@ fun ScreenHost(
     AnimatedContent(
         targetState = screen,
         modifier = modifier,
-        contentKey = { it.dest },
         transitionSpec = {
             when {
                 initialState.tab != targetState.tab ->

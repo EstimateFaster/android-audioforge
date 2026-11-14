@@ -18,6 +18,7 @@ sleep 2
 
 capture() {
   local screen="$1" theme="$2" font="$3" phase="$4" name="$5"
+  shift 5
   adb shell am force-stop "$PKG" >/dev/null 2>&1 || true
   adb logcat -c || true
   adb shell am start -W -n "$ACT" \
@@ -25,13 +26,14 @@ capture() {
     --es theme "$theme" \
     --es font "$font" \
     --es phase "$phase" \
-    --ez dynamic false >/dev/null
+    --ez dynamic false "$@" >/dev/null
   sleep 6
   adb exec-out screencap -p > "$OUT/$name.png"
   echo "captured $name"
 }
 
 capture library  light 100 normal library-light
+capture library  light 100 normal library-search --ez search true
 capture library  dark  100 normal library-dark
 capture library  light 200 normal library-font200
 capture library  light 100 empty  library-empty
