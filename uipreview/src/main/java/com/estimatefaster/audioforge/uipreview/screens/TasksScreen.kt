@@ -1,5 +1,6 @@
 package com.estimatefaster.audioforge.uipreview.screens
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
