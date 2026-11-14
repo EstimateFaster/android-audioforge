@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -206,8 +207,12 @@ fun AppScaffold(
         bottomBar = {
             if (bottomContent != null) {
                 bottomContent()
-            } else {
-                Column {
+            } else if (showNavBar || (showMiniPlayer && player.hasSession)) {
+                // 只有真的显示了底栏才占位：否则 Scaffold 会以为底栏已处理导航栏内边距，
+                // 内容就会压到手势条下面。
+                Column(
+                    modifier = if (showNavBar) Modifier else Modifier.navigationBarsPadding(),
+                ) {
                     AnimatedVisibility(
                         visible = showMiniPlayer && player.hasSession,
                         enter = slideInVertically(initialOffsetY = { it }) + fadeIn(tween(220)),
