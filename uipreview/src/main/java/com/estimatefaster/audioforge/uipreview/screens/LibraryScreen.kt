@@ -58,7 +58,6 @@ import com.estimatefaster.audioforge.uipreview.design.IconAction
 import com.estimatefaster.audioforge.uipreview.design.InlineSearchField
 import com.estimatefaster.audioforge.uipreview.design.ListRow
 import com.estimatefaster.audioforge.uipreview.design.LoadingState
-import com.estimatefaster.audioforge.uipreview.design.ProgressBar
 import com.estimatefaster.audioforge.uipreview.design.QuietCard
 import com.estimatefaster.audioforge.uipreview.design.RowDivider
 import com.estimatefaster.audioforge.uipreview.design.SectionLabel
@@ -146,11 +145,15 @@ fun LibraryScreen(
         topBar = {
             AppTopBar(
                 title = stringResource(R.string.library_title),
-                subtitle = stringResource(
-                    R.string.library_subtitle,
-                    FakeData.books.size,
-                    formatDuration(totalDuration),
-                ),
+                subtitle = if (phase == ScreenPhase.Empty) {
+                    stringResource(R.string.library_empty_subtitle)
+                } else {
+                    stringResource(
+                        R.string.library_subtitle,
+                        FakeData.books.size,
+                        formatDuration(totalDuration),
+                    )
+                },
                 scrollBehavior = scrollBehavior,
                 actions = {
                     IconAction(
@@ -374,8 +377,6 @@ private fun ContinueCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                 )
-                Spacer(Modifier.height(10.dp))
-                ProgressBar(progress = book.progress, height = 8.dp)
             }
             Spacer(Modifier.width(12.dp))
             FilledTonalIconButton(

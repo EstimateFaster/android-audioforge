@@ -62,6 +62,7 @@
     <string name="library_sort_progress">进度</string>
     <string name="library_view_list">列表视图</string>
     <string name="library_view_grid">网格视图</string>
+    <string name="library_empty_subtitle">还没有导入任何项目</string>
     <string name="library_empty_title">书架还是空的</string>
     <string name="library_empty_body">导入一本 TXT 小说，几秒内自动分章。全部解析与合成都在本机完成。</string>
     <string name="library_empty_action">导入 TXT</string>

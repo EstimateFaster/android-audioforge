@@ -148,8 +148,9 @@ fun OnboardingScreen(navigator: Navigator, player: PlayerState) {
                         Text("上一步", style = MaterialTheme.typography.labelLarge)
                     }
                 }
-                Spacer(Modifier.weight(1f))
+                Spacer(Modifier.width(12.dp))
                 PrimaryButton(
+                    modifier = Modifier.weight(1f),
                     text = when (step) {
                         0 -> "开始配置"
                         1 -> "保存并继续"

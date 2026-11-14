@@ -142,27 +142,20 @@ fun ModelConfigScreen(navigator: Navigator, player: PlayerState) {
                 }
             }
             item(key = "test") {
-                Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 20.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        SecondaryButton(
-                            text = "测试连接",
-                            icon = Ms.Bolt,
-                            onClick = {
-                                scope.launch { snackbarHostState.showSnackbar("预览构建：连接测试不会真的发起请求") }
-                            },
-                        )
-                        Spacer(Modifier.width(12.dp))
-                        Text(
-                            text = "只校验地址与 Key 格式",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    Spacer(Modifier.height(12.dp))
+                Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 24.dp)) {
                     Text(
-                        text = "Key 只写入本机 Keystore，不会随备份导出，也不会上传到任何服务器。",
+                        text = "测试只校验地址与 Key 的格式，不会真的发起请求。Key 只写入本机 Keystore，不会随备份导出。",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    SecondaryButton(
+                        text = "测试连接",
+                        icon = Ms.Bolt,
+                        onClick = {
+                            scope.launch { snackbarHostState.showSnackbar("预览构建：连接测试不会真的发起请求") }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
                     )
                 }
             }

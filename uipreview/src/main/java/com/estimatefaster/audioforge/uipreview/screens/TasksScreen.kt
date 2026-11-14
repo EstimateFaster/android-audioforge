@@ -105,21 +105,24 @@ fun TasksScreen(navigator: Navigator, player: PlayerState) {
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Spacer(Modifier.height(14.dp))
-                    ProgressLine(progress = task.percent / 100f)
-                    Spacer(Modifier.height(6.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(modifier = Modifier.weight(1f)) {
+                            ProgressLine(progress = task.percent / 100f)
+                        }
+                        Spacer(Modifier.width(12.dp))
                         Text(
                             text = "${task.percent}%",
                             style = MaterialTheme.typography.labelLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
-                        Spacer(Modifier.weight(1f))
-                        SecondaryButton(
-                            text = stringResource(R.string.task_stop),
-                            icon = Ms.StopCircle,
-                            onClick = { showStop = true },
-                        )
                     }
+                    Spacer(Modifier.height(14.dp))
+                    SecondaryButton(
+                        text = stringResource(R.string.task_stop),
+                        icon = Ms.StopCircle,
+                        onClick = { showStop = true },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
                 }
             }
             item(key = "queue-label") {

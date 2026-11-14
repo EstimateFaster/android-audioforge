@@ -348,6 +348,20 @@ private fun SegmentRow(
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
+                    if (isCurrent) {
+                        TextButton(
+                            onClick = onEdit,
+                            modifier = Modifier.height(36.dp),
+                        ) {
+                            Icon(
+                                painter = painterResource(Ms.Edit),
+                                contentDescription = null,
+                                modifier = Modifier.size(15.dp),
+                            )
+                            Spacer(Modifier.width(4.dp))
+                            Text(stringResource(R.string.action_edit), style = MaterialTheme.typography.labelMedium)
+                        }
+                    }
                 }
                 Spacer(Modifier.height(8.dp))
                 Text(
@@ -385,20 +399,7 @@ private fun SegmentRow(
                         modifier = Modifier.size(22.dp),
                     )
                 }
-                IconButton(
-                    onClick = onEdit,
-                    modifier = Modifier
-                        .size(48.dp)
-                        .alpha(if (isCurrent) 1f else 0f),
-                    enabled = isCurrent,
-                ) {
-                    Icon(
-                        painter = painterResource(Ms.Edit),
-                        contentDescription = stringResource(R.string.action_edit),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(18.dp),
-                    )
-                }
+
             }
         }
         if (showDivider) {

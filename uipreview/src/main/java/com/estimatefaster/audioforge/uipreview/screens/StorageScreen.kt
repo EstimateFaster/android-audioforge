@@ -43,6 +43,7 @@ import com.estimatefaster.audioforge.uipreview.data.PlayerState
 import com.estimatefaster.audioforge.uipreview.design.AppTopBar
 import com.estimatefaster.audioforge.uipreview.design.ChoiceOption
 import com.estimatefaster.audioforge.uipreview.design.ConfirmDialog
+import com.estimatefaster.audioforge.uipreview.design.CoverArt
 import com.estimatefaster.audioforge.uipreview.design.IconAction
 import com.estimatefaster.audioforge.uipreview.design.ListRow
 import com.estimatefaster.audioforge.uipreview.design.RowDivider
@@ -157,6 +158,15 @@ fun StorageScreen(navigator: Navigator, player: PlayerState) {
                             },
                             trailingText = listOf("1.2 GB", "420 MB", "96 MB", "84 MB")[index % 4],
                             onClick = { navigator.push(Dest.Project(book.id)) },
+                            leading = {
+                                CoverArt(
+                                    title = book.title,
+                                    modifier = Modifier
+                                        .width(36.dp)
+                                        .height(48.dp),
+                                    textStyle = MaterialTheme.typography.titleSmallEmphasized,
+                                )
+                            },
                         )
                         RowDivider()
                     }

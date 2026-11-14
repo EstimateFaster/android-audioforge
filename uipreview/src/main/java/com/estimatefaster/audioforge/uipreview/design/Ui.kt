@@ -351,7 +351,7 @@ fun ProgressLine(
 fun QuietCard(
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
-    color: Color = MaterialTheme.colorScheme.surfaceContainerLow,
+    color: Color = MaterialTheme.colorScheme.surfaceContainerHigh,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Surface(
@@ -489,7 +489,7 @@ private fun TopBarSubtitle(text: String) {
         text = text,
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
-        maxLines = 1,
+        maxLines = 2,
         overflow = TextOverflow.Ellipsis,
     )
 }
